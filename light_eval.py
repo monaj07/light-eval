@@ -17,7 +17,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from cases import ROOT, TOOLS, TRACKS, VERSION, Case, dataset, dispatch, parse_json, score
+from cases import ROOT, TOOLS, TRACKS, VERSION, Case, dataset, dispatch, parse_json, score, score_answer, score_tools
 from runtime import BenchError, Ollama, Telemetry, read_text
 
 PHASES = ("cold", "warm", "sustained")
@@ -114,6 +114,9 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
         user_message["images"] = [images[case.image]]
     body = {"model": model, "messages": [user_message], "options": options,
             "keep_alive": "1h", "stream": True}
+    schema = case.response_schema
+    if schema is not None and case.track != "agent":
+        body["format"] = schema
     if case.track == "agent":
         body["tools"] = TOOLS
     if metadata["thinking_requested"] is not None:
@@ -123,20 +126,48 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
     started = time.monotonic()
     deadline = started + args.timeout
     status, reason = "protocol_error", None
+    tool_response_observed = False
+    final_answer_complete = False
+
+    def generate_turn():
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise BenchError("Case time budget exhausted", "timeout")
+        turn = {"content": "", "thinking": "", "tool_calls": [], "first_output_s": None,
+                "first_text_s": None, "format": body.get("format")}
+        turns.append(turn)
+        api.chat(body, remaining, turn)
+        if turn["metrics"].get("done_reason") == "length" and case.track != "performance":
+            raise BenchError("Model reached the per-turn generation limit", "generation_limit")
+        return turn
+
+    def assistant_message(turn):
+        message = {"role": "assistant", "content": turn["content"], "tool_calls": turn["tool_calls"]}
+        if turn["thinking"]:
+            message["thinking"] = turn["thinking"]
+        return message
+
     try:
         for index in range(args.tool_rounds + 1 if case.track == "agent" else 1):
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise BenchError("Case time budget exhausted", "timeout")
-            turn = {"content": "", "thinking": "", "tool_calls": [], "first_output_s": None,
-                    "first_text_s": None}
-            turns.append(turn)
-            api.chat(body, remaining, turn)
-            if turn["metrics"].get("done_reason") == "length" and case.track != "performance":
-                status = "generation_limit"
-                break
+            turn = generate_turn()
+            tool_response_observed = True
             calls = turn["tool_calls"]
             if not calls:
+                if case.track == "agent":
+                    # A final-answer grammar can suppress native tool calls.
+                    # Let the model finish its tool loop before constraining its answer.
+                    body["messages"].append(assistant_message(turn))
+                    body["messages"].append({"role": "user", "content":
+                        "Return your final answer to the original request using only a JSON object "
+                        "matching this schema: " + json.dumps(schema, sort_keys=True) +
+                        ". Follow the original request's restrictions on the answer value. "
+                        "Do not add a sentence around the value, Markdown, or commentary."})
+                    body.pop("tools")
+                    body["format"] = schema
+                    turn = generate_turn()
+                    if turn["tool_calls"]:
+                        raise BenchError("Unexpected tool call during final answer", "invalid_tool_call")
+                    final_answer_complete = True
                 status = "complete" if case.track == "performance" else score(
                     case, turn["content"], trace, state
                 )
@@ -145,10 +176,7 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
                 raise BenchError("Unexpected tool call", "invalid_tool_call")
             if index == args.tool_rounds or len(trace) + len(calls) > args.tool_calls:
                 raise BenchError("Tool call budget exhausted", "tool_limit")
-            assistant = {"role": "assistant", "content": turn["content"], "tool_calls": calls}
-            if turn["thinking"]:
-                assistant["thinking"] = turn["thinking"]
-            body["messages"].append(assistant)
+            body["messages"].append(assistant_message(turn))
             for call in calls:
                 try:
                     name = call["function"]["name"]
@@ -163,11 +191,19 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
                                          "content": json.dumps(result, sort_keys=True)})
     except BenchError as exc:
         status, reason = exc.status, str(exc)
-    return {"status": status, "reason": reason, "wall_s": time.monotonic() - started,
+    result = {"status": status, "reason": reason, "response_schema": schema,
+            "wall_s": time.monotonic() - started,
             "ttft_s": turns[0]["first_output_s"] if turns else None,
             "first_text_s": turns[0]["first_text_s"] if turns else None,
             "generated_tokens": sum(turn.get("metrics", {}).get("eval_count", 0) for turn in turns),
             "turns": turns, "tool_trace": trace, "final_state": state}
+    if case.track == "agent":
+        result["agent_evaluation"] = {
+            "tool_use_correct": (tool_response_observed and status not in {"invalid_tool_call", "tool_limit"}
+                                 and score_tools(case, trace, state) == "pass"),
+            "final_answer_correct": final_answer_complete and score_answer(case, turns[-1]["content"]) == "pass",
+        }
+    return result
 
 
 def append_line(handle, record):
@@ -232,8 +268,11 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                 unsupported = ((case.track == "agent" and "tools" not in metadata["capabilities"])
                                or (case.track == "vision" and "vision" not in metadata["capabilities"]))
                 if failure and not unsupported:
-                    append_line(records, {**header, "phase": "warm", "case": case.id, "track": case.track,
-                                          "status": failure["status"], "reason": "Warmup failed: " + str(failure["reason"])})
+                    row = {**header, "phase": "warm", "case": case.id, "track": case.track,
+                           "status": failure["status"], "reason": "Warmup failed: " + str(failure["reason"])}
+                    if case.track == "agent":
+                        row["agent_evaluation"] = {"tool_use_correct": False, "final_answer_correct": False}
+                    append_line(records, row)
                 else:
                     case_start = None if unsupported else monitor.gate(band, args.cooldown)
                     measured(case, "warm", case.id, start=case_start)
@@ -291,7 +330,7 @@ def summarize(rows, blocks):
         def metric_spread(field, divisor=1):
             return spread(row[field] / divisor for row in metrics if field in row)
 
-        results.append({
+        group = {
             "model": model, "phase": phase, "track": track, "n": len(entries),
             "outcomes": dict(statuses), "pass_rate": (statuses["pass"] / supported
                                                        if phase == "warm" and supported else None),
@@ -312,7 +351,19 @@ def summarize(rows, blocks):
                 (row["environment"]["peak_system_used_estimate_kib"] for row in entries
                  if row.get("environment", {}).get("peak_system_used_estimate_kib") is not None), default=None
             ),
-        })
+        }
+        if track == "agent":
+            evaluated = [row["agent_evaluation"] for row in entries if row["status"] != "unsupported"
+                         and "agent_evaluation" in row]
+            group["agent_metrics"] = None
+            if supported and len(evaluated) == supported:
+                tools_passed = sum(check["tool_use_correct"] for check in evaluated)
+                answers_passed = sum(check["final_answer_correct"] for check in evaluated)
+                group["agent_metrics"] = {
+                    "n": supported, "tool_use_passed": tools_passed, "tool_use_pass_rate": tools_passed / supported,
+                    "final_answer_passed": answers_passed, "final_answer_pass_rate": answers_passed / supported,
+                }
+        results.append(group)
     repeatability = {}
     for (model, _), entries in repeats.items():
         if len(entries) < 2:
@@ -359,6 +410,14 @@ def print_summary(summary):
         status = row["outcomes"]
         latency = row["wall_s"]
         score_label = f", {status.get('pass', 0)}/{n - status.get('unsupported', 0)} passed" if row["pass_rate"] is not None else ""
+        if row["track"] == "agent" and row["pass_rate"] is not None:
+            score_label = f", {status.get('pass', 0)}/{n - status.get('unsupported', 0)} end-to-end passed"
+            checks = row.get("agent_metrics")
+            if checks is None:
+                score_label += ", tool-use checks unavailable"
+            else:
+                score_label += (f", {checks['tool_use_passed']}/{checks['n']} tool use"
+                                f", {checks['final_answer_passed']}/{checks['n']} exact answers")
         timing = f", median {latency['median']:.2f}s" if latency else ""
         print(f"{row['model']} {row['phase']}/{row['track']} ({n} cases{score_label}{timing}) {status}")
     for block in summary["sustained"]:
@@ -453,6 +512,11 @@ def run_locked(args, api, models, plan, selection):
         "memory_page_bytes": os.sysconf("SC_PAGE_SIZE"),
         "storage_page_cache": "OS page cache retained and uncontrolled",
         "warm_prompt_cache": "distinct early case references; Ollama reports cached tokens when available",
+        "response_schemas": {case.id: case.response_schema for case in selection},
+        "agent_finalization": "native tool loop, then one schema-constrained answer without tools; "
+                              "all turns share the case deadline and contribute to metrics",
+        "agent_scoring": "tool-use success checks required calls, arguments, order and final state; "
+                         "exact final-answer success is reported separately; end-to-end requires both",
         "options": {key: value for key, value in vars(args).items() if key != "out"},
         "models": metadata, "plan": plan, "sha256": {str(path.relative_to(ROOT)): file_hash(path) for path in paths},
     }

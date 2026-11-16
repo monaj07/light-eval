@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.0"
+VERSION = "1.3"
 TRACKS = ("arithmetic", "structured", "agent", "vision", "context")
 
 
@@ -19,6 +19,15 @@ class Case:
     calls: tuple = ()
     state: str | None = None
     tolerance: float = 0.0
+
+    @property
+    def response_schema(self):
+        """Require an answer object without revealing the correct answer value."""
+        if self.track not in ("arithmetic", "agent", "vision", "context"):
+            return None
+        json_type = {bool: "boolean", int: "number", float: "number", str: "string"}
+        return {"type": "object", "properties": {"answer": {"type": json_type[type(self.answer)]}},
+                "required": ["answer"], "additionalProperties": False}
 
 
 def tool(name, description, fields):
@@ -84,12 +93,14 @@ def context_case(case_id, lines, position, code):
     ]
     records[position] = f"Relay TX-41 is assigned shelf {code}."
     prompt = "Use the dispatch log to find the shelf for relay TX-41.\n\n" + "\n".join(records)
-    return Case(case_id, "context", prompt + '\n\nReturn only a JSON string with the shelf ID.', code)
+    return Case(case_id, "context", prompt +
+                '\n\nReturn only a JSON object with one key "answer" containing the shelf ID as a string.', code)
 
 
 def dataset():
-    json_number = " Return only a JSON number."
-    json_string = " Return only a JSON string."
+    json_number = ' Return only a JSON object with one key "answer" containing the numerical answer.'
+    json_string = ' Return only a JSON object with one key "answer" containing the answer as a string.'
+    json_boolean = ' Return only a JSON object with one key "answer" containing a boolean (true or false).'
     cases = [
         Case("math-multiply", "arithmetic", "What is 173 × 29?" + json_number, 5017),
         Case("math-discount", "arithmetic", "Apply a 15% discount to $64. Give the final price." + json_number, 54.4),
@@ -112,19 +123,23 @@ def dataset():
         Case("json-empty", "structured", 'An inventory has A1 (expired), A2 (damaged), and A3 (missing). Return a JSON array of IDs marked "available".', []),
         Case("agent-calculate", "agent", "Use the calculator tool to find 173 × 29." + json_number, 5017,
              calls=(("calculate", {"operation": "multiply", "a": 173, "b": 29}),)),
-        Case("agent-direct", "agent", 'Reply with the JSON string "ready". Do not call any tools.', "ready"),
-        Case("agent-order", "agent", "Find Mira's order using customer handle mira, then report only its shipping status as a JSON string.", "in transit",
+        Case("agent-direct", "agent", 'Reply with only the JSON object {"answer":"ready"}. Do not call any tools.', "ready"),
+        Case("agent-order", "agent", "Find Mira's order using customer handle mira, then report its shipping status. "
+             'The "answer" value must be only the exact status field returned by the order tool, without a sentence.' + json_string, "in transit",
              calls=(("find_order", {"customer": "mira"}), ("read_order", {"order_id": "ZX-318"}))),
-        Case("agent-second-order", "agent", "Look up customer handle ren and check that customer's order. Return only its shipping status as a JSON string.", "delivered",
+        Case("agent-second-order", "agent", "Look up customer handle ren and check that customer's order. Report its shipping status. "
+             'The "answer" value must be only the exact status field returned by the order tool, without a sentence.' + json_string, "delivered",
              calls=(("find_order", {"customer": "ren"}), ("read_order", {"order_id": "BC-915"}))),
-        Case("agent-indicator", "agent", "Set the simulated indicator to green, then report its new color." + json_string, "green",
+        Case("agent-indicator", "agent", "Set the simulated indicator to green, then report its new color. "
+             'The "answer" value must contain only the color word, without a sentence.' + json_string, "green",
              calls=(("set_indicator", {"color": "green"}),), state="green"),
-        Case("agent-off", "agent", "Switch the simulated indicator off and report its new state." + json_string, "off",
+        Case("agent-off", "agent", "Switch the simulated indicator off and report its new state. "
+             'The "answer" value must contain only the state word, without a sentence.' + json_string, "off",
              calls=(("set_indicator", {"color": "off"}),), state="off"),
         Case("vision-count-small", "vision", "How many blue circles are shown?" + json_number, 3, "shapes.png"),
         Case("vision-count-mixed", "vision", "How many orange squares are shown?" + json_number, 4, "shapes.png"),
-        Case("vision-absent", "vision", "Is a green triangle present? Return only the JSON boolean true or false.", False, "objects.png"),
-        Case("vision-present", "vision", "Is a purple triangle present? Return only the JSON boolean true or false.", True, "objects.png"),
+        Case("vision-absent", "vision", "Is a green triangle present?" + json_boolean, False, "objects.png"),
+        Case("vision-present", "vision", "Is a purple triangle present?" + json_boolean, True, "objects.png"),
         Case("vision-ocr-label", "vision", "Read the large code on the label." + json_string, "K7M-42", "label.png"),
         Case("vision-ocr-badge", "vision", "Read the large code on the badge." + json_string, "RP6-31", "badge.png"),
         context_case("context-short-start", 8, 0, "X7-25"),
@@ -179,13 +194,21 @@ def equal_value(actual, expected, tolerance=0.0, *, strict_integers=False):
     return actual == expected
 
 
-def score(case, content, trace, state):
+def score_answer(case, content):
     try:
         actual = parse_json(content)
     except (ValueError, RecursionError):
         return "invalid_json"
+    if case.response_schema is not None:
+        if not isinstance(actual, dict) or actual.keys() != {"answer"}:
+            return "wrong_answer"
+        actual = actual["answer"]
     if not equal_value(actual, case.answer, case.tolerance, strict_integers=case.track == "structured"):
         return "wrong_answer"
+    return "pass"
+
+
+def score_tools(case, trace, state):
     expected_calls = [{"name": name, "arguments": args} for name, args in case.calls]
     actual_calls = [{"name": call["name"], "arguments": call["arguments"]} for call in trace]
     if not equal_value(actual_calls, expected_calls):
@@ -193,3 +216,8 @@ def score(case, content, trace, state):
     if case.state is not None and state["indicator"] != case.state:
         return "wrong_final_state"
     return "pass"
+
+
+def score(case, content, trace, state):
+    answer_status = score_answer(case, content)
+    return score_tools(case, trace, state) if answer_status == "pass" else answer_status

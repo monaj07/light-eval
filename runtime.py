@@ -1,0 +1,251 @@
+"""Loopback Ollama transport and Raspberry Pi telemetry."""
+import http.client
+import json
+import re
+import shutil
+import subprocess
+import threading
+import time
+from pathlib import Path
+
+from cases import parse_json
+
+METRIC_FIELDS = (
+    "total_duration", "load_duration", "prompt_eval_count", "prompt_eval_cached_count",
+    "prompt_eval_duration", "eval_count", "eval_duration", "done_reason",
+)
+CPU_TEMP = Path("/sys/class/thermal/thermal_zone0/temp")
+
+
+class BenchError(Exception):
+    def __init__(self, message, status="protocol_error"):
+        super().__init__(message)
+        self.status = status
+
+
+class Ollama:
+    def __init__(self, port):
+        self.port = port
+
+    def request(self, endpoint, body=None, *, timeout=15, stream=False):
+        start = time.monotonic()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=timeout)
+        expired = threading.Event()
+
+        def interrupt(sock):
+            expired.set()
+            try:
+                sock.shutdown(2)
+            except OSError:
+                pass
+
+        timer = None
+        try:
+            conn.connect()
+            remaining = timeout - (time.monotonic() - start)
+            if remaining <= 0:
+                raise TimeoutError
+            timer = threading.Timer(remaining, interrupt, args=(conn.sock,))
+            timer.daemon = True
+            timer.start()
+            data = None if body is None else json.dumps(body).encode()
+            conn.request("GET" if data is None else "POST", "/api/" + endpoint, data,
+                         {"Content-Type": "application/json"})
+            with conn.getresponse() as response:
+                if response.status != 200:
+                    detail = response.read(8192).decode(errors="replace")
+                    raise api_error(detail, response.status)
+                for line in response if stream else (response.read(),):
+                    if expired.is_set():
+                        raise TimeoutError
+                    if line.strip():
+                        try:
+                            record = parse_json(line.decode())
+                        except (ValueError, RecursionError) as exc:
+                            raise BenchError("Ollama returned invalid JSON") from exc
+                        if not isinstance(record, dict):
+                            raise BenchError("Expected an Ollama response object")
+                        if "error" in record:
+                            raise api_error(str(record["error"]))
+                        yield time.monotonic() - start, record
+                if expired.is_set():
+                    raise TimeoutError
+        except (TimeoutError, OSError, http.client.HTTPException) as exc:
+            if expired.is_set() or isinstance(exc, TimeoutError):
+                raise BenchError(f"Ollama request exceeded {timeout:.2f}s", "timeout") from exc
+            raise BenchError(str(exc), "connection_error") from exc
+        finally:
+            if timer is not None:
+                timer.cancel()
+            conn.close()
+
+    def json(self, endpoint, body=None, timeout=15):
+        rows = list(self.request(endpoint, body, timeout=timeout))
+        if not rows:
+            raise BenchError(f"Empty Ollama response from {endpoint}")
+        return rows[0][1]
+
+    def loaded(self):
+        return self.json("ps")["models"]
+
+    def unload(self, model):
+        if any(item.get("name", item.get("model")) in {model, model.removesuffix(":latest")}
+               for item in self.loaded()):
+            self.json("generate", {"model": model, "keep_alive": 0, "stream": False})
+        deadline = time.monotonic() + 10
+        while self.loaded():
+            if time.monotonic() >= deadline:
+                raise BenchError("Ollama still has resident models. Check for other Ollama clients.")
+            time.sleep(.2)
+
+    def chat(self, body, timeout, turn):
+        for elapsed, chunk in self.request("chat", body, stream=True, timeout=timeout):
+            message = chunk.get("message") or {}
+            if not isinstance(message, dict):
+                raise BenchError("Ollama returned an invalid chat message")
+            content = message.get("content") or ""
+            thinking = message.get("thinking") or ""
+            calls = message.get("tool_calls") or []
+            if not isinstance(content, str) or not isinstance(thinking, str) or not isinstance(calls, list):
+                raise BenchError("Ollama returned invalid chat fields")
+            if (content or thinking or calls) and turn["first_output_s"] is None:
+                turn["first_output_s"] = elapsed
+            if content and turn["first_text_s"] is None:
+                turn["first_text_s"] = elapsed
+            turn["content"] += content
+            turn["thinking"] += thinking
+            turn["tool_calls"].extend(calls)
+            if chunk.get("done"):
+                turn["metrics"] = {key: chunk[key] for key in METRIC_FIELDS if key in chunk}
+                turn["response_s"] = elapsed
+                return
+        raise BenchError("Ollama stream ended before a final response")
+
+
+def api_error(detail, code=None):
+    detail = detail.strip()
+    lower = detail.lower()
+    oom = ("out of memory", "unable to allocate", "failed to allocate", "more system memory",
+           "failed to reserve memory", "not enough memory", "available memory")
+    status = "out_of_memory" if any(phrase in lower for phrase in oom) else "api_error"
+    return BenchError(f"HTTP {code}: {detail}" if code is not None else detail, status)
+
+
+def read_text(path):
+    try:
+        return Path(path).read_text().strip().strip("\x00")
+    except OSError:
+        return None
+
+
+def linux_fields(path, keys):
+    raw = read_text(path) or ""
+    values = {}
+    for line in raw.splitlines():
+        fields = line.split()
+        if len(fields) >= 2 and (key := fields[0].rstrip(":")) in keys:
+            values[key] = int(fields[1])
+    return values
+
+
+def sample():
+    temperature = read_text(CPU_TEMP)
+    throttled = None
+    if shutil.which("vcgencmd"):
+        try:
+            result = subprocess.run(["vcgencmd", "get_throttled"], capture_output=True,
+                                    text=True, timeout=1, check=False)
+            match = re.search(r"throttled=(0x[0-9a-fA-F]+)", result.stdout)
+            if match:
+                throttled = int(match[1], 16)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    mem = linux_fields("/proc/meminfo", {"MemTotal", "MemAvailable", "SwapTotal", "SwapFree"})
+    vm = linux_fields("/proc/vmstat", {"pswpin", "pswpout", "oom_kill"})
+    return {"t": time.monotonic(), "cpu_c": float(temperature) / 1000 if temperature else None,
+            "throttled_bits": throttled, **mem, **vm}
+
+
+def range_stats(rows):
+    def values(key):
+        return [row[key] for row in rows if row.get(key) is not None]
+
+    temperatures = values("cpu_c")
+    flags = values("throttled_bits")
+    active_flags = 0
+    for flag in flags:
+        active_flags |= flag & 0xffff
+    new_sticky = (flags[-1] & ~flags[0]) >> 16 if flags else None
+    available = values("MemAvailable")
+    total = values("MemTotal")
+
+    def delta(key):
+        points = values(key)
+        return points[-1] - points[0] if len(points) >= 2 else None
+
+    return {
+        "samples": len(rows),
+        "start_cpu_c": temperatures[0] if temperatures else None,
+        "peak_cpu_c": max(temperatures, default=None),
+        "end_cpu_c": temperatures[-1] if temperatures else None,
+        "min_mem_available_kib": min(available, default=None),
+        "peak_system_used_estimate_kib": total[0] - min(available) if total and available else None,
+        "swap_in_pages": delta("pswpin"), "swap_out_pages": delta("pswpout"),
+        "system_oom_kills": delta("oom_kill"),
+        "active_throttling_bits_or": active_flags if flags else None,
+        "new_throttling_history_bits": new_sticky,
+    }
+
+
+class Telemetry:
+    def __init__(self, output, interval):
+        self.output = output
+        self.interval = interval
+        self.rows = []
+        self.lock = threading.Lock()
+        self.stop = threading.Event()
+        self.thread = threading.Thread(target=self.poll, daemon=True)
+
+    def __enter__(self):
+        self.take()
+        self.thread.start()
+        return self
+
+    def __exit__(self, *_):
+        self.stop.set()
+        self.thread.join()
+
+    def take(self):
+        with self.lock:
+            row = sample()
+            self.rows.append(row)
+            self.output.write(json.dumps(row) + "\n")
+            self.output.flush()
+        return row
+
+    def poll(self):
+        while not self.stop.wait(self.interval):
+            self.take()
+
+    def stats(self, start):
+        end = self.take()
+        with self.lock:
+            subset = [row for row in self.rows if start["t"] <= row["t"] <= end["t"]]
+        return range_stats(subset)
+
+    def gate(self, band, wait):
+        if band is None:
+            return self.take()
+        low, high = band
+        deadline = time.monotonic() + wait
+        while True:
+            row = self.take()
+            temp, flags = row["cpu_c"], row["throttled_bits"]
+            if temp is None or flags is None:
+                raise BenchError("Pi temperature or vcgencmd unavailable. Use --no-thermal-gate for a smoke run.")
+            if low <= temp <= high and flags & 0xffff == 0:
+                return row
+            if time.monotonic() >= deadline:
+                raise BenchError(f"Temperature gate timed out at {temp:.1f}°C (band {low:.1f}–{high:.1f}°C, flags {flags:#x}).",
+                                 "thermal_gate_timeout")
+            time.sleep(min(2, max(0, deadline - time.monotonic())))

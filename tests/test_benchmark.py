@@ -2,6 +2,7 @@ import base64
 import io
 import json
 import random
+import re
 import subprocess
 import sys
 import tempfile
@@ -17,8 +18,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from cases import ROOT, Case, dataset, dispatch, score, score_tools
-from light_eval import COLD, DECODE_PROMPT, WARMUP, build_parser, print_summary, rounds, run_case, summarize
-from runtime import BenchError, Ollama, Telemetry, range_stats
+from light_eval import COLD, DECODE_PROMPT, WARMUP, build_parser, print_summary, rounds, run_case, run_locked, run_slot, summarize
+from runtime import BenchError, Ollama, Telemetry, mac_memory, mac_total_memory_kib, range_stats
 
 CASES = {case.prompt: case for case in dataset()}
 
@@ -80,7 +81,7 @@ class Handler(BaseHTTPRequestHandler):
             assert base64.b64decode(images[0]) == (ROOT / "fixtures" / case.image).read_bytes()
         if case and case.track == "agent":
             if "tools" in request:
-                assert len(request["tools"]) == 4
+                assert request["tools"] == case.tools
             else:
                 assert request.get("format") == case.response_schema
             results = [msg for msg in request["messages"] if msg["role"] == "tool"]
@@ -147,6 +148,8 @@ class BenchmarkTest(unittest.TestCase):
                 value = {"answer": case.answer} if case.id in expected_types else case.answer
                 result, requests = self.scripted_case(case, [{"content": json.dumps(value)}])
                 body = requests[0][0]
+                if case.track == "context":
+                    self.assertFalse(body["truncate"])
                 if case.id in expected_types:
                     expected = {"type": "object", "properties": {"answer": {"type": expected_types[case.id]}},
                                 "required": ["answer"], "additionalProperties": False}
@@ -156,6 +159,20 @@ class BenchmarkTest(unittest.TestCase):
                     self.assertNotIn("format", body)
                     self.assertIsNone(result["response_schema"])
                 self.assertEqual(result["status"], "complete" if case.track == "performance" else "pass")
+
+    def test_native_mac_backend_and_explicit_cpu_mode(self):
+        case = next(case for case in dataset() if case.id == "math-multiply")
+        reply = {"content": '{"answer":5017}'}
+        with patch("light_eval.platform.system", return_value="Darwin"):
+            _, native = self.scripted_case(case, [reply])
+            _, cpu = self.scripted_case(case, [reply], "--cpu-only")
+        with patch("light_eval.platform.system", return_value="Linux"):
+            _, pi = self.scripted_case(case, [reply])
+        self.assertNotIn("num_gpu", native[0][0]["options"])
+        self.assertEqual(cpu[0][0]["options"]["num_gpu"], 0)
+        self.assertEqual(pi[0][0]["options"]["num_gpu"], 0)
+        self.assertEqual(native[0][0]["messages"], cpu[0][0]["messages"])
+        self.assertEqual(native[0][0]["format"], cpu[0][0]["format"])
 
     def test_agent_tools_then_constrained_final_answer(self):
         case = next(case for case in dataset() if case.id == "agent-second-order")
@@ -328,6 +345,133 @@ class BenchmarkTest(unittest.TestCase):
         final_tool_results = [message for message in requests[-1][0]["messages"] if message["role"] == "tool"]
         self.assertEqual(json.loads(final_tool_results[-1]["content"]), {"status": "awaiting collection"})
 
+    def test_expanded_suite_preserves_controls_and_fits_tool_budgets(self):
+        cases = dataset()
+        self.assertEqual(cases, dataset())
+        self.assertEqual(len(cases), len({case.id for case in cases}))
+        self.assertEqual(Counter(case.track for case in cases),
+                         {"arithmetic": 8, "structured": 6, "agent": 12, "vision": 6, "context": 13})
+        self.assertEqual(Counter(case.track for case in cases if case.difficulty == "challenge"),
+                         {"agent": 6, "context": 8})
+        args = build_parser().parse_args(["run", "--models", "fixture"])
+        for case in cases:
+            if case.track != "agent":
+                continue
+            with self.subTest(case=case.id):
+                offered = {tool["function"]["name"] for tool in case.tools}
+                self.assertTrue(all(name in offered for name, _ in case.calls))
+                self.assertLessEqual(len(case.calls), args.tool_calls)
+                self.assertLessEqual(len(case.calls), args.tool_rounds)
+                if case.difficulty == "control":
+                    self.assertEqual(len(case.tools), 4)
+                replies = [{"tool_calls": [{"function": {"name": name, "arguments": values}}]}
+                           for name, values in case.calls]
+                replies += [{"content": json.dumps({"answer": case.answer})}] * 2
+                result, _ = self.scripted_case(case, replies)
+                self.assertEqual(result["status"], "pass")
+                self.assertTrue(result["agent_evaluation"]["tool_use_correct"])
+                if case.state is not None:
+                    self.assertEqual(result["final_state"]["indicator"], case.state)
+
+    def test_advanced_agent_oracles_and_state_reset(self):
+        cases = {case.id: case for case in dataset()}
+        arithmetic = cases["agent-chain-arithmetic"]
+        state = {"indicator": arithmetic.initial_state}
+        values = [dispatch(name, args, state) for name, args in arithmetic.calls]
+        self.assertEqual(arithmetic.calls[1][1]["a"], values[0])
+        self.assertEqual(arithmetic.calls[2][1]["a"], values[1])
+        self.assertEqual(arithmetic.answer, values[-1])
+        for case_id in ("agent-status-branch", "agent-cross-order"):
+            case = cases[case_id]
+            state = {"indicator": case.initial_state}
+            results = [dispatch(name, args, state) for name, args in case.calls]
+            statuses = [result["status"] for result in results if isinstance(result, dict) and "status" in result]
+            wanted = ("off" if statuses[0] == "delivered" else "green") if case_id == "agent-status-branch" else (
+                "green" if all(status == "delivered" for status in statuses) else "red")
+            self.assertEqual(state["indicator"], wanted)
+            self.assertEqual(case.answer, wanted)
+        missing = cases["agent-missing-customer"]
+        self.assertIsNone(dispatch(*missing.calls[0], {"indicator": "red"})["order_id"])
+        self.assertEqual(len(missing.calls), 1)
+        noop = cases["agent-no-op-state"]
+        self.assertEqual(noop.initial_state, "green")
+        self.assertEqual(noop.calls, (("read_indicator", {}),))
+        state = {"indicator": "red"}
+        self.assertEqual(dispatch("read_indicator", {}, state), {"indicator": "red"})
+        self.assertEqual(state, {"indicator": "red"})
+
+    def test_context_challenge_answers_from_independent_log_queries(self):
+        for case in dataset():
+            if case.track != "context" or case.difficulty != "challenge":
+                continue
+            with self.subTest(case=case.id):
+                question, log = case.prompt.split("\n\nDispatch log (data records only):\n")
+                lines = log.split("\n\nReturn only", 1)[0].splitlines()
+                expected_count = 16 if "-short-" in case.id else 96
+                self.assertEqual(len(lines), expected_count)
+                records = []
+                for line in lines:
+                    parts = line.split()
+                    fields = dict(part.split("=", 1) for part in parts[1:] if "=" in part)
+                    records.append((parts[0], fields))
+                    if "shelf" in fields:
+                        self.assertRegex(fields["shelf"], r"^S\d{3}$")
+                if case.id.endswith("revision"):
+                    target = re.search(r"exact relay ID (TX-\d+)", question)[1]
+                    matching = [fields for kind, fields in records if kind == "ASSIGN" and fields["relay"] == target]
+                    approved = sorted((row for row in matching if row["state"] == "approved"),
+                                      key=lambda row: int(row["revision"]))
+                    answer = approved[-1]["shelf"]
+                    self.assertNotEqual(approved[-2]["shelf"], answer)
+                    self.assertTrue(any(int(row["revision"]) > int(approved[-1]["revision"]) for row in matching))
+                elif case.id.endswith("join"):
+                    alias = re.search(r"alias (pump-\d+)", question)[1]
+                    aliases = {row["name"]: row["relay"] for kind, row in records if kind == "ALIAS"}
+                    relays = {row["id"]: row["route"] for kind, row in records if kind == "RELAY"}
+                    routes = {row["id"]: row["shelf"] for kind, row in records if kind == "ROUTE"}
+                    answer = routes[relays[aliases[alias]]]
+                    self.assertIn(alias + "0", aliases)
+                elif case.id.endswith("filter"):
+                    eligible = [row for kind, row in records if kind == "NODE" and row["zone"] == "Z4"
+                                and row["state"] == "active" and int(row["temp"]) >= 70]
+                    answer = len(eligible)
+                    self.assertTrue(any(row["temp"] == "70" for row in eligible))
+                    self.assertTrue(any(row["zone"] == "Z40" for _, row in records))
+                else:
+                    target = re.search(r"exact relay ID (TX-\d+)", question)[1]
+                    assignments = [row for kind, row in records if kind == "ASSIGN" and row["relay"] == target]
+                    self.assertEqual(assignments, [])
+                    self.assertTrue(any(kind == "COMMENT" and row["relay"] == target for kind, row in records))
+                    answer = "not found"
+                self.assertEqual(case.answer, answer)
+                self.assertEqual(score(case, json.dumps({"answer": answer}), [], {}), "pass")
+
+    def test_unadvertised_tool_is_rejected_and_call_ids_are_preserved(self):
+        direct = next(case for case in dataset() if case.id == "agent-direct")
+        result, _ = self.scripted_case(direct, [{"tool_calls": [
+            {"function": {"name": "read_indicator", "arguments": {}}}]}])
+        self.assertEqual(result["status"], "invalid_tool_call")
+        self.assertFalse(result["agent_evaluation"]["tool_use_correct"])
+        case = next(case for case in dataset() if case.id == "agent-calculate")
+        name, args = case.calls[0]
+        result, requests = self.scripted_case(case, [
+            {"tool_calls": [{"id": "call-test-1", "function": {"name": name, "arguments": args}}]},
+            {"content": '{"answer":5017}'}, {"content": '{"answer":5017}'}])
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(requests[1][0]["messages"][-1]["tool_call_id"], "call-test-1")
+
+    def test_summary_reports_controls_and_challenges_separately(self):
+        rows = [{"model": "fixture", "phase": "warm", "track": "context", "round": 1,
+                 "case": "context-short-" + level, "difficulty": level, "status": status}
+                for level, status in (("control", "pass"), ("challenge", "wrong_answer"))]
+        summary = summarize(rows, [])
+        levels = summary["groups"][0]["by_difficulty"]
+        self.assertEqual(levels["control"]["pass_rate"], 1.0)
+        self.assertEqual(levels["challenge"]["pass_rate"], 0.0)
+        with patch("sys.stdout", new_callable=io.StringIO) as output:
+            print_summary(summary)
+        self.assertIn("control 1/1, challenge 0/1", output.getvalue())
+
     def test_constrained_answers_still_validate_values_and_failures(self):
         case = next(case for case in dataset() if case.id == "math-multiply")
         for reply, expected in (
@@ -365,13 +509,15 @@ class BenchmarkTest(unittest.TestCase):
 
     def test_agent_final_answer_shares_case_deadline(self):
         case = next(case for case in dataset() if case.id == "agent-direct")
-        with patch("light_eval.time.monotonic", side_effect=[0, 1, 91, 92]):
-            result, requests = self.scripted_case(case, [{"content": "ready"}])
-        self.assertEqual(result["status"], "timeout")
-        self.assertEqual(len(requests), 1)
-        self.assertEqual(requests[0][1], 89)
-        self.assertEqual(result["agent_evaluation"],
-                         {"tool_use_correct": True, "final_answer_correct": False})
+        for budget, options in ((600, ()), (90, ("--timeout", "90"))):
+            with self.subTest(budget=budget), patch(
+                    "light_eval.time.monotonic", side_effect=[0, 1, budget + 1, budget + 2]):
+                result, requests = self.scripted_case(case, [{"content": "ready"}], *options)
+            self.assertEqual(result["status"], "timeout")
+            self.assertEqual(len(requests), 1)
+            self.assertEqual(requests[0][1], budget - 1)
+            self.assertEqual(result["agent_evaluation"],
+                             {"tool_use_correct": True, "final_answer_correct": False})
 
     def test_agent_tool_budget_still_applies(self):
         case = next(case for case in dataset() if case.id == "agent-second-order")
@@ -461,6 +607,128 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(stats["active_throttling_bits_or"], 4)
         self.assertEqual(stats["new_throttling_history_bits"], 4)
 
+    def test_macos_memory_and_swap_units(self):
+        vm = ("Mach Virtual Memory Statistics: (page size of 16384 bytes)\n"
+              "Pages free: 4.\nPages wired down: 10.\nPages occupied by compressor: 3.\n"
+              "Swapins: 5.\nSwapouts: 7.\n")
+        outputs = {("vm_stat",): vm, ("sysctl", "-n", "hw.memsize"): "8589934592\n",
+                   ("sysctl", "-n", "vm.swapusage"): "total = 4096.00M used = 1536.50M free = 2559.50M",
+                   ("sysctl", "-n", "kern.memorystatus_vm_pressure_level"): "1"}
+        mac_total_memory_kib.cache_clear()
+        self.addCleanup(mac_total_memory_kib.cache_clear)
+        with patch("runtime.command_output", side_effect=lambda args: outputs[tuple(args)]):
+            row = mac_memory()
+        self.assertEqual(row["MemTotal"], 8 * 1024**2)
+        self.assertEqual(row["MemFree"], 64)
+        self.assertEqual(row["memory_wired_kib"], 160)
+        self.assertEqual(row["memory_compressed_kib"], 48)
+        self.assertEqual(row["memory_pressure_level"], 1)
+        self.assertEqual(row["SwapUsed"], 1536.5 * 1024)
+        self.assertEqual((row["pswpin"], row["pswpout"]), (5, 7))
+        self.assertNotIn("MemAvailable", row)
+        later = {**row, "pswpin": 7, "pswpout": 10, "memory_compressed_kib": 80}
+        stats = range_stats([row, later])
+        self.assertEqual(stats["swap_in_mib"], 2 * 16384 / 2**20)
+        self.assertEqual(stats["swap_out_mib"], 3 * 16384 / 2**20)
+        self.assertEqual(stats["peak_compressed_memory_kib"], 80)
+        self.assertIsNone(stats["peak_system_used_estimate_kib"])
+
+    def test_memory_telemetry_is_passive_even_when_pressure_and_swap_increase(self):
+        warning = {"t": 0, "memory_pressure_level": 2, "pswpout": 100,
+                   "memory_page_bytes": 16384}
+        later = {**warning, "t": 1, "pswpout": 110}
+        with patch("runtime.sample", side_effect=[warning, later]):
+            with Telemetry(io.StringIO(), 1000) as monitor:
+                stats = monitor.stats(warning)
+        self.assertEqual(stats["swap_out_mib"], 10 * 16384 / 2**20)
+
+    def test_all_warm_cases_share_one_load_and_unload_after_the_suite(self):
+        candidates = dataset()
+        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm", "--no-thermal-gate"])
+        api, monitor = Mock(), Mock()
+        metadata = {"digest": "fixture-digest", "capabilities": ["completion", "tools", "vision"]}
+        resident = {"digest": "fixture-digest"}
+        live, prompts, events = [], [], []
+        api.loaded.side_effect = lambda: live[:]
+        api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
+
+        def unload(model):
+            if live:
+                events.append("unload")
+            live.clear()
+            prompts.clear()
+
+        def generate(api, args, model, metadata, case, label, images, **kwargs):
+            if case is WARMUP:
+                self.assertEqual(live, [])
+                self.assertEqual(prompts, [])
+                live.append(resident)
+                prompts.append("warmup")
+                events.append("warmup")
+            else:
+                self.assertEqual(live, [resident])
+                self.assertEqual(prompts[0], "warmup")
+                prompts.append(case.id)
+                events.append(case.id)
+            return {"status": "complete" if case is WARMUP else "pass"}
+
+        api.unload.side_effect = unload
+        monitor.take.return_value = monitor.gate.return_value = {"t": 0}
+        monitor.stats.return_value = {"system_oom_kills": None}
+        records, blocks = io.StringIO(), io.StringIO()
+        with patch("light_eval.run_case", side_effect=generate), patch("sys.stdout", new_callable=io.StringIO):
+            run_slot(api, args, monitor, None,
+                     {"round": 1, "position": 1, "model": "fixture:latest", "metadata": metadata},
+                     candidates, {}, records, blocks)
+        self.assertEqual(events, ["warmup", *[case.id for case in candidates], "unload"])
+        self.assertEqual(len(records.getvalue().splitlines()), 45)
+        self.assertEqual(json.loads(blocks.getvalue())["warmups"], 1)
+        self.assertEqual(live, [])
+
+    def test_oom_recovery_prewarms_next_case_despite_stale_residency(self):
+        candidates = [case for case in dataset() if case.track == "arithmetic"][:2]
+        for failed_index in (0, 1):
+            with self.subTest(failed_index=failed_index):
+                args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
+                api, monitor = Mock(), Mock()
+                metadata = {"digest": "fixture-digest", "capabilities": ["completion"]}
+                live, events = [], []
+                api.loaded.side_effect = lambda: live[:]
+                api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
+
+                def unload(model):
+                    if live:
+                        events.append("unload")
+                    live.clear()
+
+                def generate(api, args, model, metadata, case, label, images, **kwargs):
+                    if case is WARMUP:
+                        self.assertEqual(live, [])
+                        live.append({"digest": "fixture-digest"})
+                        events.append("warmup")
+                        return {"status": "complete"}
+                    self.assertTrue(live)
+                    events.append(case.id)
+                    # Keep /api/ps stale, as it was after the Pi runner crash.
+                    return {"status": "out_of_memory" if case is candidates[failed_index] else "pass"}
+
+                api.unload.side_effect = unload
+                monitor.take.return_value = monitor.gate.return_value = {"t": 0}
+                monitor.stats.return_value = {"system_oom_kills": None}
+                records, blocks = io.StringIO(), io.StringIO()
+                with patch("light_eval.run_case", side_effect=generate), patch("sys.stdout", new_callable=io.StringIO):
+                    run_slot(api, args, monitor, None,
+                             {"round": 1, "position": 1, "model": "fixture:latest", "metadata": metadata},
+                             candidates, {}, records, blocks)
+                expected = ["warmup", candidates[0].id]
+                if failed_index == 0:
+                    expected += ["unload", "warmup"]
+                self.assertEqual(events, [*expected, candidates[1].id, "unload"])
+                rows = [json.loads(line) for line in records.getvalue().splitlines()]
+                self.assertEqual(len(rows), 2)
+                self.assertEqual(rows[failed_index]["status"], "out_of_memory")
+                self.assertEqual(json.loads(blocks.getvalue())["warmups"], 2 if failed_index == 0 else 1)
+
     def test_gate_waits_for_temperature_and_active_flags(self):
         samples = [
             {"cpu_c": 64, "throttled_bits": 0},
@@ -489,34 +757,45 @@ class BenchmarkTest(unittest.TestCase):
                 self.assertEqual(caught.exception.status, "timeout")
                 out = Path(tmp) / "eval"
                 command = [sys.executable, str(ROOT / "light_eval.py"), "run", "--models", "alpha", "beta",
-                           "--port", port, "--no-thermal-gate", "--sustain-seconds", ".025", "--out", str(out)]
+                           "--port", port, "--no-thermal-gate", "--cpu-only", "--sustain-seconds", ".025", "--out", str(out)]
                 result = subprocess.run(command, capture_output=True, text=True, timeout=25, check=False)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 manifest = json.loads((out / "manifest.json").read_text())
                 self.assertEqual(manifest["status"], "complete")
-                self.assertEqual(manifest["suite_version"], "1.3")
+                self.assertEqual(manifest["suite_version"], "1.4.5")
+                blocks = [json.loads(line) for line in (out / "blocks.jsonl").read_text().splitlines()]
+                self.assertTrue(all(block["warmups"] == 1 for block in blocks if block["phase"] == "warm"))
+                self.assertEqual(manifest["inference_options"], {"device": "cpu", "num_batch": 64})
                 self.assertEqual(manifest["response_schemas"]["math-multiply"],
                                  {"type": "object", "properties": {"answer": {"type": "number"}},
                                   "required": ["answer"], "additionalProperties": False})
                 self.assertIsNone(manifest["response_schemas"]["json-shipment"])
                 self.assertIn("schema-constrained", manifest["agent_finalization"])
+                self.assertEqual(manifest["case_metadata"]["agent-cross-order"]["difficulty"], "challenge")
+                self.assertIn("read_indicator", manifest["case_metadata"]["agent-no-op-state"]["tools"])
+                self.assertNotIn("read_indicator", manifest["case_metadata"]["agent-direct"]["tools"])
                 self.assertIsNone(manifest["temperature_band_c"])
                 self.assertEqual(len(manifest["plan"]), 2)
                 self.assertEqual(server.loaded, [])
                 self.assertTrue(all(req["options"]["num_gpu"] == 0 for req in server.requests))
+                self.assertTrue(all(req["options"]["num_batch"] == 64 for req in server.requests))
+                decode_inputs = [req["messages"][0]["content"] for req in server.requests
+                                 if req["messages"][0]["content"].endswith(DECODE_PROMPT)]
+                self.assertGreaterEqual(len(decode_inputs), 2)
+                self.assertEqual(len(set(decode_inputs)), 1)
                 self.assertTrue(all(req["think"] is False for req in server.requests))
                 summary = json.loads((out / "summary.json").read_text())
                 rows = {(r["model"], r["phase"], r["track"]): r for r in summary["groups"]}
                 self.assertEqual(rows["alpha:latest", "warm", "agent"]["pass_rate"], 1.0)
                 self.assertEqual(rows["alpha:latest", "warm", "agent"]["agent_metrics"], {
-                    "n": 12, "tool_use_passed": 12, "tool_use_pass_rate": 1.0,
-                    "final_answer_passed": 12, "final_answer_pass_rate": 1.0,
+                    "n": 24, "tool_use_passed": 24, "tool_use_pass_rate": 1.0,
+                    "final_answer_passed": 24, "final_answer_pass_rate": 1.0,
                 })
                 self.assertEqual(rows["alpha:latest", "warm", "vision"]["n"], 12)
                 self.assertEqual(rows["beta:latest", "warm", "vision"]["outcomes"], {"unsupported": 12})
-                self.assertEqual(rows["alpha:latest", "warm", "context-long"]["outcomes"], {"pass": 6})
+                self.assertEqual(rows["alpha:latest", "warm", "context-long"]["outcomes"], {"pass": 14})
                 self.assertEqual(rows["alpha:latest", "cold", "performance"]["load_s"]["median"], .05)
-                self.assertEqual(summary["repeatability"]["alpha:latest"]["raw_output_stable"], 31)
+                self.assertEqual(summary["repeatability"]["alpha:latest"]["raw_output_stable"], 45)
                 self.assertEqual(len(summary["sustained"]), 4)
                 self.assertTrue(all(interval["completed_requests"] > 0 for interval in summary["sustained"]))
                 report = subprocess.run([sys.executable, str(ROOT / "light_eval.py"), "report", str(out)],

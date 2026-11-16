@@ -1,12 +1,14 @@
 """Versioned fixtures and deterministic scoring for Light Eval."""
 import json
 import math
+import random
 from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.3"
+VERSION = "1.4.5"
 TRACKS = ("arithmetic", "structured", "agent", "vision", "context")
+DEFAULT_TOOL_NAMES = ("calculate", "find_order", "read_order", "set_indicator")
 
 
 @dataclass(frozen=True)
@@ -19,6 +21,13 @@ class Case:
     calls: tuple = ()
     state: str | None = None
     tolerance: float = 0.0
+    difficulty: str = "control"
+    initial_state: str = "red"
+    tool_names: tuple = DEFAULT_TOOL_NAMES
+
+    @property
+    def tools(self):
+        return [item for item in TOOLS if item["function"]["name"] in self.tool_names]
 
     @property
     def response_schema(self):
@@ -49,6 +58,7 @@ TOOLS = [
     tool("set_indicator", "Set the simulated indicator to a color.", {
         "color": {"type": "string", "enum": ["red", "green", "off"]},
     }),
+    tool("read_indicator", "Read the current color of the simulated indicator without changing it.", {}),
 ]
 TOOL_PARAMETERS = {item["function"]["name"]: item["function"]["parameters"] for item in TOOLS}
 CUSTOMERS = {"mira": "ZX-318", "ren": "BC-915"}
@@ -82,6 +92,8 @@ def dispatch(name, args, state):
         return {"order_id": CUSTOMERS.get(args["customer"])}
     if name == "read_order":
         return {"status": ORDERS.get(args["order_id"])}
+    if name == "read_indicator":
+        return {"indicator": state["indicator"]}
     state["indicator"] = args["color"]
     return {"indicator": state["indicator"]}
 
@@ -95,6 +107,110 @@ def context_case(case_id, lines, position, code):
     prompt = "Use the dispatch log to find the shelf for relay TX-41.\n\n" + "\n".join(records)
     return Case(case_id, "context", prompt +
                 '\n\nReturn only a JSON object with one key "answer" containing the shelf ID as a string.', code)
+
+
+def challenge_agent_cases(json_number, json_string):
+    state_tools = DEFAULT_TOOL_NAMES + ("read_indicator",)
+    word_only = ' The "answer" value must contain only the resulting color word, without a sentence.'
+    return [
+        Case("agent-chain-arithmetic", "agent",
+             "Use the calculator once for each step, in this order: multiply 37 by 19; "
+             "add 86 to that result; divide that new result by 3. Report the final value." + json_number,
+             263, calls=(("calculate", {"operation": "multiply", "a": 37, "b": 19}),
+                         ("calculate", {"operation": "add", "a": 703, "b": 86}),
+                         ("calculate", {"operation": "divide", "a": 789, "b": 3})), difficulty="challenge"),
+        Case("agent-status-branch", "agent",
+             "Look up customer mira and read that order. If its status is delivered, set the indicator off; "
+             "otherwise set it green. Perform only these necessary calls in this order and report its new color."
+             + word_only + json_string, "green",
+             calls=(("find_order", {"customer": "mira"}), ("read_order", {"order_id": "ZX-318"}),
+                    ("set_indicator", {"color": "green"})), state="green", difficulty="challenge"),
+        Case("agent-missing-customer", "agent",
+             'Look up customer sol. If the returned order_id is null, stop and return "not found" as the answer value; '
+             "do not read an order or change any state. Otherwise read the order and report only its exact status."
+             + json_string, "not found", calls=(("find_order", {"customer": "sol"}),), difficulty="challenge"),
+        Case("agent-read-before-write", "agent",
+             "Read the indicator. If it is red, set it green; otherwise leave it unchanged. "
+             "Then read it again to verify the final color and report that color. Use exactly this sequence."
+             + word_only + json_string, "green",
+             calls=(("read_indicator", {}), ("set_indicator", {"color": "green"}), ("read_indicator", {})),
+             state="green", difficulty="challenge", tool_names=state_tools),
+        Case("agent-no-op-state", "agent",
+             "Ensure the indicator is green with the fewest calls: read it once and set it only if it is not "
+             "already green. Report the resulting color. Do not perform a redundant write or a second read."
+             + word_only + json_string, "green", calls=(("read_indicator", {}),), state="green",
+             difficulty="challenge", initial_state="green", tool_names=state_tools),
+        Case("agent-cross-order", "agent",
+             "In order, look up customer mira and read that order, then look up customer ren and read that order. "
+             "If both orders are delivered, set the indicator green; otherwise set it red. "
+             "Then read the indicator once to verify the result. Perform only this sequence and report the verified color."
+             + word_only + json_string, "red",
+             calls=(("find_order", {"customer": "mira"}), ("read_order", {"order_id": "ZX-318"}),
+                    ("find_order", {"customer": "ren"}), ("read_order", {"order_id": "BC-915"}),
+                    ("set_indicator", {"color": "red"}), ("read_indicator", {})), state="red",
+             difficulty="challenge", tool_names=state_tools),
+    ]
+
+
+def challenge_context_case(size, scenario):
+    """Fixed, model-independent fixtures; no runtime answer selection or tuning."""
+    case_id = f"context-{size}-{scenario}"
+    rng = random.Random(case_id)
+    count = 16 if size == "short" else 96
+    target = f"TX-{rng.randrange(20, 90)}"
+    records = []
+    if scenario == "revision":
+        for index in range(count - 5):
+            records.append(f"ASSIGN relay={target}{index % 9} revision={index + 1} state=approved shelf=S{index + 100}")
+        versions = [(1, "approved"), (4, "approved"), (7, "approved"), (9, "pending"), (10, "cancelled")]
+        shelves = rng.sample(range(100, 999), len(versions))
+        updates = [(revision, state, f"S{shelf}") for (revision, state), shelf in zip(versions, shelves)]
+        records += [f"ASSIGN relay={target} revision={rev} state={state} shelf={shelf}"
+                    for rev, state, shelf in updates]
+        answer = max((row for row in updates if row[1] == "approved"), key=lambda row: row[0])[2]
+        question = (f"For the exact relay ID {target}, find the shelf in its highest numeric revision whose "
+                    "state is approved. Ignore pending and cancelled revisions. Text order is not revision order.")
+    elif scenario == "join":
+        alias = f"pump-{rng.randrange(100, 999)}"
+        route = f"RT-{rng.randrange(100, 999)}"
+        answer = f"S{rng.randrange(100, 999)}"
+        for index in range(count - 5):
+            suffix = index + 1
+            if index % 3 == 0:
+                records.append(f"ALIAS name={alias}{suffix} relay={target}{suffix}")
+            elif index % 3 == 1:
+                records.append(f"RELAY id={target}{suffix} route={route}{suffix}")
+            else:
+                records.append(f"ROUTE id={route}{suffix} shelf=S{rng.randrange(100, 999)}")
+        other_shelf = f"S{100 + (int(answer[1:]) - 100 + 371) % 899}"
+        records += [f"ALIAS name={alias} relay={target}", f"RELAY id={target} route={route}",
+                    f"ROUTE id={route} shelf={answer}", f"ALIAS name={alias}0 relay=UNRELATED",
+                    f"ROUTE id={route}0 shelf={other_shelf}"]
+        question = (f"Find the shelf for alias {alias}. Follow ALIAS to RELAY to ROUTE, matching complete "
+                    "identifiers exactly; similarly prefixed names are different identifiers.")
+    elif scenario == "filter":
+        entries = [("Z4", "active", 70), ("Z4", "active", 69),
+                   ("Z4", "inactive", 80), ("Z40", "active", 80)]
+        entries += [(rng.choice(("Z4", "Z40", "Z2")), rng.choice(("active", "inactive")), rng.randrange(55, 86))
+                    for _ in range(count - len(entries))]
+        records = [f"NODE id=N{index:03d} zone={zone} state={state} temp={temp}"
+                   for index, (zone, state, temp) in enumerate(entries)]
+        answer = sum(zone == "Z4" and state == "active" and temp >= 70 for zone, state, temp in entries)
+        question = ("Count NODE records whose zone is exactly Z4, whose state is exactly active, and whose "
+                    "temp is at least 70. Exclude Z40, inactive records, and temperatures below 70.")
+    elif scenario == "absence":
+        records = [f"ASSIGN relay={target}{index % 9} shelf=S{index + 100}" for index in range(count - 1)]
+        records.append(f"COMMENT relay={target} shelf=S901 (not an assignment)")
+        answer = "not found"
+        question = (f"What shelf is assigned to the exact relay ID {target}? Use only ASSIGN records; "
+                    'COMMENT records are not evidence. Match complete IDs exactly. If no assignment exists, answer "not found".')
+    else:
+        raise ValueError(f"Unknown context scenario: {scenario}")
+    rng.shuffle(records)
+    value_type = "number" if scenario == "filter" else "string"
+    prompt = (question + "\n\nDispatch log (data records only):\n" + "\n".join(records) +
+              f'\n\nReturn only a JSON object with one key "answer" containing the answer as a {value_type}.')
+    return Case(case_id, "context", prompt, answer, difficulty="challenge")
 
 
 def dataset():
@@ -147,6 +263,9 @@ def dataset():
         context_case("context-long-start", 90, 4, "Q4-12"),
         context_case("context-long-middle", 90, 44, "Y3-26"),
         context_case("context-long-end", 90, 84, "W8-54"),
+        *challenge_agent_cases(json_number, json_string),
+        *(challenge_context_case(size, scenario) for size in ("short", "long")
+          for scenario in ("revision", "join", "filter", "absence")),
     ]
     return cases
 

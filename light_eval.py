@@ -17,10 +17,12 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from cases import ROOT, TOOLS, TRACKS, VERSION, Case, dataset, dispatch, parse_json, score, score_answer, score_tools
+from cases import ROOT, TRACKS, VERSION, Case, dataset, dispatch, parse_json, score, score_answer, score_tools
 from runtime import BenchError, Ollama, Telemetry, read_text
 
 PHASES = ("cold", "warm", "sustained")
+# Keep prompt-processing workspace small without shortening the context.
+INFERENCE_OPTIONS = {"num_batch": 64}
 COLD = Case("cold-request", "performance", 'Reply with only the JSON string "ready".', None)
 WARMUP = Case("warmup", "performance", "Write a short sentence about a lighthouse.", None)
 DECODE_PROMPT = (
@@ -100,8 +102,10 @@ def decode_rate(turn):
 
 
 def run_case(api, args, model, metadata, case, label, images, *, cap=None):
-    options = dict(num_ctx=args.context, num_thread=args.threads, num_gpu=0, temperature=0,
+    options = dict(INFERENCE_OPTIONS, num_ctx=args.context, num_thread=args.threads, temperature=0,
                    num_predict=cap or args.max_tokens, seed=args.seed)
+    if args.cpu_only or platform.system() != "Darwin":
+        options["num_gpu"] = 0
     if case.track == "agent" and "tools" not in metadata["capabilities"]:
         return {"status": "unsupported", "reason": "tools capability absent"}
     if case.track == "vision" and "vision" not in metadata["capabilities"]:
@@ -118,11 +122,13 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
     if schema is not None and case.track != "agent":
         body["format"] = schema
     if case.track == "agent":
-        body["tools"] = TOOLS
+        body["tools"] = case.tools
+    if case.track == "context":
+        body["truncate"] = False
     if metadata["thinking_requested"] is not None:
         body["think"] = metadata["thinking_requested"]
     trace, turns = [], []
-    state = {"indicator": "red"}
+    state = {"indicator": case.initial_state}
     started = time.monotonic()
     deadline = started + args.timeout
     status, reason = "protocol_error", None
@@ -180,6 +186,8 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
             for call in calls:
                 try:
                     name = call["function"]["name"]
+                    if name not in case.tool_names:
+                        raise ValueError("Tool is not available in this case")
                     values = call["function"]["arguments"]
                     if isinstance(values, str):
                         values = parse_json(values)
@@ -187,8 +195,10 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
                 except (ValueError, KeyError, TypeError, OverflowError, RecursionError) as exc:
                     raise BenchError(f"Invalid tool call: {exc}", "invalid_tool_call") from exc
                 trace.append({"name": name, "arguments": values, "result": result})
-                body["messages"].append({"role": "tool", "tool_name": name,
-                                         "content": json.dumps(result, sort_keys=True)})
+                message = {"role": "tool", "tool_name": name, "content": json.dumps(result, sort_keys=True)}
+                if call.get("id"):
+                    message["tool_call_id"] = call["id"]
+                body["messages"].append(message)
     except BenchError as exc:
         status, reason = exc.status, str(exc)
     result = {"status": status, "reason": reason, "response_schema": schema,
@@ -227,7 +237,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
         env = monitor.stats(start)
         if env["system_oom_kills"] and record["status"] in {"api_error", "connection_error", "timeout"}:
             record["status"] = "out_of_memory"
-        row = {**header, "phase": phase, "case": case.id, "track": case.track,
+        row = {**header, "phase": phase, "case": case.id, "track": case.track, "difficulty": case.difficulty,
                "environment": env, **record}
         append_line(records, row)
         return row
@@ -262,24 +272,34 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
         if "warm" in args.phases:
             monitor.gate(band, args.cooldown)
             resident, failure = prime()
-            start = monitor.gate(band, args.cooldown)
+            warmups = 1
+            start = monitor.take()
             started = time.monotonic()
-            for case in candidates:
+            for case_index, case in enumerate(candidates):
                 unsupported = ((case.track == "agent" and "tools" not in metadata["capabilities"])
                                or (case.track == "vision" and "vision" not in metadata["capabilities"]))
                 if failure and not unsupported:
-                    row = {**header, "phase": "warm", "case": case.id, "track": case.track,
+                    row = {**header, "phase": "warm", "case": case.id, "track": case.track, "difficulty": case.difficulty,
                            "status": failure["status"], "reason": "Warmup failed: " + str(failure["reason"])}
                     if case.track == "agent":
                         row["agent_evaluation"] = {"tool_use_correct": False, "final_answer_correct": False}
                     append_line(records, row)
                 else:
                     case_start = None if unsupported else monitor.gate(band, args.cooldown)
-                    measured(case, "warm", case.id, start=case_start)
-                if not failure and not unsupported and ensure_residency() is None:
-                    monitor.gate(band, args.cooldown)
-                    resident, failure = prime()
-            record_phase("warm", start, started, resident=resident, failure=failure)
+                    row = measured(case, "warm", case.id, start=case_start)
+                if not failure and not unsupported and case_index + 1 < len(candidates):
+                    if row["status"] == "out_of_memory":
+                        # /api/ps can still list a crashed runner. Reset it here,
+                        # so the next measured case does not pay the reload cost.
+                        api.unload(model)
+                        resident = None
+                    else:
+                        resident = ensure_residency()
+                    if resident is None:
+                        monitor.gate(band, args.cooldown)
+                        resident, failure = prime()
+                        warmups += 1
+            record_phase("warm", start, started, resident=resident, failure=failure, warmups=warmups)
             api.unload(model)
         if "sustained" in args.phases:
             monitor.gate(band, args.cooldown)
@@ -292,7 +312,9 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                 while time.monotonic() < deadline:
                     ordinal += 1
                     case = Case(f"decode-{ordinal:03d}", "performance", DECODE_PROMPT, None)
-                    row = measured(case, "sustained", case.id, cap=args.sustain_tokens)
+                    # Repeat one prompt instead of filling the cache with new
+                    # references during the continuous decode workload.
+                    row = measured(case, "sustained", "sustained-decode", cap=args.sustain_tokens)
                     if row["status"] != "complete":
                         failure = {"status": row["status"], "reason": row.get("reason")}
                         break
@@ -352,6 +374,17 @@ def summarize(rows, blocks):
                  if row.get("environment", {}).get("peak_system_used_estimate_kib") is not None), default=None
             ),
         }
+        difficulty_groups = defaultdict(list)
+        for row in entries:
+            difficulty_groups[row.get("difficulty", "unlabelled")].append(row)
+        group["by_difficulty"] = {}
+        for difficulty, subset in sorted(difficulty_groups.items()):
+            counts = Counter(row["status"] for row in subset)
+            eligible = len(subset) - counts["unsupported"]
+            group["by_difficulty"][difficulty] = {
+                "n": len(subset), "supported": eligible, "passed": counts["pass"],
+                "pass_rate": counts["pass"] / eligible if eligible else None, "outcomes": dict(counts),
+            }
         if track == "agent":
             evaluated = [row["agent_evaluation"] for row in entries if row["status"] != "unsupported"
                          and "agent_evaluation" in row]
@@ -419,6 +452,10 @@ def print_summary(summary):
                 score_label += (f", {checks['tool_use_passed']}/{checks['n']} tool use"
                                 f", {checks['final_answer_passed']}/{checks['n']} exact answers")
         timing = f", median {latency['median']:.2f}s" if latency else ""
+        levels = row.get("by_difficulty", {})
+        if row["pass_rate"] is not None and "control" in levels and "challenge" in levels:
+            score_label += ", " + ", ".join(
+                f"{level} {levels[level]['passed']}/{levels[level]['supported']}" for level in ("control", "challenge"))
         print(f"{row['model']} {row['phase']}/{row['track']} ({n} cases{score_label}{timing}) {status}")
     for block in summary["sustained"]:
         if block["failure"]:
@@ -438,12 +475,13 @@ def build_parser():
     run.add_argument("--seed", type=int, default=42)
     run.add_argument("--setup", help="cooler, power supply, storage and Ollama service settings for the manifest")
     run.add_argument("--threads", type=int, default=2)
+    run.add_argument("--cpu-only", action="store_true", help="force CPU inference on Mac too")
     run.add_argument("--context", type=int, default=4096)
     run.add_argument("--max-tokens", type=int, default=128)
     run.add_argument("--thinking", choices=("off", "default"), default="off")
-    run.add_argument("--timeout", type=float, default=90, help="per-case deadline in seconds")
-    run.add_argument("--tool-rounds", type=int, default=3)
-    run.add_argument("--tool-calls", type=int, default=4)
+    run.add_argument("--timeout", type=float, default=600, help="per-case deadline in seconds (default: 600)")
+    run.add_argument("--tool-rounds", type=int, default=6)
+    run.add_argument("--tool-calls", type=int, default=8)
     run.add_argument("--sustain-seconds", type=float, default=90)
     run.add_argument("--sustain-tokens", type=int, default=128)
     run.add_argument("--sample-seconds", type=float, default=1)
@@ -510,14 +548,24 @@ def run_locked(args, api, models, plan, selection):
         "device_tree_model": read_text("/proc/device-tree/model"), "os_release": read_text("/etc/os-release"),
         "cpu_governor": read_text("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"),
         "memory_page_bytes": os.sysconf("SC_PAGE_SIZE"),
+        "memory_telemetry": "Linux available-memory estimate; macOS free/compressed/wired memory and swap; "
+                            "all swap counters are system-wide, not model-specific",
         "storage_page_cache": "OS page cache retained and uncontrolled",
-        "warm_prompt_cache": "distinct early case references; Ollama reports cached tokens when available",
+        "warm_prompt_cache": "one load and warmup per model slot; model and native prompt cache retained "
+                             "across all warm cases; unloaded at the end; OOM or eviction triggers recovery "
+                             "before timing the next case",
+        "sustained_prompt_cache": "one repeated prompt reference; native prefix reuse allowed",
         "response_schemas": {case.id: case.response_schema for case in selection},
+        "case_metadata": {case.id: {"track": case.track, "difficulty": case.difficulty,
+                                    "tools": list(case.tool_names) if case.track == "agent" else []}
+                          for case in selection},
         "agent_finalization": "native tool loop, then one schema-constrained answer without tools; "
                               "all turns share the case deadline and contribute to metrics",
         "agent_scoring": "tool-use success checks required calls, arguments, order and final state; "
                          "exact final-answer success is reported separately; end-to-end requires both",
         "options": {key: value for key, value in vars(args).items() if key != "out"},
+        "inference_options": {**INFERENCE_OPTIONS,
+                              "device": "cpu" if args.cpu_only or platform.system() != "Darwin" else "ollama-auto"},
         "models": metadata, "plan": plan, "sha256": {str(path.relative_to(ROOT)): file_hash(path) for path in paths},
     }
     write_json(out / "manifest.json", manifest)
@@ -543,6 +591,7 @@ def run_locked(args, api, models, plan, selection):
     except (Exception, KeyboardInterrupt) as exc:
         manifest["status"] = "aborted"
         manifest["error"] = str(exc) or type(exc).__name__
+        manifest["error_status"] = getattr(exc, "status", type(exc).__name__)
         raise
     finally:
         write_json(out / "manifest.json", manifest)

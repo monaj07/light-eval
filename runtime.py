@@ -1,12 +1,15 @@
-"""Loopback Ollama transport and Raspberry Pi telemetry."""
+"""Loopback Ollama transport and passive Mac/Linux telemetry."""
 import http.client
 import json
+import os
+import platform
 import re
 import shutil
 import subprocess
 import threading
 import time
 from pathlib import Path
+from functools import lru_cache
 
 from cases import parse_json
 
@@ -148,6 +151,44 @@ def linux_fields(path, keys):
     return values
 
 
+def command_output(command):
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=1, check=False)
+        return result.stdout if result.returncode == 0 else ""
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+@lru_cache(maxsize=1)
+def mac_total_memory_kib():
+    raw = command_output(["sysctl", "-n", "hw.memsize"]).strip()
+    return int(raw) // 1024 if raw.isdigit() else None
+
+
+def mac_memory():
+    raw = command_output(["vm_stat"])
+    page_match = re.search(r"page size of (\d+) bytes", raw)
+    if not page_match:
+        return {}
+    page_bytes = int(page_match[1])
+    fields = {key.strip().strip('"'): int(value) for key, value in
+              re.findall(r"^([^:\n]+):\s+(\d+)\.?\s*$", raw, re.MULTILINE)}
+
+    def kib(key):
+        return fields[key] * page_bytes // 1024 if key in fields else None
+
+    swap_raw = command_output(["sysctl", "-n", "vm.swapusage"])
+    swap_match = re.search(r"used\s*=\s*([\d.]+)([KMGT])", swap_raw)
+    swap_used = float(swap_match[1]) * {"K": 1, "M": 1024, "G": 1024**2, "T": 1024**3}[swap_match[2]] if swap_match else None
+    pressure = command_output(["sysctl", "-n", "kern.memorystatus_vm_pressure_level"]).strip()
+    return {"MemTotal": mac_total_memory_kib(), "MemFree": kib("Pages free"),
+            "memory_page_bytes": page_bytes,
+            "memory_compressed_kib": kib("Pages occupied by compressor"),
+            "memory_wired_kib": kib("Pages wired down"), "SwapUsed": swap_used,
+            "memory_pressure_level": int(pressure) if pressure.isdigit() else None,
+            "pswpin": fields.get("Swapins"), "pswpout": fields.get("Swapouts")}
+
+
 def sample():
     temperature = read_text(CPU_TEMP)
     throttled = None
@@ -160,8 +201,14 @@ def sample():
                 throttled = int(match[1], 16)
         except (OSError, subprocess.TimeoutExpired):
             pass
-    mem = linux_fields("/proc/meminfo", {"MemTotal", "MemAvailable", "SwapTotal", "SwapFree"})
-    vm = linux_fields("/proc/vmstat", {"pswpin", "pswpout", "oom_kill"})
+    if platform.system() == "Darwin":
+        mem, vm = mac_memory(), {}
+    else:
+        mem = linux_fields("/proc/meminfo", {"MemTotal", "MemAvailable", "MemFree", "SwapTotal", "SwapFree"})
+        if "SwapTotal" in mem and "SwapFree" in mem:
+            mem["SwapUsed"] = mem["SwapTotal"] - mem["SwapFree"]
+        mem["memory_page_bytes"] = os.sysconf("SC_PAGE_SIZE")
+        vm = linux_fields("/proc/vmstat", {"pswpin", "pswpout", "oom_kill"})
     return {"t": time.monotonic(), "cpu_c": float(temperature) / 1000 if temperature else None,
             "throttled_bits": throttled, **mem, **vm}
 
@@ -183,6 +230,11 @@ def range_stats(rows):
         points = values(key)
         return points[-1] - points[0] if len(points) >= 2 else None
 
+    def swap_mib(key):
+        pages = delta(key)
+        sizes = values("memory_page_bytes")
+        return pages * sizes[0] / 2**20 if pages is not None and sizes and len(set(sizes)) == 1 else None
+
     return {
         "samples": len(rows),
         "start_cpu_c": temperatures[0] if temperatures else None,
@@ -190,7 +242,11 @@ def range_stats(rows):
         "end_cpu_c": temperatures[-1] if temperatures else None,
         "min_mem_available_kib": min(available, default=None),
         "peak_system_used_estimate_kib": total[0] - min(available) if total and available else None,
+        "min_free_memory_kib": min(values("MemFree"), default=None),
+        "peak_compressed_memory_kib": max(values("memory_compressed_kib"), default=None),
+        "peak_swap_used_kib": max(values("SwapUsed"), default=None),
         "swap_in_pages": delta("pswpin"), "swap_out_pages": delta("pswpout"),
+        "swap_in_mib": swap_mib("pswpin"), "swap_out_mib": swap_mib("pswpout"),
         "system_oom_kills": delta("oom_kill"),
         "active_throttling_bits_or": active_flags if flags else None,
         "new_throttling_history_bits": new_sticky,

@@ -71,7 +71,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         self.server.loaded = [item for item in self.server.models if item["name"] == model]
         self.server.requests.append(request)
-        prompt = request["messages"][0]["content"].split("\n\n", 1)[1]
+        prompt = request["messages"][0]["content"]
         case = CASES.get(prompt)
         if case and case.response_schema is not None and "tools" not in request:
             assert request.get("format") == case.response_schema
@@ -133,7 +133,7 @@ class BenchmarkTest(unittest.TestCase):
         api.chat.side_effect = chat
         metadata = {"capabilities": ["completion", "tools", "vision"], "thinking_requested": False}
         images = {case.image: "fixture-image"} if case.image else {}
-        result = run_case(api, args, "fixture", metadata, case, case.id, images)
+        result = run_case(api, args, "fixture", metadata, case, images)
         return result, requests
 
     def test_answer_format_by_track(self):
@@ -351,9 +351,12 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(cases, dataset())
         self.assertEqual(len(cases), len({case.id for case in cases}))
         self.assertEqual(Counter(case.track for case in cases),
-                         {"arithmetic": 8, "structured": 6, "agent": 12, "vision": 6, "context": 13})
+                         {"arithmetic": 12, "structured": 10, "agent": 13, "vision": 10, "context": 13})
         self.assertEqual(Counter(case.track for case in cases if case.difficulty == "challenge"),
-                         {"agent": 6, "context": 8})
+                         {"arithmetic": 4, "structured": 4, "agent": 7, "vision": 4, "context": 8})
+        for case in cases:
+            if case.image:
+                self.assertTrue((ROOT / "fixtures" / case.image).is_file(), case.image)
         args = build_parser().parse_args(["run", "--models", "fixture"])
         for case in cases:
             if case.track != "agent":
@@ -461,6 +464,22 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(result["status"], "pass")
         self.assertEqual(requests[1][0]["messages"][-1]["tool_call_id"], "call-test-1")
 
+    def test_commutative_calculator_operands_are_equivalent(self):
+        case = next(case for case in dataset() if case.id == "agent-chain-arithmetic")
+        trace = [{"name": name, "arguments": dict(args)} for name, args in case.calls]
+        trace[1]["arguments"]["a"], trace[1]["arguments"]["b"] = 86, 703
+        self.assertEqual(score_tools(case, trace, {"indicator": "red"}), "pass")
+        trace[2]["arguments"]["a"], trace[2]["arguments"]["b"] = 3, 789
+        self.assertEqual(score_tools(case, trace, {"indicator": "red"}), "wrong_tool_trace")
+
+    def test_structured_answers_accept_one_code_fence(self):
+        case = next(case for case in dataset() if case.id == "json-null")
+        for content, expected in (('```json\n{"ticket": "P-42", "owner": null}\n```', "pass"),
+                                  ('```\n{"ticket": "P-42", "owner": null}\n```', "pass"),
+                                  ('Here it is: {"ticket": "P-42", "owner": null}', "invalid_json")):
+            with self.subTest(content=content):
+                self.assertEqual(score(case, content, [], {"indicator": "red"}), expected)
+
     def test_summary_reports_controls_and_challenges_separately(self):
         rows = [{"model": "fixture", "phase": "warm", "track": "context", "round": 1,
                  "case": "context-short-" + level, "difficulty": level, "status": status}
@@ -478,7 +497,8 @@ class BenchmarkTest(unittest.TestCase):
         for reply, expected in (
             ({"content": '{"answer":4917}'}, "wrong_answer"),
             ({"content": '{"answer":"5017"}'}, "wrong_answer"),
-            ({"content": "```json\n{\"answer\":5017}\n```"}, "invalid_json"),
+            ({"content": "```json\n{\"answer\":5017}\n```"}, "pass"),
+            ({"content": "```json\n{\"answer\":5017}\n```\nDone."}, "invalid_json"),
             ({"content": '{"answer":501', "metrics": {"done_reason": "length", "eval_count": 128}},
              "generation_limit"),
             (BenchError("Schema rejected", "api_error"), "api_error"),
@@ -487,6 +507,7 @@ class BenchmarkTest(unittest.TestCase):
                 result, requests = self.scripted_case(case, [reply])
                 self.assertEqual(result["status"], expected)
                 self.assertEqual(len(requests), 1)
+                self.assertEqual(requests[0][0]["messages"][0]["content"], case.prompt)
                 self.assertEqual(requests[0][0]["format"],
                                  {"type": "object", "properties": {"answer": {"type": "number"}},
                                   "required": ["answer"], "additionalProperties": False})
@@ -665,7 +686,7 @@ class BenchmarkTest(unittest.TestCase):
             live.clear()
             prompts.clear()
 
-        def generate(api, args, model, metadata, case, label, images, **kwargs):
+        def generate(api, args, model, metadata, case, images, **kwargs):
             if case is WARMUP:
                 self.assertEqual(live, [])
                 self.assertEqual(prompts, [])
@@ -690,7 +711,7 @@ class BenchmarkTest(unittest.TestCase):
         groups = [candidates[index:index + every] for index in range(0, len(candidates), every)]
         expected = [event for group in groups for event in ("warmup", *[case.id for case in group], "unload")]
         self.assertEqual(events, expected)
-        self.assertEqual(len(records.getvalue().splitlines()), 45)
+        self.assertEqual(len(records.getvalue().splitlines()), len(candidates))
         self.assertEqual(json.loads(blocks.getvalue())["warmups"], len(groups))
         self.assertEqual(live, [])
 
@@ -704,7 +725,7 @@ class BenchmarkTest(unittest.TestCase):
         api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
         api.unload.side_effect = lambda model: live.clear()
 
-        def generate(api, args, model, metadata, case, label, images, **kwargs):
+        def generate(api, args, model, metadata, case, images, **kwargs):
             if case is WARMUP:
                 warmups.append(case)
                 if len(warmups) == 1:
@@ -735,7 +756,7 @@ class BenchmarkTest(unittest.TestCase):
         api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
         api.unload.side_effect = lambda model: live.clear()
 
-        def generate(api, args, model, metadata, case, label, images, **kwargs):
+        def generate(api, args, model, metadata, case, images, **kwargs):
             if case is WARMUP:
                 live.append({"digest": "fixture-digest"})
                 events.append("warmup")
@@ -787,7 +808,7 @@ class BenchmarkTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 manifest = json.loads((out / "manifest.json").read_text())
                 self.assertEqual(manifest["status"], "complete")
-                self.assertEqual(manifest["suite_version"], "1.4.6")
+                self.assertEqual(manifest["suite_version"], "1.5.0")
                 blocks = [json.loads(line) for line in (out / "blocks.jsonl").read_text().splitlines()]
                 rows = [json.loads(line) for line in (out / "cases.jsonl").read_text().splitlines()]
                 for block in blocks:
@@ -818,14 +839,14 @@ class BenchmarkTest(unittest.TestCase):
                 rows = {(r["model"], r["phase"], r["track"]): r for r in summary["groups"]}
                 self.assertEqual(rows["alpha:latest", "warm", "agent"]["pass_rate"], 1.0)
                 self.assertEqual(rows["alpha:latest", "warm", "agent"]["agent_metrics"], {
-                    "n": 24, "tool_use_passed": 24, "tool_use_pass_rate": 1.0,
-                    "final_answer_passed": 24, "final_answer_pass_rate": 1.0,
+                    "n": 26, "tool_use_passed": 26, "tool_use_pass_rate": 1.0,
+                    "final_answer_passed": 26, "final_answer_pass_rate": 1.0,
                 })
-                self.assertEqual(rows["alpha:latest", "warm", "vision"]["n"], 12)
-                self.assertEqual(rows["beta:latest", "warm", "vision"]["outcomes"], {"unsupported": 12})
+                self.assertEqual(rows["alpha:latest", "warm", "vision"]["n"], 20)
+                self.assertEqual(rows["beta:latest", "warm", "vision"]["outcomes"], {"unsupported": 20})
                 self.assertEqual(rows["alpha:latest", "warm", "context-long"]["outcomes"], {"pass": 14})
                 self.assertEqual(rows["alpha:latest", "cold", "performance"]["load_s"]["median"], .05)
-                self.assertEqual(summary["repeatability"]["alpha:latest"]["raw_output_stable"], 45)
+                self.assertEqual(summary["repeatability"]["alpha:latest"]["raw_output_stable"], 58)
                 self.assertEqual(len(summary["sustained"]), 4)
                 self.assertTrue(all(interval["completed_requests"] > 0 for interval in summary["sustained"]))
                 report = subprocess.run([sys.executable, str(ROOT / "light_eval.py"), "report", str(out)],

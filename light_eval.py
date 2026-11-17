@@ -101,7 +101,7 @@ def decode_rate(turn):
     return tokens * 1e9 / duration if tokens and duration else None
 
 
-def run_case(api, args, model, metadata, case, label, images, *, cap=None):
+def run_case(api, args, model, metadata, case, images, *, cap=None):
     options = dict(INFERENCE_OPTIONS, num_ctx=args.context, num_thread=args.threads, temperature=0,
                    num_predict=cap or args.max_tokens, seed=args.seed)
     if args.cpu_only or platform.system() != "Darwin":
@@ -110,10 +110,9 @@ def run_case(api, args, model, metadata, case, label, images, *, cap=None):
         return {"status": "unsupported", "reason": "tools capability absent"}
     if case.track == "vision" and "vision" not in metadata["capabilities"]:
         return {"status": "unsupported", "reason": "vision capability absent"}
-    # Distinct early text per measured request limits whole-prompt reuse. Keep the
-    # reference identical across models, and across rounds for repeatability checks.
-    reference = hashlib.sha256(label.encode()).hexdigest()[:12]
-    user_message = {"role": "user", "content": f"Case reference {reference}.\n\n{case.prompt}"}
+    # Send the case prompt unchanged: any extra text (such as an ID) can be
+    # mistaken for task input by some models.
+    user_message = {"role": "user", "content": case.prompt}
     if case.image:
         user_message["images"] = [images[case.image]]
     body = {"model": model, "messages": [user_message], "options": options,
@@ -231,9 +230,9 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
     check_digest(api, model, model_digest)
     print(f"Round {header['round']} position {header['position']}: {model}", flush=True)
 
-    def measured(case, phase, label, cap=None, start=None):
+    def measured(case, phase, cap=None, start=None):
         start = start or monitor.take()
-        record = run_case(api, args, model, metadata, case, label, images, cap=cap)
+        record = run_case(api, args, model, metadata, case, images, cap=cap)
         env = monitor.stats(start)
         if env["system_oom_kills"] and record["status"] in {"api_error", "connection_error", "timeout"}:
             record["status"] = "out_of_memory"
@@ -249,7 +248,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
         return running[0] if running else None
 
     def prime():
-        priming = run_case(api, args, model, metadata, WARMUP, "warmup", images, cap=16)
+        priming = run_case(api, args, model, metadata, WARMUP, images, cap=16)
         resident = ensure_residency()
         if priming["status"] != "complete" or resident is None:
             if priming["status"] == "complete":
@@ -266,7 +265,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
         if "cold" in args.phases:
             start = monitor.gate(band, args.cooldown)
             started = time.monotonic()
-            measured(COLD, "cold", COLD.id, start=start)
+            measured(COLD, "cold", start=start)
             record_phase("cold", start, started)
             api.unload(model)
         if "warm" in args.phases:
@@ -281,7 +280,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                 unsupported = ((case.track == "agent" and "tools" not in metadata["capabilities"])
                                or (case.track == "vision" and "vision" not in metadata["capabilities"]))
                 if unsupported:
-                    measured(case, "warm", case.id)
+                    measured(case, "warm")
                     continue
                 if (cases_since_load is None or cases_since_load >= args.reload_every
                         or ensure_residency() is None):
@@ -299,7 +298,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                         append_line(records, row)
                         cases_since_load = None
                         continue
-                row = measured(case, "warm", case.id, start=monitor.take())
+                row = measured(case, "warm", start=monitor.take())
                 cases_since_load += 1
                 if row["status"] == "out_of_memory":
                     # /api/ps can still list a crashed runner, so force a reload.
@@ -317,9 +316,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                 while time.monotonic() < deadline:
                     ordinal += 1
                     case = Case(f"decode-{ordinal:03d}", "performance", DECODE_PROMPT, None)
-                    # Repeat one prompt instead of filling the cache with new
-                    # references during the continuous decode workload.
-                    row = measured(case, "sustained", "sustained-decode", cap=args.sustain_tokens)
+                    row = measured(case, "sustained", cap=args.sustain_tokens)
                     if row["status"] != "complete":
                         failure = {"status": row["status"], "reason": row.get("reason")}
                         break

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.4.6"
+VERSION = "1.5.0"
 TRACKS = ("arithmetic", "structured", "agent", "vision", "context")
 DEFAULT_TOOL_NAMES = ("calculate", "find_order", "read_order", "set_indicator")
 
@@ -149,6 +149,13 @@ def challenge_agent_cases(json_number, json_string):
                     ("find_order", {"customer": "ren"}), ("read_order", {"order_id": "BC-915"}),
                     ("set_indicator", {"color": "red"}), ("read_indicator", {})), state="red",
              difficulty="challenge", tool_names=state_tools),
+        Case("agent-count-delivered", "agent",
+             "In order, look up customer mira and read that order, then look up customer ren and read that order. "
+             "Perform only these four lookups, then report how many of the two orders have the status delivered."
+             + json_number, 1,
+             calls=(("find_order", {"customer": "mira"}), ("read_order", {"order_id": "ZX-318"}),
+                    ("find_order", {"customer": "ren"}), ("read_order", {"order_id": "BC-915"})),
+             difficulty="challenge"),
     ]
 
 
@@ -226,17 +233,40 @@ def dataset():
         Case("math-units", "arithmetic", "How many seconds are in 2 hours and 17 minutes?" + json_number, 8220),
         Case("math-decimal", "arithmetic", "What is 0.075 × 48?" + json_number, 3.6),
         Case("math-remainder", "arithmetic", "What is the remainder when 374 is divided by 17?" + json_number, 0),
+        Case("math-up-down", "arithmetic", "A price of $250 rises by 20%, then the new price falls by 20%. "
+             "What is the final price?" + json_number, 240, difficulty="challenge"),
+        Case("math-precedence", "arithmetic", "Evaluate 48 ÷ 6 × (3 + 1)² − 2³." + json_number, 120,
+             difficulty="challenge"),
+        Case("math-work-rate", "arithmetic", "One pump fills a tank in 6 hours and a second pump fills it in "
+             "3 hours. How many hours do both pumps take working together?" + json_number, 2, difficulty="challenge"),
+        Case("math-overnight", "arithmetic", "A train departs at 22:47 and arrives at 03:18 the next day. "
+             "How many minutes does the trip take?" + json_number, 271, difficulty="challenge"),
         Case("json-shipment", "structured", 'Extract id (string), units (integer), and fragile (boolean) from: "Mark B-023 as fragile; send 12 units." Return only the JSON object.',
              {"id": "B-023", "units": 12, "fragile": True}),
         Case("json-status", "structured", 'Extract node (string) and connected (boolean) from: "Node M-14 is disconnected." Return only the JSON object.',
              {"node": "M-14", "connected": False}),
-        Case("json-list", "structured", 'Return only a JSON array of active IDs in source order: Q1 active, Q2 retired, Q3 active, Q4 inactive.',
+        Case("json-list", "structured", 'Statuses: Q1 active, Q2 retired, Q3 active, Q4 inactive. Return only a JSON array of the IDs whose '
+             'status is active, in the order listed.',
              ["Q1", "Q3"]),
         Case("json-sort", "structured", 'Sort the IDs ["G12", "G03", "G19"] by their numeric suffix. Return only a JSON array.',
              ["G03", "G12", "G19"]),
         Case("json-null", "structured", 'Return only a JSON object with keys "ticket" and "owner". Ticket P-42 is unassigned; represent the owner as null.',
              {"ticket": "P-42", "owner": None}),
-        Case("json-empty", "structured", 'An inventory has A1 (expired), A2 (damaged), and A3 (missing). Return a JSON array of IDs marked "available".', []),
+        Case("json-nested", "structured", 'Extract an object with keys "order" (the order number as a string) and "items" (an array of '
+             'objects with keys "sku" (string) and "qty" (integer), in source order) from: '
+             '"Order 7781: 3 x KB-2, 1 x MS-9, 12 x CB-1." Return only the JSON object.',
+             {"order": "7781", "items": [{"sku": "KB-2", "qty": 3}, {"sku": "MS-9", "qty": 1},
+                                         {"sku": "CB-1", "qty": 12}]}, difficulty="challenge"),
+        Case("json-number-words", "structured", 'Extract dock (integer) and crates (integer) from: '
+             '"Dock seven received forty-two crates." Return only the JSON object.',
+             {"dock": 7, "crates": 42}, difficulty="challenge"),
+        Case("json-escape", "structured", 'Return only a JSON object with one key "note" whose value is exactly '
+             'the text between the angle brackets: <She said "ship it" at 5>',
+             {"note": 'She said "ship it" at 5'}, difficulty="challenge"),
+        Case("json-filter-sort", "structured", "Readings: S1=48, S2=73, S3=51, S4=90, S5=50. Return only a JSON "
+             "array of the sensor IDs whose value is above 50, ordered from highest value to lowest.",
+             ["S4", "S2", "S3"], difficulty="challenge"),
+        Case("json-empty", "structured", 'An inventory has A1 (expired), A2 (damaged), and A3 (missing). Return only a JSON array of IDs marked "available".', []),
         Case("agent-calculate", "agent", "Use the calculator tool to find 173 × 29." + json_number, 5017,
              calls=(("calculate", {"operation": "multiply", "a": 173, "b": 29}),)),
         Case("agent-direct", "agent", 'Reply with only the JSON object {"answer":"ready"}. Do not call any tools.', "ready"),
@@ -258,6 +288,16 @@ def dataset():
         Case("vision-present", "vision", "Is a purple triangle present?" + json_boolean, True, "objects.png"),
         Case("vision-ocr-label", "vision", "Read the large code on the label." + json_string, "K7M-42", "label.png"),
         Case("vision-ocr-badge", "vision", "Read the large code on the badge." + json_string, "RP6-31", "badge.png"),
+        Case("vision-count-distractors", "vision", "How many green triangles are shown?" + json_number, 5,
+             "counting.png", difficulty="challenge"),
+        Case("vision-position", "vision", "What color is the shape immediately to the right of the red square? "
+             'The "answer" value must contain only the color word.' + json_string, "blue", "position.png",
+             difficulty="challenge"),
+        Case("vision-chart-rank", "vision", "Which lettered bar is the second tallest? "
+             'The "answer" value must contain only the letter.' + json_string, "E", "chart.png",
+             difficulty="challenge"),
+        Case("vision-receipt-sum", "vision", "Add the COFFEE price and the SALAD price on the receipt."
+             + json_number, 15.9, "receipt.png", difficulty="challenge"),
         context_case("context-short-start", 8, 0, "X7-25"),
         context_case("context-short-end", 8, 7, "U2-71"),
         context_case("context-long-start", 90, 4, "Q4-12"),
@@ -313,9 +353,19 @@ def equal_value(actual, expected, tolerance=0.0, *, strict_integers=False):
     return actual == expected
 
 
+def strip_code_fence(text):
+    """Remove one surrounding Markdown code fence, a common model habit."""
+    text = text.strip()
+    if text.startswith("```") and text.endswith("```") and len(text) > 6:
+        text = text[3:-3]
+        if text[:4].lower() == "json":
+            text = text[4:]
+    return text
+
+
 def score_answer(case, content):
     try:
-        actual = parse_json(content)
+        actual = parse_json(strip_code_fence(content))
     except (ValueError, RecursionError):
         return "invalid_json"
     if case.response_schema is not None:
@@ -327,9 +377,18 @@ def score_answer(case, content):
     return "pass"
 
 
+def canonical_call(name, args):
+    """Treat add(a, b) and add(b, a), or multiply likewise, as the same call."""
+    if name == "calculate" and isinstance(args, dict) and args.get("operation") in ("add", "multiply"):
+        a, b = args.get("a"), args.get("b")
+        if isinstance(a, (int, float)) and isinstance(b, (int, float)) and b < a:
+            args = {**args, "a": b, "b": a}
+    return {"name": name, "arguments": args}
+
+
 def score_tools(case, trace, state):
-    expected_calls = [{"name": name, "arguments": args} for name, args in case.calls]
-    actual_calls = [{"name": call["name"], "arguments": call["arguments"]} for call in trace]
+    expected_calls = [canonical_call(name, args) for name, args in case.calls]
+    actual_calls = [canonical_call(call["name"], call["arguments"]) for call in trace]
     if not equal_value(actual_calls, expected_calls):
         return "wrong_tool_trace"
     if case.state is not None and state["indicator"] != case.state:

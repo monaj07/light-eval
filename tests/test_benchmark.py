@@ -19,7 +19,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from cases import ROOT, Case, dataset, dispatch, score, score_tools
-from light_eval import COLD, DECODE_PROMPT, WARMUP, build_parser, print_summary, rounds, run_case, run_locked, run_slot, summarize
+from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, build_parser, inspect_models, print_summary, rounds, run_case, run_locked, run_slot, summarize
 from runtime import BenchError, Ollama, Telemetry, mac_memory, mac_total_memory_kib, range_stats
 
 CASES = {case.prompt: case for case in dataset()}
@@ -463,6 +463,24 @@ class BenchmarkTest(unittest.TestCase):
             {"content": '{"answer":5017}'}, {"content": '{"answer":5017}'}])
         self.assertEqual(result["status"], "pass")
         self.assertEqual(requests[1][0]["messages"][-1]["tool_call_id"], "call-test-1")
+
+    def test_budget_defaults_follow_thinking_mode(self):
+        parse = build_parser().parse_args
+        for argv, context, tokens in ((["--thinking", "off"], 4096, 1024), (["--thinking", "on"], 10240, 6144),
+                                      (["--thinking", "on", "--context", "8192", "--max-tokens", "512"], 8192, 512)):
+            with self.subTest(argv=argv):
+                args = apply_budget_defaults(parse(["run", "--models", "fixture", *argv]))
+                self.assertEqual((args.context, args.max_tokens), (context, tokens))
+
+    def test_thinking_on_requests_thinking_only_when_supported(self):
+        api = Mock()
+        api.json.side_effect = lambda path, body=None: (
+            {"models": [{"name": "a:latest", "digest": "a"}, {"name": "b:latest", "digest": "b"}]} if path == "tags"
+            else {"capabilities": ["completion", "thinking"] if body["model"] == "a:latest" else ["completion"]})
+        with patch("light_eval.installed_models", return_value={"a:latest": {"digest": "a"}, "b:latest": {"digest": "b"}}):
+            metadata = inspect_models(api, ["a:latest", "b:latest"], "on")
+        self.assertIs(metadata["a:latest"]["thinking_requested"], True)
+        self.assertIsNone(metadata["b:latest"]["thinking_requested"])
 
     def test_commutative_calculator_operands_are_equivalent(self):
         case = next(case for case in dataset() if case.id == "agent-chain-arithmetic")

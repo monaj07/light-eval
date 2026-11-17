@@ -78,6 +78,8 @@ def inspect_models(api, models, requested_thinking):
             if "values" in thinking and not any(item is False for item in thinking["values"]):
                 raise BenchError(f"{name} cannot disable thinking. Choose --thinking default for this run.")
             setting = False
+        elif "thinking" in capabilities and requested_thinking == "on":
+            setting = True
         template = info.get("template", "")
         metadata[name] = {
             "digest": installed[name]["digest"], "size_bytes": installed[name].get("size"),
@@ -478,9 +480,10 @@ def build_parser():
     run.add_argument("--setup", help="cooler, power supply, storage and Ollama service settings for the manifest")
     run.add_argument("--threads", type=int, default=2)
     run.add_argument("--cpu-only", action="store_true", help="force CPU inference on Mac too")
-    run.add_argument("--context", type=int, default=4096)
-    run.add_argument("--max-tokens", type=int, default=128)
-    run.add_argument("--thinking", choices=("off", "default"), default="off")
+    run.add_argument("--context", type=int, help="context window; default 4096, or 10240 with --thinking on")
+    run.add_argument("--max-tokens", type=int, help="generation cap per turn; default 1024, or 6144 with --thinking on")
+    run.add_argument("--thinking", choices=("off", "on", "default"), default="off",
+                     help="off or on requests that mode; default leaves the model's own default")
     run.add_argument("--timeout", type=float, default=600, help="per-case deadline in seconds (default: 600)")
     run.add_argument("--tool-rounds", type=int, default=6)
     run.add_argument("--tool-calls", type=int, default=8)
@@ -499,7 +502,18 @@ def build_parser():
     return parser
 
 
+def apply_budget_defaults(args):
+    """Thinking needs room for its reasoning tokens as well as the answer."""
+    thinking_on = args.thinking == "on"
+    if args.context is None:
+        args.context = 10240 if thinking_on else 4096
+    if args.max_tokens is None:
+        args.max_tokens = 6144 if thinking_on else 1024
+    return args
+
+
 def run_benchmark(args, parser):
+    apply_budget_defaults(args)
     for key in ("cycles", "threads", "context", "max_tokens", "timeout", "tool_rounds",
                 "tool_calls", "sustain_seconds", "sustain_tokens", "sample_seconds", "cooldown",
                 "reload_every"):

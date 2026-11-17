@@ -1,4 +1,5 @@
 import base64
+import math
 import io
 import json
 import random
@@ -642,9 +643,15 @@ class BenchmarkTest(unittest.TestCase):
                 stats = monitor.stats(warning)
         self.assertEqual(stats["swap_out_mib"], 10 * 16384 / 2**20)
 
-    def test_all_warm_cases_share_one_load_and_unload_after_the_suite(self):
+    def test_warm_cases_reload_every_n_cases(self):
+        for every in (1, 10):
+            with self.subTest(every=every):
+                self.check_reload_every(every)
+
+    def check_reload_every(self, every):
         candidates = dataset()
-        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm", "--no-thermal-gate"])
+        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm", "--no-thermal-gate",
+                                             "--reload-every", str(every)])
         api, monitor = Mock(), Mock()
         metadata = {"digest": "fixture-digest", "capabilities": ["completion", "tools", "vision"]}
         resident = {"digest": "fixture-digest"}
@@ -680,54 +687,72 @@ class BenchmarkTest(unittest.TestCase):
             run_slot(api, args, monitor, None,
                      {"round": 1, "position": 1, "model": "fixture:latest", "metadata": metadata},
                      candidates, {}, records, blocks)
-        self.assertEqual(events, ["warmup", *[case.id for case in candidates], "unload"])
+        groups = [candidates[index:index + every] for index in range(0, len(candidates), every)]
+        expected = [event for group in groups for event in ("warmup", *[case.id for case in group], "unload")]
+        self.assertEqual(events, expected)
         self.assertEqual(len(records.getvalue().splitlines()), 45)
-        self.assertEqual(json.loads(blocks.getvalue())["warmups"], 1)
+        self.assertEqual(json.loads(blocks.getvalue())["warmups"], len(groups))
         self.assertEqual(live, [])
 
-    def test_oom_recovery_prewarms_next_case_despite_stale_residency(self):
+    def test_failed_warmup_fails_only_its_own_case(self):
         candidates = [case for case in dataset() if case.track == "arithmetic"][:2]
-        for failed_index in (0, 1):
-            with self.subTest(failed_index=failed_index):
-                args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
-                api, monitor = Mock(), Mock()
-                metadata = {"digest": "fixture-digest", "capabilities": ["completion"]}
-                live, events = [], []
-                api.loaded.side_effect = lambda: live[:]
-                api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
+        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
+        api, monitor = Mock(), Mock()
+        metadata = {"digest": "fixture-digest", "capabilities": ["completion"]}
+        live, warmups = [], []
+        api.loaded.side_effect = lambda: live[:]
+        api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
+        api.unload.side_effect = lambda model: live.clear()
 
-                def unload(model):
-                    if live:
-                        events.append("unload")
-                    live.clear()
+        def generate(api, args, model, metadata, case, label, images, **kwargs):
+            if case is WARMUP:
+                warmups.append(case)
+                if len(warmups) == 1:
+                    return {"status": "out_of_memory", "reason": "runner crashed"}
+                live.append({"digest": "fixture-digest"})
+                return {"status": "complete"}
+            return {"status": "pass"}
 
-                def generate(api, args, model, metadata, case, label, images, **kwargs):
-                    if case is WARMUP:
-                        self.assertEqual(live, [])
-                        live.append({"digest": "fixture-digest"})
-                        events.append("warmup")
-                        return {"status": "complete"}
-                    self.assertTrue(live)
-                    events.append(case.id)
-                    # Keep /api/ps stale, as it was after the Pi runner crash.
-                    return {"status": "out_of_memory" if case is candidates[failed_index] else "pass"}
+        monitor.take.return_value = monitor.gate.return_value = {"t": 0}
+        monitor.stats.return_value = {"system_oom_kills": None}
+        records, blocks = io.StringIO(), io.StringIO()
+        with patch("light_eval.run_case", side_effect=generate), patch("sys.stdout", new_callable=io.StringIO):
+            run_slot(api, args, monitor, None,
+                     {"round": 1, "position": 1, "model": "fixture:latest", "metadata": metadata},
+                     candidates, {}, records, blocks)
+        rows = [json.loads(line) for line in records.getvalue().splitlines()]
+        self.assertEqual([row["status"] for row in rows], ["out_of_memory", "pass"])
+        self.assertIn("Warmup failed", rows[0]["reason"])
+        self.assertEqual(json.loads(blocks.getvalue())["warmups"], 2)
 
-                api.unload.side_effect = unload
-                monitor.take.return_value = monitor.gate.return_value = {"t": 0}
-                monitor.stats.return_value = {"system_oom_kills": None}
-                records, blocks = io.StringIO(), io.StringIO()
-                with patch("light_eval.run_case", side_effect=generate), patch("sys.stdout", new_callable=io.StringIO):
-                    run_slot(api, args, monitor, None,
-                             {"round": 1, "position": 1, "model": "fixture:latest", "metadata": metadata},
-                             candidates, {}, records, blocks)
-                expected = ["warmup", candidates[0].id]
-                if failed_index == 0:
-                    expected += ["unload", "warmup"]
-                self.assertEqual(events, [*expected, candidates[1].id, "unload"])
-                rows = [json.loads(line) for line in records.getvalue().splitlines()]
-                self.assertEqual(len(rows), 2)
-                self.assertEqual(rows[failed_index]["status"], "out_of_memory")
-                self.assertEqual(json.loads(blocks.getvalue())["warmups"], 2 if failed_index == 0 else 1)
+    def test_out_of_memory_forces_reload_despite_stale_residency(self):
+        candidates = [case for case in dataset() if case.track == "arithmetic"][:3]
+        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
+        api, monitor = Mock(), Mock()
+        metadata = {"digest": "fixture-digest", "capabilities": ["completion"]}
+        live, events = [], []
+        api.loaded.side_effect = lambda: live[:]
+        api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
+        api.unload.side_effect = lambda model: live.clear()
+
+        def generate(api, args, model, metadata, case, label, images, **kwargs):
+            if case is WARMUP:
+                live.append({"digest": "fixture-digest"})
+                events.append("warmup")
+                return {"status": "complete"}
+            events.append(case.id)
+            # Keep /api/ps stale, as it was after a real runner crash.
+            return {"status": "out_of_memory" if case is candidates[0] else "pass"}
+
+        monitor.take.return_value = monitor.gate.return_value = {"t": 0}
+        monitor.stats.return_value = {"system_oom_kills": None}
+        records, blocks = io.StringIO(), io.StringIO()
+        with patch("light_eval.run_case", side_effect=generate), patch("sys.stdout", new_callable=io.StringIO):
+            run_slot(api, args, monitor, None,
+                     {"round": 1, "position": 1, "model": "fixture:latest", "metadata": metadata},
+                     candidates, {}, records, blocks)
+        self.assertEqual(events, ["warmup", candidates[0].id, "warmup", candidates[1].id, candidates[2].id])
+        self.assertEqual(json.loads(blocks.getvalue())["warmups"], 2)
 
     def test_gate_waits_for_temperature_and_active_flags(self):
         samples = [
@@ -762,9 +787,14 @@ class BenchmarkTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 manifest = json.loads((out / "manifest.json").read_text())
                 self.assertEqual(manifest["status"], "complete")
-                self.assertEqual(manifest["suite_version"], "1.4.5")
+                self.assertEqual(manifest["suite_version"], "1.4.6")
                 blocks = [json.loads(line) for line in (out / "blocks.jsonl").read_text().splitlines()]
-                self.assertTrue(all(block["warmups"] == 1 for block in blocks if block["phase"] == "warm"))
+                rows = [json.loads(line) for line in (out / "cases.jsonl").read_text().splitlines()]
+                for block in blocks:
+                    if block["phase"] == "warm":
+                        measured = [row for row in rows if row["phase"] == "warm" and row["model"] == block["model"] and row["round"] == block["round"]
+                                    and row["status"] != "unsupported"]
+                        self.assertEqual(block["warmups"], math.ceil(len(measured) / 10))
                 self.assertEqual(manifest["inference_options"], {"device": "cpu", "num_batch": 64})
                 self.assertEqual(manifest["response_schemas"]["math-multiply"],
                                  {"type": "object", "properties": {"answer": {"type": "number"}},

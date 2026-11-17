@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.4.5"
+VERSION = "1.4.6"
 TRACKS = ("arithmetic", "structured", "agent", "vision", "context")
 DEFAULT_TOOL_NAMES = ("calculate", "find_order", "read_order", "set_indicator")
 

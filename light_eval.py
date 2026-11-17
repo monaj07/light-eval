@@ -270,35 +270,40 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
             record_phase("cold", start, started)
             api.unload(model)
         if "warm" in args.phases:
-            monitor.gate(band, args.cooldown)
-            resident, failure = prime()
-            warmups = 1
+            # Ollama keeps up to 8 GiB of prompt cache in RAM while a model stays
+            # loaded, and each distinct case prompt adds to it. Reloading every
+            # --reload-every cases bounds that cache without reloading for every case.
             start = monitor.take()
             started = time.monotonic()
-            for case_index, case in enumerate(candidates):
+            resident, failure, warmups = None, None, 0
+            cases_since_load = None  # None means the next case needs a fresh load
+            for case in candidates:
                 unsupported = ((case.track == "agent" and "tools" not in metadata["capabilities"])
                                or (case.track == "vision" and "vision" not in metadata["capabilities"]))
-                if failure and not unsupported:
-                    row = {**header, "phase": "warm", "case": case.id, "track": case.track, "difficulty": case.difficulty,
-                           "status": failure["status"], "reason": "Warmup failed: " + str(failure["reason"])}
-                    if case.track == "agent":
-                        row["agent_evaluation"] = {"tool_use_correct": False, "final_answer_correct": False}
-                    append_line(records, row)
-                else:
-                    case_start = None if unsupported else monitor.gate(band, args.cooldown)
-                    row = measured(case, "warm", case.id, start=case_start)
-                if not failure and not unsupported and case_index + 1 < len(candidates):
-                    if row["status"] == "out_of_memory":
-                        # /api/ps can still list a crashed runner. Reset it here,
-                        # so the next measured case does not pay the reload cost.
-                        api.unload(model)
-                        resident = None
-                    else:
-                        resident = ensure_residency()
-                    if resident is None:
-                        monitor.gate(band, args.cooldown)
-                        resident, failure = prime()
-                        warmups += 1
+                if unsupported:
+                    measured(case, "warm", case.id)
+                    continue
+                if (cases_since_load is None or cases_since_load >= args.reload_every
+                        or ensure_residency() is None):
+                    api.unload(model)
+                    monitor.gate(band, args.cooldown)
+                    resident, failure = prime()
+                    warmups += 1
+                    cases_since_load = 0
+                    if failure:
+                        row = {**header, "phase": "warm", "case": case.id, "track": case.track,
+                               "difficulty": case.difficulty, "status": failure["status"],
+                               "reason": "Warmup failed: " + str(failure["reason"])}
+                        if case.track == "agent":
+                            row["agent_evaluation"] = {"tool_use_correct": False, "final_answer_correct": False}
+                        append_line(records, row)
+                        cases_since_load = None
+                        continue
+                row = measured(case, "warm", case.id, start=monitor.take())
+                cases_since_load += 1
+                if row["status"] == "out_of_memory":
+                    # /api/ps can still list a crashed runner, so force a reload.
+                    cases_since_load = None
             record_phase("warm", start, started, resident=resident, failure=failure, warmups=warmups)
             api.unload(model)
         if "sustained" in args.phases:
@@ -485,6 +490,8 @@ def build_parser():
     run.add_argument("--sustain-seconds", type=float, default=90)
     run.add_argument("--sustain-tokens", type=int, default=128)
     run.add_argument("--sample-seconds", type=float, default=1)
+    run.add_argument("--reload-every", type=int, default=10,
+                     help="warm cases per model load; bounds Ollama's in-RAM prompt cache (default: 10)")
     run.add_argument("--cooldown", type=float, default=180, help="seconds to wait at a temperature gate")
     run.add_argument("--temp-min", type=float, help="override the idle-baseline-dependent minimum")
     run.add_argument("--temp-max", type=float, default=65, help="initial ceiling and upper bound on automatic band")
@@ -497,7 +504,8 @@ def build_parser():
 
 def run_benchmark(args, parser):
     for key in ("cycles", "threads", "context", "max_tokens", "timeout", "tool_rounds",
-                "tool_calls", "sustain_seconds", "sustain_tokens", "sample_seconds", "cooldown"):
+                "tool_calls", "sustain_seconds", "sustain_tokens", "sample_seconds", "cooldown",
+                "reload_every"):
         value = getattr(args, key)
         if not math.isfinite(value) or value <= 0:
             parser.error(f"--{key.replace('_', '-')} must be positive and finite")
@@ -551,9 +559,8 @@ def run_locked(args, api, models, plan, selection):
         "memory_telemetry": "Linux available-memory estimate; macOS free/compressed/wired memory and swap; "
                             "all swap counters are system-wide, not model-specific",
         "storage_page_cache": "OS page cache retained and uncontrolled",
-        "warm_prompt_cache": "one load and warmup per model slot; model and native prompt cache retained "
-                             "across all warm cases; unloaded at the end; OOM or eviction triggers recovery "
-                             "before timing the next case",
+        "warm_prompt_cache": f"fresh load and warmup every {args.reload_every} warm cases, outside case "
+                             "timing; prompt cache carried only within each group",
         "sustained_prompt_cache": "one repeated prompt reference; native prefix reuse allowed",
         "response_schemas": {case.id: case.response_schema for case in selection},
         "case_metadata": {case.id: {"track": case.track, "difficulty": case.difficulty,

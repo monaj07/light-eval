@@ -159,6 +159,25 @@ def command_output(command):
         return ""
 
 
+def server_setting(key):
+    """Return an environment setting of the running Ollama server.
+
+    Ollama's llama-server runners inherit the server's environment, so this is
+    the value they use. Returns "unset" when the server has no such variable and
+    None when the server environment can't be read.
+    """
+    pids = command_output(["pgrep", "-f", "ollama serve"]).split()
+    if platform.system() == "Darwin":
+        sources = [command_output(["ps", "-E", "-ww", "-p", pid, "-o", "command="]) for pid in pids]
+    else:
+        sources = [(read_text(f"/proc/{pid}/environ") or "").replace("\x00", " ") for pid in pids]
+        sources.append(command_output(["systemctl", "show", "ollama", "-p", "Environment", "--value"]))
+    for text in sources:
+        if match := re.search(rf"(?:^|\s){key}=(\S*)", text):
+            return match[1]
+    return "unset" if any(text.strip() for text in sources) else None
+
+
 @lru_cache(maxsize=1)
 def mac_total_memory_kib():
     raw = command_output(["sysctl", "-n", "hw.memsize"]).strip()

@@ -1,5 +1,4 @@
 import base64
-import math
 import io
 import json
 import random
@@ -20,7 +19,7 @@ from unittest.mock import Mock, patch
 
 from cases import ROOT, Case, dataset, dispatch, score, score_tools
 from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, build_parser, inspect_models, print_summary, rounds, run_case, run_locked, run_slot, summarize
-from runtime import BenchError, Ollama, Telemetry, mac_memory, mac_total_memory_kib, range_stats
+from runtime import BenchError, Ollama, Telemetry, mac_memory, mac_total_memory_kib, range_stats, server_setting
 
 CASES = {case.prompt: case for case in dataset()}
 
@@ -673,6 +672,27 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(stats["peak_compressed_memory_kib"], 80)
         self.assertIsNone(stats["peak_system_used_estimate_kib"])
 
+    def test_server_setting_reads_ollama_server_environment(self):
+        def mac(command):
+            if command[0] == "pgrep":
+                return "17\n"
+            return "/Applications/Ollama.app/Contents/Resources/ollama serve HOME=/x LLAMA_ARG_CACHE_RAM=0\n"
+        with patch("runtime.platform.system", return_value="Darwin"), patch("runtime.command_output", side_effect=mac):
+            self.assertEqual(server_setting("LLAMA_ARG_CACHE_RAM"), "0")
+            self.assertEqual(server_setting("LLAMA_ARG_CTX_CHECKPOINTS"), "unset")
+
+        def linux(command):
+            if command[0] == "pgrep":
+                return "17\n"
+            return 'OLLAMA_HOST=127.0.0.1 LLAMA_ARG_CACHE_RAM=256\n'
+        # The service user's /proc environ is unreadable, so systemd's setting is used.
+        with patch("runtime.platform.system", return_value="Linux"), patch("runtime.command_output", side_effect=linux), \
+                patch("runtime.read_text", return_value=None):
+            self.assertEqual(server_setting("LLAMA_ARG_CACHE_RAM"), "256")
+        with patch("runtime.platform.system", return_value="Linux"), patch("runtime.command_output", return_value=""), \
+                patch("runtime.read_text", return_value=None):
+            self.assertIsNone(server_setting("LLAMA_ARG_CACHE_RAM"))
+
     def test_memory_telemetry_is_passive_even_when_pressure_and_swap_increase(self):
         warning = {"t": 0, "memory_pressure_level": 2, "pswpout": 100,
                    "memory_page_bytes": 16384}
@@ -682,15 +702,9 @@ class BenchmarkTest(unittest.TestCase):
                 stats = monitor.stats(warning)
         self.assertEqual(stats["swap_out_mib"], 10 * 16384 / 2**20)
 
-    def test_warm_cases_reload_every_n_cases(self):
-        for every in (1, 10):
-            with self.subTest(every=every):
-                self.check_reload_every(every)
-
-    def check_reload_every(self, every):
+    def test_warm_cases_share_one_load(self):
         candidates = dataset()
-        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm", "--no-thermal-gate",
-                                             "--reload-every", str(every)])
+        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm", "--no-thermal-gate"])
         api, monitor = Mock(), Mock()
         metadata = {"digest": "fixture-digest", "capabilities": ["completion", "tools", "vision"]}
         resident = {"digest": "fixture-digest"}
@@ -726,11 +740,9 @@ class BenchmarkTest(unittest.TestCase):
             run_slot(api, args, monitor, None,
                      {"round": 1, "position": 1, "model": "fixture:latest", "metadata": metadata},
                      candidates, {}, records, blocks)
-        groups = [candidates[index:index + every] for index in range(0, len(candidates), every)]
-        expected = [event for group in groups for event in ("warmup", *[case.id for case in group], "unload")]
-        self.assertEqual(events, expected)
+        self.assertEqual(events, ["warmup", *[case.id for case in candidates], "unload"])
         self.assertEqual(len(records.getvalue().splitlines()), len(candidates))
-        self.assertEqual(json.loads(blocks.getvalue())["warmups"], len(groups))
+        self.assertEqual(json.loads(blocks.getvalue())["warmups"], 1)
         self.assertEqual(live, [])
 
     def test_failed_warmup_fails_only_its_own_case(self):
@@ -826,15 +838,14 @@ class BenchmarkTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 manifest = json.loads((out / "manifest.json").read_text())
                 self.assertEqual(manifest["status"], "complete")
-                self.assertEqual(manifest["suite_version"], "1.5.0")
+                self.assertEqual(manifest["suite_version"], "1.5.1")
                 blocks = [json.loads(line) for line in (out / "blocks.jsonl").read_text().splitlines()]
-                rows = [json.loads(line) for line in (out / "cases.jsonl").read_text().splitlines()]
                 for block in blocks:
                     if block["phase"] == "warm":
-                        measured = [row for row in rows if row["phase"] == "warm" and row["model"] == block["model"] and row["round"] == block["round"]
-                                    and row["status"] != "unsupported"]
-                        self.assertEqual(block["warmups"], math.ceil(len(measured) / 10))
+                        self.assertEqual(block["warmups"], 1)
                 self.assertEqual(manifest["inference_options"], {"device": "cpu", "num_batch": 64})
+                self.assertIn("server_prompt_cache_ram_mib", manifest)
+                self.assertIn("swap_devices", manifest)
                 self.assertEqual(manifest["response_schemas"]["math-multiply"],
                                  {"type": "object", "properties": {"answer": {"type": "number"}},
                                   "required": ["answer"], "additionalProperties": False})

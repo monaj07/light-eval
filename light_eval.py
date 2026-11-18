@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cases import ROOT, TRACKS, VERSION, Case, dataset, dispatch, parse_json, score, score_answer, score_tools
-from runtime import BenchError, Ollama, Telemetry, read_text
+from runtime import BenchError, Ollama, Telemetry, read_text, server_setting
 
 PHASES = ("cold", "warm", "sustained")
 # Keep prompt-processing workspace small without shortening the context.
@@ -271,26 +271,25 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
             record_phase("cold", start, started)
             api.unload(model)
         if "warm" in args.phases:
-            # Ollama keeps up to 8 GiB of prompt cache in RAM while a model stays
-            # loaded, and each distinct case prompt adds to it. Reloading every
-            # --reload-every cases bounds that cache without reloading for every case.
+            # One load serves every warm case. With LLAMA_ARG_CACHE_RAM=0 on the
+            # server, earlier prompts don't accumulate in RAM between cases. Reload
+            # only after a failed warmup, an out-of-memory error or an eviction.
             start = monitor.take()
             started = time.monotonic()
             resident, failure, warmups = None, None, 0
-            cases_since_load = None  # None means the next case needs a fresh load
+            needs_load = True
             for case in candidates:
                 unsupported = ((case.track == "agent" and "tools" not in metadata["capabilities"])
                                or (case.track == "vision" and "vision" not in metadata["capabilities"]))
                 if unsupported:
                     measured(case, "warm")
                     continue
-                if (cases_since_load is None or cases_since_load >= args.reload_every
-                        or ensure_residency() is None):
+                if needs_load or ensure_residency() is None:
                     api.unload(model)
                     monitor.gate(band, args.cooldown)
                     resident, failure = prime()
                     warmups += 1
-                    cases_since_load = 0
+                    needs_load = False
                     if failure:
                         row = {**header, "phase": "warm", "case": case.id, "track": case.track,
                                "difficulty": case.difficulty, "status": failure["status"],
@@ -298,13 +297,12 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                         if case.track == "agent":
                             row["agent_evaluation"] = {"tool_use_correct": False, "final_answer_correct": False}
                         append_line(records, row)
-                        cases_since_load = None
+                        needs_load = True
                         continue
                 row = measured(case, "warm", start=monitor.take())
-                cases_since_load += 1
                 if row["status"] == "out_of_memory":
                     # /api/ps can still list a crashed runner, so force a reload.
-                    cases_since_load = None
+                    needs_load = True
             record_phase("warm", start, started, resident=resident, failure=failure, warmups=warmups)
             api.unload(model)
         if "sustained" in args.phases:
@@ -490,8 +488,6 @@ def build_parser():
     run.add_argument("--sustain-seconds", type=float, default=90)
     run.add_argument("--sustain-tokens", type=int, default=128)
     run.add_argument("--sample-seconds", type=float, default=1)
-    run.add_argument("--reload-every", type=int, default=10,
-                     help="warm cases per model load; bounds Ollama's in-RAM prompt cache (default: 10)")
     run.add_argument("--cooldown", type=float, default=180, help="seconds to wait at a temperature gate")
     run.add_argument("--temp-min", type=float, help="override the idle-baseline-dependent minimum")
     run.add_argument("--temp-max", type=float, default=65, help="initial ceiling and upper bound on automatic band")
@@ -515,8 +511,7 @@ def apply_budget_defaults(args):
 def run_benchmark(args, parser):
     apply_budget_defaults(args)
     for key in ("cycles", "threads", "context", "max_tokens", "timeout", "tool_rounds",
-                "tool_calls", "sustain_seconds", "sustain_tokens", "sample_seconds", "cooldown",
-                "reload_every"):
+                "tool_calls", "sustain_seconds", "sustain_tokens", "sample_seconds", "cooldown"):
         value = getattr(args, key)
         if not math.isfinite(value) or value <= 0:
             parser.error(f"--{key.replace('_', '-')} must be positive and finite")
@@ -551,6 +546,12 @@ def run_benchmark(args, parser):
 
 def run_locked(args, api, models, plan, selection):
     version = api.json("version").get("version")
+    # llama-server keeps up to 8 GiB of earlier prompts in RAM by default. Cases are
+    # independent, so the cache only costs memory; disable it on the Ollama server.
+    cache_ram = server_setting("LLAMA_ARG_CACHE_RAM")
+    if cache_ram != "0":
+        print(f"light-eval: warning: the Ollama server's LLAMA_ARG_CACHE_RAM is {cache_ram or 'unreadable'}, "
+              "not 0; see README, Prompt cache", file=sys.stderr, flush=True)
     metadata = inspect_models(api, models, args.thinking)
     if api.loaded():
         raise BenchError("Ollama has resident models. Stop them with ollama ps / ollama stop MODEL before running.")
@@ -566,12 +567,14 @@ def run_locked(args, api, models, plan, selection):
         "ollama_version": version, "python": platform.python_version(), "platform": platform.platform(),
         "device_tree_model": read_text("/proc/device-tree/model"), "os_release": read_text("/etc/os-release"),
         "cpu_governor": read_text("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"),
-        "memory_page_bytes": os.sysconf("SC_PAGE_SIZE"),
+        "memory_page_bytes": os.sysconf("SC_PAGE_SIZE"), "swap_devices": read_text("/proc/swaps"),
         "memory_telemetry": "Linux available-memory estimate; macOS free/compressed/wired memory and swap; "
                             "all swap counters are system-wide, not model-specific",
         "storage_page_cache": "OS page cache retained and uncontrolled",
-        "warm_prompt_cache": f"fresh load and warmup every {args.reload_every} warm cases, outside case "
-                             "timing; prompt cache carried only within each group",
+        "server_prompt_cache_ram_mib": cache_ram,
+        "warm_prompt_cache": "one load and warmup for all warm cases, outside case timing; reload after a "
+                             "failed warmup, out-of-memory error or eviction; cross-request prompt cache "
+                             "set by server_prompt_cache_ram_mib",
         "sustained_prompt_cache": "one repeated prompt reference; native prefix reuse allowed",
         "response_schemas": {case.id: case.response_schema for case in selection},
         "case_metadata": {case.id: {"track": case.track, "difficulty": case.difficulty,

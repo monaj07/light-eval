@@ -137,7 +137,7 @@ class BenchmarkTest(unittest.TestCase):
 
     def test_answer_format_by_track(self):
         expected_types = {
-            "math-multiply": "number", "math-fraction": "number",
+            "math-multiply": "number", "math-mixture": "number",
             "vision-count-small": "number", "vision-present": "boolean",
             "vision-ocr-label": "string", "context-short-start": "string",
         }
@@ -352,7 +352,7 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(Counter(case.track for case in cases),
                          {"arithmetic": 13, "structured": 13, "agent": 13, "vision": 13, "context": 13})
         self.assertEqual(Counter(case.track for case in cases if case.difficulty == "challenge"),
-                         {"arithmetic": 5, "structured": 7, "agent": 7, "vision": 7, "context": 8})
+                         {"arithmetic": 7, "structured": 7, "agent": 7, "vision": 7, "context": 8})
         for case in cases:
             if case.image:
                 self.assertTrue((ROOT / "fixtures" / case.image).is_file(), case.image)
@@ -619,9 +619,10 @@ class BenchmarkTest(unittest.TestCase):
         boolean = Case("test", "vision", "", False)
         self.assertEqual(score(boolean, '{"answer":false}', [], {}), "pass")
         self.assertEqual(score(boolean, '{"answer":0}', [], {}), "wrong_answer")
-        fraction = next(case for case in dataset() if case.id == "math-fraction")
-        self.assertEqual(score(fraction, '{"answer":0.2857}', [], {}), "pass")
-        self.assertEqual(score(fraction, '{"answer":0.2855}', [], {}), "wrong_answer")
+        savings = next(case for case in dataset() if case.id == "math-savings")
+        for content, status in (('{"answer":1784.49}', "pass"), ('{"answer":1784.5}', "pass"),
+                                ('{"answer":1784.48}', "wrong_answer"), ('{"answer":1784.51}', "wrong_answer")):
+            self.assertEqual(score(savings, content, [], {}), status)
 
     def test_non_structured_prompts_request_answer_objects(self):
         for case in dataset():
@@ -838,7 +839,7 @@ class BenchmarkTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 manifest = json.loads((out / "manifest.json").read_text())
                 self.assertEqual(manifest["status"], "complete")
-                self.assertEqual(manifest["suite_version"], "1.6.0")
+                self.assertEqual(manifest["suite_version"], "1.7.0")
                 blocks = [json.loads(line) for line in (out / "blocks.jsonl").read_text().splitlines()]
                 for block in blocks:
                     if block["phase"] == "warm":

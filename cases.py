@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.6.0"
+VERSION = "1.7.0"
 TRACKS = ("arithmetic", "structured", "agent", "vision", "context")
 DEFAULT_TOOL_NAMES = ("calculate", "find_order", "read_order", "set_indicator")
 
@@ -227,11 +227,9 @@ def dataset():
     cases = [
         Case("math-multiply", "arithmetic", "What is 173 × 29?" + json_number, 5017),
         Case("math-discount", "arithmetic", "Apply a 15% discount to $64. Give the final price." + json_number, 54.4),
-        Case("math-fraction", "arithmetic", "What is 2 divided by 7, as a decimal to within 0.0001?" + json_number, 2 / 7, tolerance=.0001),
         Case("math-negative", "arithmetic", "Evaluate -18 + 4 × (7 - 12)." + json_number, -38),
         Case("math-rate", "arithmetic", "A pump transfers 135 litres in 9 minutes. How many litres in 25 minutes at the same rate?" + json_number, 375),
         Case("math-units", "arithmetic", "How many seconds are in 2 hours and 17 minutes?" + json_number, 8220),
-        Case("math-decimal", "arithmetic", "What is 0.075 × 48?" + json_number, 3.6),
         Case("math-remainder", "arithmetic", "What is the remainder when 374 is divided by 17?" + json_number, 0),
         Case("math-up-down", "arithmetic", "A price of $250 rises by 20%, then the new price falls by 20%. "
              "What is the final price?" + json_number, 240, difficulty="challenge"),
@@ -241,6 +239,11 @@ def dataset():
              "3 hours. How many hours do both pumps take working together?" + json_number, 2, difficulty="challenge"),
         Case("math-overnight", "arithmetic", "A train departs at 22:47 and arrives at 03:18 the next day. "
              "How many minutes does the trip take?" + json_number, 271, difficulty="challenge"),
+        Case("math-clock-angle", "arithmetic", "What is the smaller angle, in degrees, between the hour hand and "
+             "the minute hand of an analog clock at 7:38?" + json_number, 1, difficulty="challenge"),
+        Case("math-mixture", "arithmetic", "A tank holds 40 litres of a mixture that is 15% syrup by volume. How many "
+             "litres of pure syrup must be added to make the mixture 20% syrup?" + json_number, 2.5,
+             difficulty="challenge"),
         Case("math-savings", "arithmetic", "A savings account starts with $2,000 and earns 5% interest once a year. "
              "Immediately after each yearly interest payment, $150 is withdrawn. What is the balance after the "
              "fourth withdrawal, to the nearest cent?" + json_number,

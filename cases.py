@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.5.1"
+VERSION = "1.6.0"
 TRACKS = ("arithmetic", "structured", "agent", "vision", "context")
 DEFAULT_TOOL_NAMES = ("calculate", "find_order", "read_order", "set_indicator")
 
@@ -241,6 +241,11 @@ def dataset():
              "3 hours. How many hours do both pumps take working together?" + json_number, 2, difficulty="challenge"),
         Case("math-overnight", "arithmetic", "A train departs at 22:47 and arrives at 03:18 the next day. "
              "How many minutes does the trip take?" + json_number, 271, difficulty="challenge"),
+        Case("math-savings", "arithmetic", "A savings account starts with $2,000 and earns 5% interest once a year. "
+             "Immediately after each yearly interest payment, $150 is withdrawn. What is the balance after the "
+             "fourth withdrawal, to the nearest cent?" + json_number,
+             # 1784.49 unrounded; 1784.50 if each year's balance is rounded to the cent.
+             1784.495, tolerance=.006, difficulty="challenge"),
         Case("json-shipment", "structured", 'Extract id (string), units (integer), and fragile (boolean) from: "Mark B-023 as fragile; send 12 units." Return only the JSON object.',
              {"id": "B-023", "units": 12, "fragile": True}),
         Case("json-status", "structured", 'Extract node (string) and connected (boolean) from: "Node M-14 is disconnected." Return only the JSON object.',
@@ -266,6 +271,19 @@ def dataset():
         Case("json-filter-sort", "structured", "Readings: S1=48, S2=73, S3=51, S4=90, S5=50. Return only a JSON "
              "array of the sensor IDs whose value is above 50, ordered from highest value to lowest.",
              ["S4", "S2", "S3"], difficulty="challenge"),
+        Case("json-group", "structured", "Tasks: T1 owner Ana, T2 owner Ben, T3 owner Ana, T4 owner Cy, T5 owner Ben. "
+             "Return only a JSON object whose keys are the owner names and whose values are arrays of that "
+             "owner's task IDs in the order listed.",
+             {"Ana": ["T1", "T3"], "Ben": ["T2", "T5"], "Cy": ["T4"]}, difficulty="challenge"),
+        Case("json-count-filter", "structured", "Event log, in order: login u3, login u1, logout u3, login u3, "
+             'login u2, logout u1, login u1. Return only a JSON object mapping each user ID to its number of "login" '
+             "events, including only users with at least two login events.",
+             {"u1": 2, "u3": 2}, difficulty="challenge"),
+        Case("json-24h-times", "structured", "Meetings: Room B at 1:05 pm, Room A at 9:40 am, Room C at 12:15 am. "
+             'Return only a JSON array of objects with keys "room" (the room letter as a string) and "time" '
+             '(a 24-hour "HH:MM" string), sorted from earliest to latest time of day.',
+             [{"room": "C", "time": "00:15"}, {"room": "A", "time": "09:40"}, {"room": "B", "time": "13:05"}],
+             difficulty="challenge"),
         Case("json-empty", "structured", 'An inventory has A1 (expired), A2 (damaged), and A3 (missing). Return only a JSON array of IDs marked "available".', []),
         Case("agent-calculate", "agent", "Use the calculator tool to find 173 × 29." + json_number, 5017,
              calls=(("calculate", {"operation": "multiply", "a": 173, "b": 29}),)),
@@ -298,6 +316,13 @@ def dataset():
              difficulty="challenge"),
         Case("vision-receipt-sum", "vision", "Add the COFFEE price and the SALAD price on the receipt."
              + json_number, 15.9, "receipt.png", difficulty="challenge"),
+        Case("vision-table-total", "vision", "For each item in the table, multiply its QTY by its PRICE, then add "
+             "the results. What is the total?" + json_number, 12.25, "table.png", tolerance=.001,
+             difficulty="challenge"),
+        Case("vision-grid-row", "vision", "The grid has four rows, numbered 1 to 4 from top to bottom. Which row "
+             "contains the most red cells?" + json_number, 3, "grid.png", difficulty="challenge"),
+        Case("vision-inside-frame", "vision", "How many circles are completely inside the black rectangle?"
+             + json_number, 4, "frame.png", difficulty="challenge"),
         context_case("context-short-start", 8, 0, "X7-25"),
         context_case("context-short-end", 8, 7, "U2-71"),
         context_case("context-long-start", 90, 4, "Q4-12"),

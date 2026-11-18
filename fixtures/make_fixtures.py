@@ -76,7 +76,49 @@ def receipt():
     return image
 
 
+def table():
+    """Parts table; QTY x PRICE summed is 1.00 + 1.00 + 6.80 + 3.45 = 12.25."""
+    rows = [("ITEM", "QTY", "PRICE"), ("BOLT", "4", "0.25"), ("NUT", "10", "0.10"),
+            ("HINGE", "2", "3.40"), ("SPRING", "3", "1.15")]
+    image = Image.new("RGB", (480, 320), "#ffffff")
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.truetype(SANS, 22)
+    for index, row in enumerate(rows):
+        top = 40 + index * 48
+        draw.line((60, top + 44, 420, top + 44), fill="#bbbbbb", width=1)
+        for text, x in zip(row, (80, 250, 340)):
+            draw.text((x, top + 22), text, font=font, fill="#222222", anchor="lm")
+    return image
+
+
+def grid():
+    """Four rows of five cells; rows have 2, 0, 4 and 3 red cells, so row 3 has the most."""
+    rows = ["rbryb", "ybgbg", "rrgrr", "brryr"]
+    names = {"r": "red", "b": "blue", "y": "yellow", "g": "green"}
+    image = Image.new("RGB", (480, 320), BACKGROUND)
+    draw = ImageDraw.Draw(image)
+    for row, colors in enumerate(rows):
+        for column, code in enumerate(colors):
+            left, top = 65 + column * 72, 25 + row * 70
+            draw.rectangle((left, top, left + 62, top + 60), fill=COLORS[names[code]])
+    return image
+
+
+def frame():
+    """Four circles and two squares inside a black frame; three circles and a triangle outside."""
+    image = Image.new("RGB", (480, 320), BACKGROUND)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((120, 70, 400, 250), outline="#111111", width=4)
+    for item in [("circle", "blue", 170, 120), ("square", "orange", 260, 115), ("circle", "red", 350, 130),
+                 ("circle", "green", 190, 205), ("square", "blue", 280, 200), ("circle", "yellow", 360, 205),
+                 ("circle", "blue", 55, 90), ("circle", "green", 440, 285), ("circle", "red", 60, 260),
+                 ("triangle", "orange", 260, 35)]:
+        shape(draw, *item, size=40)
+    return image
+
+
 if __name__ == "__main__":
-    for name, make in (("counting", counting), ("position", position), ("chart", chart), ("receipt", receipt)):
+    for name, make in (("counting", counting), ("position", position), ("chart", chart), ("receipt", receipt),
+                       ("table", table), ("grid", grid), ("frame", frame)):
         make().save(HERE / f"{name}.png", optimize=True)
         print(f"wrote fixtures/{name}.png")

@@ -350,9 +350,9 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(cases, dataset())
         self.assertEqual(len(cases), len({case.id for case in cases}))
         self.assertEqual(Counter(case.track for case in cases),
-                         {"arithmetic": 12, "structured": 10, "agent": 13, "vision": 10, "context": 13})
+                         {"arithmetic": 13, "structured": 13, "agent": 13, "vision": 13, "context": 13})
         self.assertEqual(Counter(case.track for case in cases if case.difficulty == "challenge"),
-                         {"arithmetic": 4, "structured": 4, "agent": 7, "vision": 4, "context": 8})
+                         {"arithmetic": 5, "structured": 7, "agent": 7, "vision": 7, "context": 8})
         for case in cases:
             if case.image:
                 self.assertTrue((ROOT / "fixtures" / case.image).is_file(), case.image)
@@ -838,7 +838,7 @@ class BenchmarkTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 manifest = json.loads((out / "manifest.json").read_text())
                 self.assertEqual(manifest["status"], "complete")
-                self.assertEqual(manifest["suite_version"], "1.5.1")
+                self.assertEqual(manifest["suite_version"], "1.6.0")
                 blocks = [json.loads(line) for line in (out / "blocks.jsonl").read_text().splitlines()]
                 for block in blocks:
                     if block["phase"] == "warm":
@@ -871,11 +871,11 @@ class BenchmarkTest(unittest.TestCase):
                     "n": 26, "tool_use_passed": 26, "tool_use_pass_rate": 1.0,
                     "final_answer_passed": 26, "final_answer_pass_rate": 1.0,
                 })
-                self.assertEqual(rows["alpha:latest", "warm", "vision"]["n"], 20)
-                self.assertEqual(rows["beta:latest", "warm", "vision"]["outcomes"], {"unsupported": 20})
+                self.assertEqual(rows["alpha:latest", "warm", "vision"]["n"], 26)
+                self.assertEqual(rows["beta:latest", "warm", "vision"]["outcomes"], {"unsupported": 26})
                 self.assertEqual(rows["alpha:latest", "warm", "context-long"]["outcomes"], {"pass": 14})
                 self.assertEqual(rows["alpha:latest", "cold", "performance"]["load_s"]["median"], .05)
-                self.assertEqual(summary["repeatability"]["alpha:latest"]["raw_output_stable"], 58)
+                self.assertEqual(summary["repeatability"]["alpha:latest"]["raw_output_stable"], 65)
                 self.assertEqual(len(summary["sustained"]), 4)
                 self.assertTrue(all(interval["completed_requests"] > 0 for interval in summary["sustained"]))
                 report = subprocess.run([sys.executable, str(ROOT / "light_eval.py"), "report", str(out)],

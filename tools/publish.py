@@ -88,6 +88,8 @@ def entries():
             found.append({
                 "run": directory.name, "device": device(manifest), "model": model,
                 "thinking": manifest["options"]["thinking"], "cycles": manifest["options"]["cycles"],
+                # Official runs record the hardware setup (--setup); everything else is exploratory.
+                "setup": (manifest["options"].get("setup") or "").strip(),
                 "rounds": rounds,
                 "score": sum(row["status"] == "pass" for row in mine) / rounds,
                 "challenge": sum(row["status"] == "pass" and row["difficulty"] == "challenge"
@@ -132,17 +134,19 @@ def memory(entry):
 def table(group, totals):
     head = ["Model", f"Score /{totals['all']}", f"Challenge /{totals['challenge']}",
             *(f"{TRACK_NAMES[track]} /{totals[track]}" for track in TRACKS),
-            "Median time per case", "Timed out", "Memory (lowest free)", "Peak CPU"]
+            "Median time per case", "Timed out", "Memory (lowest free)", "CPU °C (mean / peak)"]
     lines = ["| " + " | ".join(head) + " |", "|" + "|".join(["---"] + ["---:"] * (len(head) - 3) + ["---", "---"]) + "|"]
     for entry in sorted(group, key=lambda item: (-item["score"], item["median_s"])):
         temperature = entry["temperature"]
         peak = "—"
         if temperature:
-            peak = f"{temperature['peak_cpu_c']:.0f} °C"
+            mean = temperature.get("mean_cpu_c")
+            peak = f"{mean:.0f} / {temperature['peak_cpu_c']:.0f}" if mean is not None else \
+                f"— / {temperature['peak_cpu_c']:.0f}"
             if temperature["throttled_cases"]:
                 peak += f" ⚠️ {temperature['throttled_cases']} throttled"
         lines.append("| " + " | ".join([
-            f"`{entry['model']}`", f"**{number(entry['score'])}**", number(entry["challenge"]),
+            f"`{entry['model']}`" + ("" if entry["setup"] else " †"), f"**{number(entry['score'])}**", number(entry["challenge"]),
             *(number(entry["tracks"][track]) for track in TRACKS),
             duration(entry["median_s"]), number(entry["timeouts"]), memory(entry), peak]) + " |")
     return "\n".join(lines)
@@ -228,10 +232,17 @@ def build():
         by_device[entry["device"]].append(entry)
     ASSETS.mkdir(parents=True, exist_ok=True)
     for name in sorted(by_device, key=lambda item: (not item.startswith("Raspberry"), item)):
-        group = by_device[name]
+        # An official run replaces exploratory runs of the same model and thinking mode.
+        official = {(entry["model"], entry["thinking"]) for entry in by_device[name] if entry["setup"]}
+        group = [entry for entry in by_device[name]
+                 if entry["setup"] or (entry["model"], entry["thinking"]) not in official]
         parts += [f"### {name}", ""]
-        if any(entry["cycles"] < 2 for entry in group):
-            parts += ["> Exploratory: one cycle per model. Official runs will use `--cycles 2`.", ""]
+        setups = sorted({entry["setup"] for entry in group if entry["setup"]})
+        for setup in setups:
+            parts += [f"Setup: {setup}", ""]
+        if any(not entry["setup"] for entry in group):
+            parts += ["† Exploratory run: one pass, no recorded hardware setup. "
+                      "[Official runs](docs/OFFICIAL_RUNS.md) will replace these rows.", ""]
         for mode in ("off", "on"):
             subset = [entry for entry in group if entry["thinking"] == mode]
             if subset:

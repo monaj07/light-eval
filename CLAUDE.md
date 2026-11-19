@@ -47,7 +47,7 @@ There are three modules; each depends only on the ones listed before it.
   - `VERSION` is the suite version recorded in every manifest.
 - **`runtime.py`**: the `Ollama` client (streaming chat, `/api/ps`, unload), error classification (`api_error` maps OOM text to `out_of_memory`), passive telemetry (`sample()`, the `Telemetry` thread, `range_stats`, the thermal `gate`), and `server_setting()`, which reads an environment variable from the running Ollama server process (Mac: `ps -E`; Linux: `/proc/<pid>/environ` or `systemctl show ollama`).
 - **`light_eval.py`**: the CLI and orchestration.
-  - `rounds()` builds the balanced, seeded model order. Paired cycles reverse the order, so `--cycles 2` covers every order.
+  - `rounds()` builds the balanced, seeded model order. Paired cycles reverse the order; with three models, `--cycles 2` covers every order. Official runs use `--cycles 1` (see `docs/OFFICIAL_RUNS.md`).
   - `run_locked()` writes the manifest and opens the output files.
   - `run_slot()` runs the cold, warm and sustained phases for one model.
   - `run_case()` handles one case, including the agent loop: native tool calls first, then one schema-constrained final answer with tools removed, all within one deadline.

@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use Light Eval, please cite it as below."
+title: "Light Eval: benchmarking local LLMs on a Raspberry Pi 5 with 8 GB"
+authors:
+  - family-names: Najafi
+    given-names: Mohammad
+repository-code: "https://github.com/monaj07/light-eval"
+license: MIT
+version: 1.7.0
+date-released: 2026-11-18
+keywords:
+  - llm
+  - benchmark
+  - raspberry-pi
+  - ollama
+  - edge-ai

@@ -26,9 +26,13 @@ python3 light_eval.py report results/<name>
 
 # Regenerate the challenge images (needs Pillow and macOS fonts; the runner never imports it)
 python3 fixtures/make_fixtures.py
+
+# Publish a run (copies it into docs/results/, which is committed) and rebuild the README results
+python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>
+python3 tools/publish.py build
 ```
 
-`--out` must be a new directory. `results/` is gitignored, so run outputs are never committed. Keep them in `results/` and not in a scratch or temp directory, or they will be lost.
+`--out` must be a new directory. `results/` is gitignored, so run outputs are never committed. Keep them in `results/` and not in a scratch or temp directory, or they will be lost. Runs worth publishing go into `docs/results/` with `tools/publish.py add`; that copies the manifest, cases and blocks, without the large telemetry file.
 
 ## Architecture
 
@@ -50,14 +54,16 @@ There are three modules; each depends only on the ones listed before it.
   - `summarize()` produces `summary.json`.
   - `apply_budget_defaults()` sets context/max-tokens by thinking mode: 4096/1024 with thinking off, 10240/6144 with thinking on.
 
+`tools/publish.py` imports `summarize` and `temperature_summary` from `light_eval.py`. `build` keeps only published runs of the current `VERSION`, and rewrites the README between `<!-- results:start -->` and `<!-- results:end -->` plus the light/dark SVG charts in `docs/assets/`. Never hand-edit that part of the README. CI (`.github/workflows/tests.yml`) runs the tests and fails if `build` changes `README.md` or `docs/assets/`, so run `build` after publishing or after changing `VERSION`.
+
 Each run writes five files: `manifest.json` (options, hashes, model digests, server settings, swap devices), `cases.jsonl`, `blocks.jsonl`, `telemetry.jsonl` and `summary.json`.
 
 ## Rules that span files
 
-- **Any change to cases, scoring or the run protocol bumps `cases.VERSION`.** Also add an entry to the version history paragraph in `README.md`, and update the tests that pin the suite version and the per-track and per-difficulty counts (`test_expanded_suite_preserves_controls_and_fits_tool_budgets`, `test_cli_mock_ollama`). Compare results only within one suite version and one thinking mode.
+- **Any change to cases, scoring or the run protocol bumps `cases.VERSION`.** Also add an entry to `CHANGELOG.md`, update the suite badge in `README.md` and `version` in `CITATION.cff`, and update the tests that pin the suite version and the per-track and per-difficulty counts (`test_expanded_suite_preserves_controls_and_fits_tool_budgets`, `test_cli_mock_ollama`). Compare results only within one suite version and one thinking mode.
 - **Prompts must not leak answers.** `test_requests_do_not_depend_on_expected_answers_or_scoring_rules` enforces this. New or changed cases are checked by a fresh subagent that sees only the exported prompts and images, never the repo; it must answer 100% correctly before the case is committed. Agent cases are excluded from that check, because solving them needs the tool simulator in the source.
 - **When adding a vision case**, add a drawing function to `fixtures/make_fixtures.py`, commit the PNG, and check that the existing images still regenerate byte for byte.
-- **The warm phase loads each model once** and reloads only after a failed warmup, an out-of-memory error or an eviction. This depends on the Ollama server running with `LLAMA_ARG_CACHE_RAM=0`; with the default 8 GiB prompt cache, memory grows with every case. The runner records the value as `server_prompt_cache_ram_mib` and warns when it isn't 0. Setup is in `README.md`, under Prompt cache.
+- **The warm phase loads each model once** and reloads only after a failed warmup, an out-of-memory error or an eviction. This depends on the Ollama server running with `LLAMA_ARG_CACHE_RAM=0`; with the default 8 GiB prompt cache, memory grows with every case. The runner records the value as `server_prompt_cache_ram_mib` and warns when it isn't 0. Setup is in `README.md` (Quick start) and `docs/METHODOLOGY.md` (Prompt cache).
 - **The runner refuses to start if any model is resident.** Unload models (`ollama stop MODEL`) and keep other Ollama clients idle, including `ollama launch` sessions.
 
 ## Models and platforms

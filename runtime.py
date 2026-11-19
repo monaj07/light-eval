@@ -258,6 +258,7 @@ def range_stats(rows):
         "samples": len(rows),
         "start_cpu_c": temperatures[0] if temperatures else None,
         "peak_cpu_c": max(temperatures, default=None),
+        "mean_cpu_c": sum(temperatures) / len(temperatures) if temperatures else None,
         "end_cpu_c": temperatures[-1] if temperatures else None,
         "min_mem_available_kib": min(available, default=None),
         "peak_system_used_estimate_kib": total[0] - min(available) if total and available else None,

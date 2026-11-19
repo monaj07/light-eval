@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from cases import ROOT, Case, dataset, dispatch, score, score_tools
-from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, build_parser, inspect_models, print_summary, rounds, run_case, run_locked, run_slot, summarize
+from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, build_parser, inspect_models, print_summary, rounds, run_case, run_locked, run_slot, summarize, temperature_summary
 from runtime import BenchError, Ollama, Telemetry, mac_memory, mac_total_memory_kib, range_stats, server_setting
 
 CASES = {case.prompt: case for case in dataset()}
@@ -646,6 +646,26 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(stats["swap_out_pages"], 3)
         self.assertEqual(stats["active_throttling_bits_or"], 4)
         self.assertEqual(stats["new_throttling_history_bits"], 4)
+        self.assertAlmostEqual(stats["mean_cpu_c"], 55.75)
+
+    def test_temperature_summary_per_run(self):
+        def row(model, start, peak, mean, samples, throttled=0, round_num=1):
+            return {"model": model, "round": round_num, "phase": "warm", "environment": {
+                "start_cpu_c": start, "peak_cpu_c": peak, "mean_cpu_c": mean, "samples": samples,
+                "active_throttling_bits_or": throttled, "new_throttling_history_bits": 0}}
+        rows = [row("pi", 50.0, 58.0, 54.0, 10), row("pi", 60.0, 69.5, 64.0, 30, throttled=8),
+                row("pi", 62.0, 63.0, 62.5, 1, round_num=2),
+                # A Mac has no temperature sensor, so its run is left out.
+                {"model": "mac", "round": 1, "phase": "warm",
+                 "environment": {"start_cpu_c": None, "peak_cpu_c": None, "samples": 5}}]
+        first, second = temperature_summary(rows)
+        self.assertEqual((first["model"], first["round"], first["cases"]), ("pi", 1, 2))
+        self.assertEqual(first["case_start_cpu_c"]["min"], 50.0)
+        self.assertEqual(first["case_start_cpu_c"]["max"], 60.0)
+        self.assertAlmostEqual(first["mean_cpu_c"], (54.0 * 10 + 64.0 * 30) / 40)
+        self.assertEqual(first["peak_cpu_c"], 69.5)
+        self.assertEqual(first["throttled_cases"], 1)
+        self.assertEqual((second["round"], second["throttled_cases"]), (2, 0))
 
     def test_macos_memory_and_swap_units(self):
         vm = ("Mach Virtual Memory Statistics: (page size of 16384 bytes)\n"

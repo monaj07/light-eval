@@ -426,7 +426,39 @@ def summarize(rows, blocks):
                           "first_third_decode_tok_s": spread(rates[:span]) if len(rates) >= 3 else None,
                           "last_third_decode_tok_s": spread(rates[-span:]) if len(rates) >= 3 else None,
                           "environment": block["environment"]})
-    return {"groups": results, "repeatability": repeatability, "sustained": sustained}
+    return {"groups": results, "repeatability": repeatability, "sustained": sustained,
+            "temperature": temperature_summary(rows)}
+
+
+def temperature_summary(rows):
+    """Per model, round and phase: how hot the CPU ran and whether it throttled.
+
+    The runner waits for the thermal band only before loading a model, so cases
+    run at whatever temperature the workload reaches. Scores don't depend on it;
+    speed does only if the Pi throttles, so throttled cases are counted.
+    """
+    runs = defaultdict(list)
+    for row in rows:
+        if row.get("environment"):
+            runs[row["model"], row["round"], row["phase"]].append(row["environment"])
+    summary = []
+    for (model, round_num, phase), envs in sorted(runs.items()):
+        weighted = [(env["mean_cpu_c"], env["samples"]) for env in envs
+                    if env.get("mean_cpu_c") is not None and env.get("samples")]
+        starts = spread(env.get("start_cpu_c") for env in envs)
+        if starts is None:
+            continue  # no temperature sensor, e.g. on a Mac
+        summary.append({
+            "model": model, "round": round_num, "phase": phase, "cases": len(envs),
+            "case_start_cpu_c": starts,
+            "mean_cpu_c": (sum(mean * n for mean, n in weighted) / sum(n for _, n in weighted)
+                           if weighted else None),
+            "peak_cpu_c": max((env["peak_cpu_c"] for env in envs if env.get("peak_cpu_c") is not None),
+                              default=None),
+            "throttled_cases": sum(bool(env.get("active_throttling_bits_or") or
+                                        env.get("new_throttling_history_bits")) for env in envs),
+        })
+    return summary
 
 
 def write_json(path, value):
@@ -459,6 +491,12 @@ def print_summary(summary):
             score_label += ", " + ", ".join(
                 f"{level} {levels[level]['passed']}/{levels[level]['supported']}" for level in ("control", "challenge"))
         print(f"{row['model']} {row['phase']}/{row['track']} ({n} cases{score_label}{timing}) {status}")
+    for item in summary.get("temperature", []):
+        starts = item["case_start_cpu_c"]
+        mean = f", mean {item['mean_cpu_c']:.1f}" if item["mean_cpu_c"] is not None else ""
+        print(f"{item['model']} {item['phase']} round {item['round']} CPU temperature: cases started at "
+              f"{starts['min']:.1f}-{starts['max']:.1f} C (median {starts['median']:.1f}){mean}, peak "
+              f"{item['peak_cpu_c']:.1f} C, {item['throttled_cases']}/{item['cases']} cases with throttling flags")
     for block in summary["sustained"]:
         if block["failure"]:
             print(f"{block['model']} sustained round {block['round']} stopped: {block['failure']['status']}")

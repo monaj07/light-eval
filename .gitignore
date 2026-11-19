@@ -5,3 +5,4 @@
 !docs/results/**
 .venv/
 .pytest_cache/
+CLAUDE.local.md

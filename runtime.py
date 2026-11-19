@@ -6,6 +6,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -281,6 +282,7 @@ class Telemetry:
         self.lock = threading.Lock()
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self.poll, daemon=True)
+        self.gate_timeouts = []  # gates that ran out of time; the run continues and records them
 
     def __enter__(self):
         self.take()
@@ -322,6 +324,11 @@ class Telemetry:
             if low <= temp <= high and flags & 0xffff == 0:
                 return row
             if time.monotonic() >= deadline:
-                raise BenchError(f"Temperature gate timed out at {temp:.1f}°C (band {low:.1f}–{high:.1f}°C, flags {flags:#x}).",
-                                 "thermal_gate_timeout")
+                # Waiting longer rarely helps, and stopping would lose an unattended run,
+                # so continue and record the miss for the manifest.
+                self.gate_timeouts.append({"cpu_c": temp, "band_c": [low, high], "throttled_bits": flags,
+                                           "waited_s": wait})
+                print(f"light-eval: warning: temperature gate timed out at {temp:.1f}°C "
+                      f"(band {low:.1f}-{high:.1f}°C, flags {flags:#x}); continuing", file=sys.stderr, flush=True)
+                return row
             time.sleep(min(2, max(0, deadline - time.monotonic())))

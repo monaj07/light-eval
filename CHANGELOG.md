@@ -6,6 +6,7 @@ Each run records the suite version in `manifest.json`. Scores are comparable onl
 
 - Replaced two arithmetic controls that every model passed (`math-decimal`, `math-fraction`) with two challenges: clock-hand angle and mixture. Arithmetic now has six controls and seven challenges, like the structured, agent and vision tracks.
 - The suite has 65 cases: 29 controls and 36 challenges.
+- Added after release: a temperature gate that times out no longer stops the run. The run continues, records the miss in `manifest.json` under `thermal_gate_timeouts`, and `--cooldown` defaults to 900 s instead of 180 s. Runs whose gates were all met behave exactly as before.
 - Added after release, as reporting only (scores and protocol unchanged): `summary.json` and `report` give each Pi run's CPU temperature (case start range, mean, peak) and the number of cases with throttling flags.
 
 ## 1.6.0 (2026-11-18)

@@ -840,6 +840,17 @@ class BenchmarkTest(unittest.TestCase):
             with self.assertRaisesRegex(BenchError, "vcgencmd unavailable"):
                 monitor.gate((50, 60), 10)
 
+    def test_gate_timeout_is_recorded_and_the_run_continues(self):
+        hot = {"cpu_c": 66.0, "throttled_bits": 0}
+        clock = iter([0, 0, 5, 11])
+        with patch("runtime.time.sleep"), patch("runtime.time.monotonic", side_effect=lambda: next(clock)), \
+                patch("runtime.sample", return_value=hot), patch("sys.stderr", new_callable=io.StringIO) as err:
+            monitor = Telemetry(io.StringIO(), 1)
+            self.assertEqual(monitor.gate((40, 50), 10), hot)
+        self.assertEqual(monitor.gate_timeouts, [{"cpu_c": 66.0, "band_c": [40, 50], "throttled_bits": 0,
+                                                  "waited_s": 10}])
+        self.assertIn("continuing", err.getvalue())
+
     def test_cli_mock_ollama(self):
         with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server, tempfile.TemporaryDirectory() as tmp:
             server.models = [{"name": name, "digest": name + "-digest"} for name in ("alpha:latest", "beta:latest")]

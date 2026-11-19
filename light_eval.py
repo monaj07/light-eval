@@ -526,7 +526,8 @@ def build_parser():
     run.add_argument("--sustain-seconds", type=float, default=90)
     run.add_argument("--sustain-tokens", type=int, default=128)
     run.add_argument("--sample-seconds", type=float, default=1)
-    run.add_argument("--cooldown", type=float, default=180, help="seconds to wait at a temperature gate")
+    run.add_argument("--cooldown", type=float, default=900,
+                     help="most seconds to wait at a temperature gate before continuing (default: 900)")
     run.add_argument("--temp-min", type=float, help="override the idle-baseline-dependent minimum")
     run.add_argument("--temp-max", type=float, default=65, help="initial ceiling and upper bound on automatic band")
     run.add_argument("--no-thermal-gate", action="store_true", help="portable smoke test")
@@ -640,6 +641,7 @@ def run_locked(args, api, models, plan, selection):
                 else:
                     band = (args.temp_min, args.temp_max)
             manifest["temperature_band_c"] = band
+            manifest["thermal_gate_timeouts"] = monitor.gate_timeouts  # filled in as the run goes
             write_json(out / "manifest.json", manifest)
             for round_num, row in enumerate(plan, 1):
                 candidates = [by_id[key] for key in row["cases"]]

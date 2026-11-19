@@ -19,6 +19,11 @@ This is the protocol behind the published Raspberry Pi 5 results. It uses suite 
 
 ## Setup
 
+Every official run uses the same temperature band, 30–50 °C:
+- Before each model loads (and before the sustained phase), the runner waits up to 15 minutes (`--cooldown`, default 900 s) for the CPU to cool into the band.
+- Without an explicit band, each run would derive one from its own starting temperature. A thinking-on run that starts straight after another would then measure a hot Pi as "idle".
+- If a gate runs out of time, the run continues. The miss is recorded in `manifest.json` under `thermal_gate_timeouts`.
+
 Every official run passes the same `--setup` text, so the hardware is recorded in each `manifest.json`:
 
 ```bash
@@ -48,6 +53,7 @@ SETUP="Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 
 5. **Clean state.**
    - Reboot, and don't use the Pi for anything else during the run.
+   - After 5 minutes idle, `vcgencmd measure_temp` should read below about 47 °C, comfortably inside the band. If it's higher, the room or the cooling differs from the recorded setup: fix that, or raise `--temp-max` and note it in `$SETUP`.
    - `ollama ps` lists nothing.
    - `vcgencmd get_throttled` prints `throttled=0x0`.
 
@@ -58,11 +64,22 @@ SETUP="Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 
 ## Commands
 
+Run these from `~/light-eval` inside the tmux session, after setting `SETUP` in that same shell.
+
+**Rehearsal first (about 10–15 minutes).** It runs every phase and the gates between two models on the arithmetic track only, to check the whole chain before committing a night to it:
+
+```bash
+python3 light_eval.py run --models qwen3.5:2b gemma4:e2b --tracks arithmetic --sustain-seconds 20 \
+  --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/rehearsal_v1_7
+```
+
+It should end with a summary for both models, `manifest.json` should show `"status": "complete"`, and `thermal_gate_timeouts` should be empty, or show how long cooling takes. Don't publish it.
+
 Thinking off: all four models, all phases, 4 rounds.
 
 ```bash
 python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b gemma4:e4b \
-  --cycles 1 --setup "$SETUP" --out results/official_v1_7_off
+  --cycles 1 --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off
 ```
 
 Thinking on: one model per run, warm phase only.
@@ -70,7 +87,7 @@ Thinking on: one model per run, warm phase only.
 ```bash
 for model in qwen3.5:2b gemma4:e2b qwen3.5:4b gemma4:e4b; do
   python3 light_eval.py run --models "$model" --phases warm --thinking on \
-    --setup "$SETUP" --out "results/official_v1_7_on_${model//[:.]/_}"
+    --temp-min 30 --temp-max 50 --setup "$SETUP" --out "results/official_v1_7_on_${model//[:.]/_}"
 done
 ```
 

@@ -80,7 +80,7 @@ def entries():
             continue
         rows = [row for row in read_rows(directory / "cases.jsonl") if row["phase"] == "warm"]
         blocks = [block for block in read_rows(directory / "blocks.jsonl") if block["phase"] == "warm"]
-        temperatures = {item["model"]: item for item in temperature_summary(rows)}
+        temperatures = combined_temperatures(temperature_summary(rows))
         for model in sorted({row["model"] for row in rows}):
             mine = [row for row in rows if row["model"] == model and row["status"] != "unsupported"]
             rounds = len({row["round"] for row in mine}) or 1
@@ -108,6 +108,23 @@ def entries():
                 "temperature": temperatures.get(model),
             })
     return found
+
+
+def combined_temperatures(items):
+    """One temperature summary per model across all its rounds (temperature_summary is per round)."""
+    by_model = defaultdict(list)
+    for item in items:
+        by_model[item["model"]].append(item)
+    combined = {}
+    for model, rounds in by_model.items():
+        weighted = [(item["mean_cpu_c"], item["cases"]) for item in rounds if item["mean_cpu_c"] is not None]
+        combined[model] = {
+            "mean_cpu_c": (sum(mean * n for mean, n in weighted) / sum(n for _, n in weighted)
+                           if weighted else None),
+            "peak_cpu_c": max(item["peak_cpu_c"] for item in rounds),
+            "throttled_cases": sum(item["throttled_cases"] for item in rounds),
+        }
+    return combined
 
 
 def number(value):

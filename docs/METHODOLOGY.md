@@ -71,7 +71,18 @@ The object format was chosen after inspecting responses on these fixtures. Treat
 | --- | --- |
 | Cold | Checks that Ollama has no resident model, then times the first text request and records model load time. The operating-system page cache is retained and uncontrolled, so this measures an unloaded-model request. |
 | Warm | Loads and warms the model once and runs every warm case, reloading only after a failed warmup, an out-of-memory error or an eviction. On the Pi, the runner waits for the thermal band before loading; the cases then run at whatever temperature the workload reaches. |
-| Sustained | Starts with a warmed model inside the same thermal band and runs sequential decode requests for at least 90 seconds by default. The final request can finish after the window. The report shows actual duration and first-versus-last-third decode speed when at least three requests complete. |
+| Sustained | Starts with a warmed model inside the same thermal band and runs sequential decode requests for at least 90 seconds by default (`--sustain-seconds`). The final request can finish after the window. The report shows actual duration and first-versus-last-third decode speed when at least three requests complete. The requests don't use the 65 cases; see [Sustained phase prompt](#sustained-phase-prompt). |
+
+### Sustained phase prompt
+
+Every sustained request sends the same prompt (`DECODE_PROMPT` in `light_eval.py`):
+
+> Write a numbered list of at least sixty distinct short sentences about maintaining a garden. Begin with item 1 and continue the list as far as possible.
+
+- **The prompt is open-ended on purpose.** Each request is capped at 128 generated tokens (`--sustain-tokens`), and a 60-item list never finishes within that cap. So every request generates the full 128 tokens, and the requests are directly comparable.
+- **Only speed is measured.** The text is not scored. Decode speed is compared between the first and last thirds of the requests, to show whether continuous generation slows the device down, for example through heat.
+- **Prefix reuse is allowed.** The model stays loaded and repeats the same prompt, so later requests can reuse the processed prompt from the live slot. The phase therefore measures generation speed, not prompt processing.
+- **The thinking mode is the run's.** In the official thinking-off run, it's off.
 
 ## Fairness and repeatability
 

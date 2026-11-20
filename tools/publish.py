@@ -40,6 +40,19 @@ HARDWARE_PHOTOS = (
      "Raspberry Pi 5 8 GB, Active Cooler, acrylic case, SanDisk Extreme 128 GB microSD card and 27 W power supply"),
     ("docs/assets/hardware/raspberry-pi-assembled.jpg", "The assembled Raspberry Pi 5 in its vented acrylic case"),
 )
+SPEED_NOTE = (
+    "Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how "
+    "fast it writes, and it is limited mostly by memory bandwidth. \"In cases\" is generation during the 65 cases, "
+    "whose answers are short JSON; \"sustained\" is 90 seconds of continuous free prose. The Gemma builds include a "
+    "small draft model for speculative decoding, which likely explains why they generate faster on short, "
+    "predictable JSON than on prose."
+)
+TIME_NOTE = (
+    "Answers are short, so most of each case is spent reading the prompt, especially for vision and long-context "
+    "cases. That is why a model can generate quickly and still take the longest per case. Times are medians over "
+    "cases, from Ollama's own prompt and generation durations, so reading and writing don't add up exactly to the "
+    "median time per case."
+)
 MEMORY_NOTE = (
     "Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages "
     "swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs "
@@ -196,7 +209,40 @@ def speed(rows, model):
             changes.append(last / first - 1)
     return {"first_load_s": first_load_s,
             "sustained_tok_s": statistics.median(rates) if rates else None,
-            "sustained_change": statistics.mean(changes) if changes else None}
+            "sustained_change": statistics.mean(changes) if changes else None,
+            **time_split(rows, model)}
+
+
+def time_split(rows, model):
+    """Where a warm case's time goes: reading the prompt (prefill) versus writing the answer.
+
+    Uses Ollama's own durations, summed over a case's turns. Prompt tokens served from the
+    cache are left out of the reading speed, since they weren't processed again."""
+    cases = []
+    for row in rows:
+        if row["model"] != model or row["phase"] != "warm":
+            continue
+        metrics = [turn["metrics"] for turn in row.get("turns", []) if turn.get("metrics")]
+        if not metrics:
+            continue
+        processed = sum((m.get("prompt_eval_count") or 0) - (m.get("prompt_eval_cached_count") or 0) for m in metrics)
+        cases.append({
+            "read_s": sum(m.get("prompt_eval_duration") or 0 for m in metrics) / 1e9,
+            "write_s": sum(m.get("eval_duration") or 0 for m in metrics) / 1e9,
+            "processed": processed, "generated": sum(m.get("eval_count") or 0 for m in metrics)})
+    if not cases:
+        return {"read_s": None}
+    read, write = sum(case["read_s"] for case in cases), sum(case["write_s"] for case in cases)
+    return {
+        "read_s": statistics.median(case["read_s"] for case in cases),
+        "write_s": statistics.median(case["write_s"] for case in cases),
+        "read_share": read / (read + write) if read + write else None,
+        "prefill_tok_s": statistics.median(case["processed"] / case["read_s"] for case in cases
+                                           if case["read_s"] and case["processed"] > 0),
+        "case_decode_tok_s": statistics.median(case["generated"] / case["write_s"] for case in cases
+                                               if case["write_s"] and case["generated"]),
+        "answer_tokens": statistics.median(case["generated"] for case in cases),
+    }
 
 
 def combined_temperatures(items):
@@ -261,14 +307,28 @@ def table(group, totals):
     return "\n".join(lines)
 
 
+def rate(value):
+    return f"{value:.1f} tokens/s" if value else "—"
+
+
 def speed_table(group):
-    lines = ["| Model | First load from storage | Generation speed (sustained) | Speed change during the sustained phase |",
-             "|---|---:|---:|---:|"]
-    for entry in sorted(group, key=lambda item: item["model"]):
+    lines = ["| Model | First load from storage | Prompt processing | Generation (in cases) | "
+             "Generation (sustained) | Speed change during the sustained phase |",
+             "|---|---:|---:|---:|---:|---:|"]
+    for entry in sorted(group, key=lambda item: item["median_s"]):
         load = f"{entry['first_load_s']:.0f} s" if entry["first_load_s"] is not None else "—"
-        rate = f"{entry['sustained_tok_s']:.1f} tokens/s" if entry["sustained_tok_s"] else "—"
         change = f"{entry['sustained_change'] * 100:+.1f}%" if entry["sustained_change"] is not None else "—"
-        lines.append(f"| `{entry['model']}` | {load} | {rate} | {change} |")
+        lines.append(f"| `{entry['model']}` | {load} | {rate(entry.get('prefill_tok_s'))} | "
+                     f"{rate(entry.get('case_decode_tok_s'))} | {rate(entry['sustained_tok_s'])} | {change} |")
+    return "\n".join(lines)
+
+
+def time_table(group):
+    lines = ["| Model | Median time per case | Reading the prompt | Writing the answer | Share spent reading | "
+             "Answer length (median) |", "|---|---:|---:|---:|---:|---:|"]
+    for entry in sorted(group, key=lambda item: item["median_s"]):
+        lines.append(f"| `{entry['model']}` | {duration(entry['median_s'])} | {duration(entry['read_s'])} | "
+                     f"{duration(entry['write_s'])} | {entry['read_share']:.0%} | {entry['answer_tokens']:.0f} tokens |")
     return "\n".join(lines)
 
 
@@ -460,7 +520,11 @@ def build():
                   "</picture>", ""]
         timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
         if timed:
-            parts += ["**Load time and generation speed**", "", speed_table(timed), ""]
+            parts += ["**Speed** (thinking off)", "", speed_table(timed), "", SPEED_NOTE, ""]
+        split = [entry for entry in group if entry["thinking"] == "off" and entry.get("read_s") is not None
+                 and entry["setup"]]
+        if split:
+            parts += ["**Where the time per case goes** (thinking off)", "", time_table(split), "", TIME_NOTE, ""]
         for mode in ("off", "on"):
             subset = [entry for entry in group if entry["thinking"] == mode]
             if subset:

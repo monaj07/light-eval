@@ -38,14 +38,27 @@ Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during 
   <img alt="Cases passed against median time per case on Raspberry Pi 5 (8 GB); colour shows the thinking mode and bubble area the peak memory in use" src="docs/assets/score-vs-time-raspberry-pi-5-8-gb-light.svg" width="920">
 </picture>
 
-**Load time and generation speed**
+**Speed** (thinking off)
 
-| Model | First load from storage | Generation speed (sustained) | Speed change during the sustained phase |
-|---|---:|---:|---:|
-| `gemma4:e2b` | 55 s | 7.5 tokens/s | +0.1% |
-| `gemma4:e4b` | 88 s | 4.5 tokens/s | +0.8% |
-| `qwen3.5:2b` | 33 s | 6.1 tokens/s | -1.8% |
-| `qwen3.5:4b` | 42 s | 4.0 tokens/s | -1.5% |
+| Model | First load from storage | Prompt processing | Generation (in cases) | Generation (sustained) | Speed change during the sustained phase |
+|---|---:|---:|---:|---:|---:|
+| `qwen3.5:2b` | 33 s | 40.3 tokens/s | 6.3 tokens/s | 6.1 tokens/s | -1.8% |
+| `gemma4:e2b` | 55 s | 22.0 tokens/s | 12.5 tokens/s | 7.5 tokens/s | +0.1% |
+| `qwen3.5:4b` | 42 s | 13.4 tokens/s | 4.2 tokens/s | 4.0 tokens/s | -1.5% |
+| `gemma4:e4b` | 88 s | 10.7 tokens/s | 6.7 tokens/s | 4.5 tokens/s | +0.8% |
+
+Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how fast it writes, and it is limited mostly by memory bandwidth. "In cases" is generation during the 65 cases, whose answers are short JSON; "sustained" is 90 seconds of continuous free prose. The Gemma builds include a small draft model for speculative decoding, which likely explains why they generate faster on short, predictable JSON than on prose.
+
+**Where the time per case goes** (thinking off)
+
+| Model | Median time per case | Reading the prompt | Writing the answer | Share spent reading | Answer length (median) |
+|---|---:|---:|---:|---:|---:|
+| `qwen3.5:2b` | 10.5 s | 9.5 s | 2.4 s | 73% | 15 tokens |
+| `gemma4:e2b` | 19.5 s | 18.4 s | 1.3 s | 93% | 14 tokens |
+| `qwen3.5:4b` | 20.0 s | 18.6 s | 3.2 s | 78% | 13 tokens |
+| `gemma4:e4b` | 40.1 s | 37.4 s | 2.0 s | 93% | 13 tokens |
+
+Answers are short, so most of each case is spent reading the prompt, especially for vision and long-context cases. That is why a model can generate quickly and still take the longest per case. Times are medians over cases, from Ollama's own prompt and generation durations, so reading and writing don't add up exactly to the median time per case.
 
 **Thinking off: full results** (scores averaged over 3 passes)
 
@@ -66,6 +79,7 @@ For what the models actually answered in each track, and why it was scored as it
 
 - **Thinking on is still being measured on the Pi.** Runs for `qwen3.5:2b`, `qwen3.5:4b` and `gemma4:e2b` are in progress. `gemma4:e4b` is left out, because it didn't reliably fit even with thinking off.
 - **`gemma4:e2b` is the best fit for an 8 GB Pi with thinking off.** It scores 39 of 65 with a median of 19.5 s per case, generates 7.5 tokens/s and leaves 2.2 GB of RAM free. `gemma4:e4b` scores higher (43.3), but it doesn't reliably fit: it filled RAM and zram in every pass, and in its fourth pass the Pi ran out of memory, hung and rebooted. It was therefore not run with thinking on.
+- **On the Pi, reading the prompt takes longer than writing the answer.** Answers are short, so 73–93% of each case is prompt processing. `gemma4:e4b` writes at a reasonable 6.7 tokens/s in the cases, but reads prompts at only 10.7 tokens/s against 40.3 for `qwen3.5:2b`, so it takes the longest per case (40 s median, against 10.5 s).
 - **Bigger isn't better at tool use.** With thinking off, `qwen3.5:4b` passes 3 of 13 agent cases against 11 for `qwen3.5:2b`, mostly by adding tool calls the task didn't ask for.
 - **Ollama's prompt cache can use up to 8 GiB.** By default each runner keeps earlier prompts in RAM, which swamps an 8 GB Pi. Set `LLAMA_ARG_CACHE_RAM=0` on the Ollama server (see [Quick start](#quick-start)).
 - **The Pi stays cool enough with the official Active Cooler.** In the official run, CPU temperature averaged 60–65 °C and peaked at 69 °C, below the roughly 80 °C at which the Pi 5 starts throttling. No case recorded a throttling flag, and sustained generation speed changed by less than 2% over each 90-second phase.

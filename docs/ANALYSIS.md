@@ -40,7 +40,7 @@ With thinking off, every model fails some control cases:
 
 - **The answers look like guesses, not working.** qwen3.5:2b's 139 is 2 × 60 + 17, the time in minutes rather than seconds. Every remainder answer is non-zero, although 374 = 17 × 22.
 - **The clock case needs several steps.** At 7:38 the hour hand has moved 19° past the 7, to 229°, while the minute hand is at 228°, so the hands are 1° apart.
-- **Thinking on should fix most of this.** In an exploratory run during development (not published), qwen3.5:2b went from 4 to 11 of 13 arithmetic cases with thinking on. The Pi thinking-on runs will show this properly.
+- **Thinking on fixes most of this.** On the Pi, `gemma4:e2b` passes all 13 arithmetic cases with thinking on, `qwen3.5:4b` 11 and `qwen3.5:2b` 10. Every remaining failure is a timeout, not a wrong answer. See [With thinking on](#with-thinking-on).
 
 ## 🧾 Structured output: one case, three different mistakes
 
@@ -123,6 +123,31 @@ Every model fell for a different decoy:
 - gemma4:e2b answered `S100`. That's the shelf of the TX-670 record directly above the comment: it found the right place, then took the wrong record.
 
 The context cases are built so that shortcuts fail: the first match, the last match, a matching prefix, a nearby record, or an answer for an ID that isn't there. A wrong answer usually shows which shortcut the model took. The absence cases also check that a model will say "not found" rather than guess. Always answering "not found" doesn't pay either, because most context cases do have an answer.
+
+## With thinking on
+
+The official thinking-on runs (one pass per model; `gemma4:e4b` excluded, since it didn't reliably fit) were tested on the same cases. Here is how the cases on this page fared:
+
+| Case | qwen3.5:2b | qwen3.5:4b | gemma4:e2b |
+|---|---|---|---|
+| `math-units`, `math-remainder` | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `math-clock-angle` | ⏱️ timeout | ✅ | ✅ |
+| `json-24h-times`, `json-filter-sort` | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `agent-direct` | ✅ | ✅ | ✅ |
+| `agent-no-op-state` | ⏱️ timeout | ⏱️ timeout | ✅ |
+| `vision-table-total` | ✅ | ✅ | ✅ |
+| `context-long-revision` | ⏱️ timeout | ⏱️ timeout | ❌ wrong answer |
+| `context-long-absence` | ⏱️ timeout | ⏱️ timeout | ✅ |
+
+- **The reasoning failures disappear:** the wrong unit, the remainder, the midnight conversion, the boundary in the filter, and the table arithmetic.
+- **What's left is mostly time.** Each timeout reached the 10-minute case limit while the model was still thinking. The Qwen models think longest, and the long-context cases are hardest, because the 96-record log takes minutes to read before any thinking starts.
+- **`context-long-revision` is still the hardest case:** `gemma4:e2b` finished, but still answered wrongly.
+
+To see a thinking-on case, including the model's reasoning, use the thinking-on run folder:
+
+```bash
+python3 tools/show_case.py docs/results/pi5-on-gemma4-e2b context-long-revision --thinking
+```
 
 ## Repeat passes
 

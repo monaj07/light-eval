@@ -3,6 +3,7 @@
 
   python3 tools/show_case.py docs/results/pi5-off-official json-24h-times
   python3 tools/show_case.py docs/results/pi5-off-official agent-no-op-state --round 2
+  python3 tools/show_case.py docs/results/pi5-on-gemma4-e2b context-long-revision --thinking
 
 Standard library only, like the runner.
 """
@@ -21,6 +22,7 @@ def main():
     parser.add_argument("run", type=Path, help="a run folder, e.g. docs/results/pi5-off-official")
     parser.add_argument("case", help="case id, e.g. json-24h-times")
     parser.add_argument("--round", type=int, default=1, help="which pass to show (default: 1)")
+    parser.add_argument("--thinking", action="store_true", help="also print each model's reasoning, if any")
     args = parser.parse_args()
 
     manifest = json.loads((args.run / "manifest.json").read_text())
@@ -45,6 +47,11 @@ def main():
         print(f"\n--- {row['model']}: {row['status']}")
         if row.get("tool_trace"):
             print("tool calls:", [[call.get("name"), call.get("arguments")] for call in row["tool_trace"]])
+        thinking = "\n".join(turn.get("thinking") or "" for turn in row.get("turns") or []).strip()
+        if thinking and args.thinking:
+            print(f"thinking:\n{thinking}\n")
+        elif thinking:
+            print(f"(thought for {len(thinking.split())} words; add --thinking to see it)")
         content = (row.get("turns") or [{}])[-1].get("content") or row.get("reason") or ""
         print(content.strip())
 

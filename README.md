@@ -71,20 +71,31 @@ Answers are short, so most of each case is spent reading the prompt, especially 
 
 Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs recorded before zram's own RAM use was measured: they add the separate peaks of RAM and swap, and count zram's compressed pages twice, so they overstate memory in use when zram is busy. ✅ more than 0.5 GB stayed free and swap stayed under 1 GB; ⚠️ less free or more swap; ❌ ran out of memory or hung the Pi.
 
+**Thinking on: full results**
+
+| Model | Score /65 | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Median time per case | Timed out | Peak memory in use (lowest free) | CPU °C (mean / peak) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `gemma4:e2b` | **56** (86%) | 28 | 13 | 13 | 12 | 9 | 9 | 1.1 min | 1 | ✅ 5.7 GB (2.2 GB free) | 63 / 68 |
+| `qwen3.5:2b` | **43** (66%) | 19 | 10 | 10 | 7 | 8 | 8 | 2.3 min | 11 | ✅ 4.3 GB (3.6 GB free) | 64 / 69 |
+| `qwen3.5:4b` | **42** (65%) | 21 | 11 | 11 | 2 | 10 | 8 | 4.5 min | 13 | ✅ 5.5 GB (2.3 GB free) | 65 / 69 |
+
+Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs recorded before zram's own RAM use was measured: they add the separate peaks of RAM and swap, and count zram's compressed pages twice, so they overstate memory in use when zram is busy. ✅ more than 0.5 GB stayed free and swap stayed under 1 GB; ⚠️ less free or more swap; ❌ ran out of memory or hung the Pi.
+
 <!-- results:end -->
 
 ### Findings so far
 
 For what the models actually answered in each track, and why it was scored as it was, see the **[failure analysis](docs/ANALYSIS.md)**.
 
-- **Thinking on is still being measured on the Pi.** Runs for `qwen3.5:2b`, `qwen3.5:4b` and `gemma4:e2b` are in progress. `gemma4:e4b` is left out, because it didn't reliably fit even with thinking off.
-- **`gemma4:e2b` is the best fit for an 8 GB Pi with thinking off.** It scores 39 of 65 with a median of 19.5 s per case, generates 7.5 tokens/s and leaves 2.2 GB of RAM free. `gemma4:e4b` scores higher (43.3), but it doesn't reliably fit: it filled RAM and zram in every pass, and in its fourth pass the Pi ran out of memory, hung and rebooted. It was therefore not run with thinking on.
+- **With thinking on, `gemma4:e2b` is the clear winner.** It passes 56 of 65 cases (86%), up from 39 with thinking off, at a median of 1.1 minutes per case, and runs out of time on only 1 case. `qwen3.5:2b` and `qwen3.5:4b` rise to 43 and 42. They think for much longer, though, and 11 and 13 of their cases hit the 10-minute limit before answering. `gemma4:e4b` wasn't run with thinking on, because it didn't reliably fit even with thinking off.
+- **Thinking fixes reasoning, at a cost in time.** It turns nearly every arithmetic and structured-output failure into a pass: the thinking-off failures in the [failure analysis](docs/ANALYSIS.md) mostly pass with thinking on. The median time per case grows about 3.5× for `gemma4:e2b` and 13× for both Qwen models.
+- **`gemma4:e2b` is also the best fit for an 8 GB Pi with thinking off.** It scores 39 of 65 with a median of 19.5 s per case, generates 7.5 tokens/s and leaves 2.2 GB of RAM free. `gemma4:e4b` scores higher (43.3), but it doesn't reliably fit: it filled RAM and zram in every pass, and in its fourth pass the Pi ran out of memory, hung and rebooted. It was therefore not run with thinking on.
 - **On the Pi, reading the prompt takes longer than writing the answer.** Answers are short, so 73–93% of each case is prompt processing. `gemma4:e4b` writes at a reasonable 6.7 tokens/s in the cases, but reads prompts at only 10.7 tokens/s against 40.3 for `qwen3.5:2b`, so it takes the longest per case (40 s median, against 10.5 s).
-- **Bigger isn't better at tool use.** With thinking off, `qwen3.5:4b` passes 3 of 13 agent cases against 11 for `qwen3.5:2b`, mostly by adding tool calls the task didn't ask for.
+- **Bigger isn't better at tool use, and thinking doesn't help it.** With thinking off, `qwen3.5:4b` passes 3 of 13 agent cases against 11 for `qwen3.5:2b`, mostly by adding tool calls the task didn't ask for. With thinking on, the Qwen models do worse still (2 and 7), while `gemma4:e2b` stays at 12.
 - **Ollama's prompt cache can use up to 8 GiB.** By default each runner keeps earlier prompts in RAM, which swamps an 8 GB Pi. Set `LLAMA_ARG_CACHE_RAM=0` on the Ollama server (see [Quick start](#quick-start)).
 - **The Pi stays cool enough with the official Active Cooler.** In the official run, CPU temperature averaged 60–65 °C and peaked at 69 °C, below the roughly 80 °C at which the Pi 5 starts throttling. No case recorded a throttling flag, and sustained generation speed changed by less than 2% over each 90-second phase.
 - **Repeat runs are close, but not identical.** Across three passes on the Pi, 74–82% of cases produced word-for-word the same output, and the pass or fail result differed between passes for only 2 of 260 model–case pairs. Scores are therefore averaged over the passes.
-- **On the Pi, time matters more than tokens with thinking on.** At about 5 tokens/s, a 10-minute case limit allows roughly 3,000 generated tokens, fewer than some cases need.
+- **On the Pi, the time limit, not the token budget, is what stops thinking.** No case used up the 6,144-token budget. All 25 thinking-on timeouts reached the 10-minute limit while the model was still reasoning. They had generated an estimated 800–3,200 tokens, since part of the 10 minutes goes to reading the prompt, and generation with thinking on runs at only 3.8–11.3 tokens/s.
 
 ## What it measures
 

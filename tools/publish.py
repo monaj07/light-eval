@@ -420,29 +420,43 @@ def svg_chart(points, theme, title):
 
     # Each label tries right, left, above and below its bubble, taking the first spot that
     # stays inside the plot and clear of every bubble and earlier label.
-    placed = []
+    placed, leaders, labels = [], [], []
     for point, px, py, r in sorted(bubbles, key=lambda item: item[2]):
         label = f'{point["model"]} · {accuracy(point):.0f}%'
         if point["flag"]:
             label += " (hung the Pi)"
         w, h = 6.6 * len(label), 14
         candidates = [(px + r + 8, py + 4, "start"), (px - r - 8, py + 4, "end"),
-                      (px, py - r - 8, "middle"), (px, py + r + 18, "middle")]
+                      (px, py - r - 8, "middle"), (px, py + r + 18, "middle"),
+                      (px + r * 0.7 + 6, py - r * 0.7 - 6, "start"), (px - r * 0.7 - 6, py - r * 0.7 - 6, "end"),
+                      (px + r * 0.7 + 6, py + r * 0.7 + 16, "start"), (px - r * 0.7 - 6, py + r * 0.7 + 16, "end"),
+                      (px, py - r - 26, "middle"), (px, py + r + 36, "middle")]
 
         def box(cand):
             lx, ly, anchor = cand
             x0 = lx if anchor == "start" else lx - w if anchor == "end" else lx - w / 2
             return (x0, ly - h + 3, x0 + w, ly + 3)
 
-        def clear(cand):
+        def overlaps(cand):
+            """How badly a spot collides: leaving the plot counts most, then bubbles, then labels."""
             x0, y0, x1, y1 = box(cand)
-            inside = left <= x0 and x1 <= left + plot_w + 30 and top <= y0 and y1 <= top + plot_h
-            return inside and not any(hits_circle((x0, y0, x1, y1), cx, cy, cr)
-                                      for other, cx, cy, cr in bubbles if other is not point) \
-                and not any(x0 < b[2] and b[0] < x1 and y0 < b[3] and b[1] < y1 for b in placed)
-        choice = next((cand for cand in candidates if clear(cand)), candidates[0])
+            outside = not (left <= x0 and x1 <= left + plot_w + 30 and top <= y0 and y1 <= top + plot_h)
+            circles = sum(hits_circle((x0, y0, x1, y1), cx, cy, cr) for other, cx, cy, cr in bubbles if other is not point)
+            labels = sum(x0 < b[2] and b[0] < x1 and y0 < b[3] and b[1] < y1 for b in placed)
+            return 100 * outside + 10 * circles + labels
+        # The first clear spot wins; if none is clear, take the least crowded one.
+        choice = min(candidates, key=overlaps)
         placed.append(box(choice))
-        out.append(text(choice[0], choice[1], label, fill="ink", anchor=choice[2], halo=True))
+        # A label pushed away from its bubble gets a thin leader line, so it can't be mistaken for a neighbour's.
+        x0, y0, x1, y1 = box(choice)
+        nearest_x, nearest_y = min(max(px, x0), x1), min(max(py, y0), y1)
+        gap = math.hypot(nearest_x - px, nearest_y - py) - r
+        if gap > 10:
+            ux, uy = (nearest_x - px) / (gap + r), (nearest_y - py) / (gap + r)
+            leaders.append(f'<line x1="{px + ux * (r + 2):.1f}" y1="{py + uy * (r + 2):.1f}" x2="{nearest_x - ux * 3:.1f}" '
+                           f'y2="{nearest_y - uy * 3:.1f}" stroke="{t["ink2"]}" stroke-width="1"/>')
+        labels.append(text(choice[0], choice[1], label, fill="ink", anchor=choice[2], halo=True))
+    out += leaders + labels
 
     # Legend column: thinking modes, then memory sizes, then the flag marker.
     ly = top + 6

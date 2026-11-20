@@ -28,7 +28,7 @@ python3 light_eval.py report results/<name>
 python3 fixtures/make_fixtures.py
 
 # Publish a run (copies it into docs/results/, which is committed) and rebuild the README results
-python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>
+python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>   # --rounds 1-3 --note "why" for a partial run
 python3 tools/publish.py build
 ```
 
@@ -70,5 +70,6 @@ Each run writes five files: `manifest.json` (options, hashes, model digests, ser
 
 - **Mac and Pi must run identical model builds.** Compare the IDs in `ollama list`. On the Mac use `gemma4:e2b-it-q4_K_M` and `gemma4:e4b-it-q4_K_M`; the plain tags can resolve to different builds on Apple hardware, for example an nvfp4 MLX build.
 - **qwen3.5:9b is excluded** because it runs at about 1.8 tokens/s on the Pi.
-- **gemma4:e4b barely fits on the Pi.** With thinking off it completes the suite but fills RAM and zram completely. Thinking on hasn't been tested on the Pi yet.
+- **gemma4:e4b doesn't reliably fit on the Pi.** In the official thinking-off run it filled RAM and zram in every pass, and in its fourth pass the Pi hung and rebooted. It is excluded from thinking-on runs.
+- **Outputs are close but not identical between passes** (74–82% identical on the Pi). Never claim answers are deterministic; scores are averaged over passes.
 - **Raspberry Pi OS swaps to zram**, which is compressed RAM. A full swap there means RAM is exhausted.

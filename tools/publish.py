@@ -15,7 +15,6 @@ Standard library only, like the runner.
 import argparse
 import json
 import math
-import shutil
 import statistics
 import sys
 from collections import defaultdict
@@ -30,7 +29,6 @@ PUBLISHED = ROOT / "docs" / "results"
 ASSETS = ROOT / "docs" / "assets"
 README = ROOT / "README.md"
 START, END = "<!-- results:start -->", "<!-- results:end -->"
-RUN_FILES = ("manifest.json", "cases.jsonl", "blocks.jsonl")
 TRACK_NAMES = {"arithmetic": "Arithmetic", "structured": "Structured", "agent": "Agent",
                "vision": "Vision", "context": "Context"}
 
@@ -46,16 +44,41 @@ THEMES = {
 }
 
 
-def add(run, name):
+def parse_rounds(text):
+    """'1-3' or '1,2,3' -> [1, 2, 3]."""
+    rounds = set()
+    for part in text.split(","):
+        low, _, high = part.partition("-")
+        rounds.update(range(int(low), int(high or low) + 1))
+    return sorted(rounds)
+
+
+def add(run, name, rounds=None, note=None, flags=()):
     manifest = json.loads((run / "manifest.json").read_text())
-    if manifest.get("status") != "complete":
-        sys.exit(f"{run} is not a complete run (status {manifest.get('status')!r})")
+    if manifest.get("status") != "complete" and not rounds:
+        sys.exit(f"{run} is not a complete run (status {manifest.get('status')!r}). To publish only its "
+                 "complete rounds, pass --rounds and a --note saying why the rest are left out.")
+    if rounds and not note:
+        sys.exit("--rounds needs a --note saying why the other rounds are left out")
     target = PUBLISHED / (name or run.name)
     if target.exists():
         sys.exit(f"{target} already exists")
     target.mkdir(parents=True)
-    for file in RUN_FILES:
-        shutil.copy2(run / file, target / file)
+    keep = set(parse_rounds(rounds)) if rounds else None
+    for file in ("cases.jsonl", "blocks.jsonl"):
+        lines = (run / file).read_text().splitlines()
+        if keep is not None:
+            lines = [line for line in lines if json.loads(line)["round"] in keep]
+        (target / file).write_text("".join(line + "\n" for line in lines))
+    published = {}
+    if keep is not None:
+        # The run's own status stays as recorded; this records what was published and why.
+        published.update({"rounds": sorted(keep), "note": note, "original_status": manifest.get("status")})
+    if flags:
+        published["flags"] = dict(flag.split("=", 1) for flag in flags)
+    if published:
+        manifest["published"] = published
+    write_json(target / "manifest.json", manifest)
     write_json(target / "summary.json", summarize(read_rows(target / "cases.jsonl"),
                                                   read_rows(target / "blocks.jsonl")))
     print(f"Published {run} as {target.relative_to(ROOT)}; now run: python3 tools/publish.py build")
@@ -76,9 +99,12 @@ def entries():
     found = []
     for directory in sorted(PUBLISHED.iterdir() if PUBLISHED.exists() else []):
         manifest = json.loads((directory / "manifest.json").read_text())
-        if manifest.get("suite_version") != VERSION or manifest.get("status") != "complete":
+        published = manifest.get("published", {})
+        if manifest.get("suite_version") != VERSION or (
+                manifest.get("status") != "complete" and not published.get("rounds")):
             continue
-        rows = [row for row in read_rows(directory / "cases.jsonl") if row["phase"] == "warm"]
+        all_rows = read_rows(directory / "cases.jsonl")
+        rows = [row for row in all_rows if row["phase"] == "warm"]
         blocks = [block for block in read_rows(directory / "blocks.jsonl") if block["phase"] == "warm"]
         temperatures = combined_temperatures(temperature_summary(rows))
         for model in sorted({row["model"] for row in rows}):
@@ -106,8 +132,42 @@ def entries():
                 "oom": any(row["status"] == "out_of_memory" for row in mine)
                        or any(env.get("system_oom_kills") for env in envs),
                 "temperature": temperatures.get(model),
+                "flag": published.get("flags", {}).get(model),
+                "note": published.get("note"),
+                **speed(all_rows, model),
             })
     return found
+
+
+def decode_rate(turn):
+    metrics = turn.get("metrics") or {}
+    if metrics.get("eval_count") and metrics.get("eval_duration"):
+        return metrics["eval_count"] / (metrics["eval_duration"] / 1e9)
+    return None
+
+
+def speed(rows, model):
+    """Cold load time and sustained generation speed, where the run measured them."""
+    cold = sorted((row for row in rows if row["model"] == model and row["phase"] == "cold"
+                   and row.get("turns") and (row["turns"][0].get("metrics") or {}).get("load_duration")),
+                  key=lambda row: row["round"])
+    # Only the first load after the reboot reads the model from storage; later loads
+    # can come from the operating system's file cache.
+    first_load_s = cold[0]["turns"][0]["metrics"]["load_duration"] / 1e9 if cold else None
+    rates, changes = [], []
+    for round_num in sorted({row["round"] for row in rows if row["model"] == model}):
+        sustained = [decode_rate(row["turns"][0]) for row in rows
+                     if row["model"] == model and row["round"] == round_num and row["phase"] == "sustained"
+                     and row["status"] == "complete" and row.get("turns")]
+        sustained = [rate for rate in sustained if rate]
+        rates += sustained
+        if len(sustained) >= 3:
+            third = len(sustained) // 3
+            first, last = statistics.mean(sustained[:third]), statistics.mean(sustained[-third:])
+            changes.append(last / first - 1)
+    return {"first_load_s": first_load_s,
+            "sustained_tok_s": statistics.median(rates) if rates else None,
+            "sustained_change": statistics.mean(changes) if changes else None}
 
 
 def combined_temperatures(items):
@@ -136,6 +196,8 @@ def duration(seconds):
 
 
 def memory(entry):
+    if entry["flag"]:
+        return f"❌ {entry['flag']}"
     if entry["oom"]:
         return "❌ out of memory"
     available = entry["min_available_kib"]
@@ -166,6 +228,17 @@ def table(group, totals):
             f"`{entry['model']}`" + ("" if entry["setup"] else " †"), f"**{number(entry['score'])}**", number(entry["challenge"]),
             *(number(entry["tracks"][track]) for track in TRACKS),
             duration(entry["median_s"]), number(entry["timeouts"]), memory(entry), peak]) + " |")
+    return "\n".join(lines)
+
+
+def speed_table(group):
+    lines = ["| Model | First load from storage | Generation speed (sustained) | Speed change during the sustained phase |",
+             "|---|---:|---:|---:|"]
+    for entry in sorted(group, key=lambda item: item["model"]):
+        load = f"{entry['first_load_s']:.0f} s" if entry["first_load_s"] is not None else "—"
+        rate = f"{entry['sustained_tok_s']:.1f} tokens/s" if entry["sustained_tok_s"] else "—"
+        change = f"{entry['sustained_change'] * 100:+.1f}%" if entry["sustained_change"] is not None else "—"
+        lines.append(f"| `{entry['model']}` | {load} | {rate} | {change} |")
     return "\n".join(lines)
 
 
@@ -257,13 +330,22 @@ def build():
         setups = sorted({entry["setup"] for entry in group if entry["setup"]})
         for setup in setups:
             parts += [f"Setup: {setup}", ""]
+        for note in sorted({entry["note"] for entry in group if entry["note"]}):
+            parts += [f"Note: {note}", ""]
         if any(not entry["setup"] for entry in group):
             parts += ["† Exploratory run: one pass, no recorded hardware setup. "
                       "[Official runs](docs/OFFICIAL_RUNS.md) will replace these rows.", ""]
         for mode in ("off", "on"):
             subset = [entry for entry in group if entry["thinking"] == mode]
             if subset:
-                parts += [f"**Thinking {mode}**", "", table(subset, totals), ""]
+                rounds = sorted({entry["rounds"] for entry in subset})
+                label = f"**Thinking {mode}**"
+                if rounds != [1]:
+                    label += f" (scores averaged over {'/'.join(map(str, rounds))} passes)"
+                parts += [label, "", table(subset, totals), ""]
+        timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
+        if timed:
+            parts += ["**Load time and generation speed**", "", speed_table(timed), ""]
         base = f"score-vs-time-{slug(name)}"
         for theme in THEMES:
             (ASSETS / f"{base}-{theme}.svg").write_text(svg_chart(group, theme))
@@ -288,10 +370,14 @@ def main():
     add_command = commands.add_parser("add", help="copy a finished run into docs/results/")
     add_command.add_argument("run", type=Path)
     add_command.add_argument("--name", help="published directory name (default: the run's name)")
+    add_command.add_argument("--rounds", help="publish only these complete rounds, e.g. 1-3 (needs --note)")
+    add_command.add_argument("--note", help="why some rounds are left out; shown with the results")
+    add_command.add_argument("--flag", action="append", default=[], metavar="MODEL=TEXT",
+                             help="a warning shown in that model's memory column, e.g. a hang")
     commands.add_parser("build", help="rebuild the README results section and charts")
     args = parser.parse_args()
     if args.command == "add":
-        add(args.run, args.name)
+        add(args.run, args.name, args.rounds, args.note, args.flag)
     else:
         build()
 

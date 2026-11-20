@@ -11,11 +11,11 @@ This is the protocol behind the published Raspberry Pi 5 results. It uses suite 
 | Phases | cold, warm, sustained | warm only |
 | Expected time on the Pi | about 10 hours | from about 4.5 hours (`qwen3.5:2b`) upwards per model |
 
-**Why not `--cycles 2`.** With four models, `--cycles 2` would mean 8 rounds. Answers are deterministic (temperature 0, fixed seed), so the extra rounds would add little beyond more timing samples. With thinking off, 4 rounds still give a balanced order, a timing spread and a check that outputs repeat.
+**Why not `--cycles 2`.** With four models, `--cycles 2` would mean 8 rounds. With thinking off, 4 rounds already give a balanced order, a timing spread and a repeatability check. Outputs are close but not identical between passes: in the official run, 74–82% of cases repeated word for word, and the pass or fail result differed between passes for 2 of 260 model–case pairs. So the scores are averaged over the passes.
 
 **Why thinking-on runs are warm only.** Cold and sustained measure the hardware: model load time and whether speed holds under continuous generation. They don't depend on the thinking mode, so they're measured once, with thinking off.
 
-**If `gemma4:e4b` runs out of memory with thinking on**, the run records it, and that is the result: it doesn't fit with thinking on.
+**`gemma4:e4b` is not run with thinking on.** In the official thinking-off run, it filled RAM and zram in every pass. In its fourth pass the Pi hung and rebooted, which also ended the run. Thinking on uses a 2.5× larger context, so it would almost certainly hang the Pi again.
 
 ## Setup
 
@@ -85,13 +85,17 @@ python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b gemma4:e4b \
 Thinking on: one model per run, warm phase only.
 
 ```bash
-for model in qwen3.5:2b gemma4:e2b qwen3.5:4b gemma4:e4b; do
+for model in qwen3.5:2b gemma4:e2b qwen3.5:4b; do
   python3 light_eval.py run --models "$model" --phases warm --thinking on \
     --temp-min 30 --temp-max 50 --setup "$SETUP" --out "results/official_v1_7_on_${model//[:.]/_}"
 done
 ```
 
 A run that stops early leaves a partial folder, and `--out` must name a new folder. To retry, give the retry a new name and keep the partial run for reference.
+
+## What happened in the official thinking-off run
+
+The Pi hung and rebooted in round 4, after 49 of `gemma4:e4b`'s 65 cases, because memory ran out. Rounds 1–3 had completed for all four models, so those were published with `--rounds 1-3`. The published manifest records the reason, and the run's own `"status": "running"` is kept as it was. See [the results](../README.md#results).
 
 ## Publishing
 
@@ -101,5 +105,7 @@ Copy each finished run folder to the Mac's `results/`, then:
 python3 tools/publish.py add results/official_v1_7_off --name pi5-off-official
 python3 tools/publish.py build
 ```
+
+If a run stops partway, publish only its complete rounds with `--rounds 1-3 --note "why"`. `--flag "MODEL=text"` shows a warning in that model's memory column.
 
 A run counts as official when it records a `--setup`. In the README, its rows replace the exploratory rows (marked †) for the same model and thinking mode.

@@ -249,7 +249,7 @@ def table(group, totals):
             if temperature["throttled_cases"]:
                 peak += f" ⚠️ {temperature['throttled_cases']} throttled"
         lines.append("| " + " | ".join([
-            f"`{entry['model']}`" + ("" if entry["setup"] else " †"), f"**{number(entry['score'])}**", number(entry["challenge"]),
+            f"`{entry['model']}`" + ("" if entry["setup"] else " †"), f"**{number(entry['score'])}** ({100 * entry['score'] / totals['all']:.0f}%)", number(entry["challenge"]),
             *(number(entry["tracks"][track]) for track in TRACKS),
             duration(entry["median_s"]), number(entry["timeouts"]), memory(entry), peak]) + " |")
     return "\n".join(lines)
@@ -292,8 +292,12 @@ def svg_chart(points, theme, title):
     def x(seconds):
         return left + plot_w * (math.log10(seconds) - math.log10(low)) / (math.log10(high) - math.log10(low))
 
-    def y(score):
-        return top + plot_h * (1 - score / total)
+    def y(percent):
+        return top + plot_h * (1 - percent / 100)
+
+    def accuracy(point):
+        # Out of all cases: a case a model can't attempt (no vision, no tools) counts as not passed.
+        return 100 * point["score"] / total
 
     def text(px, py, content, size=12, fill="ink2", anchor="start", weight="normal", halo=False):
         # A halo in the surface colour keeps labels legible where they cross a connector.
@@ -308,17 +312,17 @@ def svg_chart(points, theme, title):
            f'<rect width="{width}" height="{height}" rx="8" fill="{t["surface"]}"/>',
            text(left - 40, 34, title, size=16, fill="ink", weight="600"),
            text(left - 40, 56, subtitle, size=12, fill="ink2")]
-    for score in range(0, total + 1, 10):
-        out.append(f'<line x1="{left}" x2="{left + plot_w}" y1="{y(score):.1f}" y2="{y(score):.1f}" '
-                   f'stroke="{t["grid"] if score else t["axis"]}" stroke-width="1"/>')
-        out.append(text(left - 10, y(score) + 4, score, fill="muted", anchor="end"))
+    for percent in range(0, 101, 20):
+        out.append(f'<line x1="{left}" x2="{left + plot_w}" y1="{y(percent):.1f}" y2="{y(percent):.1f}" '
+                   f'stroke="{t["grid"] if percent else t["axis"]}" stroke-width="1"/>')
+        out.append(text(left - 10, y(percent) + 4, f"{percent}%", fill="muted", anchor="end"))
     for tick in ticks:
         out.append(f'<line x1="{x(tick):.1f}" x2="{x(tick):.1f}" y1="{top}" y2="{top + plot_h}" '
                    f'stroke="{t["grid"]}" stroke-width="1"/>')
         label = f"{tick:g} s" if tick < 60 else f"{tick / 60:g} min"
         out.append(text(x(tick), top + plot_h + 20, label, fill="muted", anchor="middle"))
     out.append(text(left + plot_w / 2, top + plot_h + 44, "Median time per case (log scale)", anchor="middle"))
-    out.append(text(left, top - 12, f"Cases passed (of {total})"))
+    out.append(text(left, top - 12, f"Accuracy (share of all {total} cases passed)"))
     out.append(text(left + plot_w - 6, top + 16, "better ↖", fill="muted", anchor="end"))
 
     # Connectors first, so the bubbles sit on top of them.
@@ -328,13 +332,13 @@ def svg_chart(points, theme, title):
     for modes in by_model.values():
         if "off" in modes and "on" in modes:
             a, b = modes["off"], modes["on"]
-            out.append(f'<line x1="{x(a["median_s"]):.1f}" y1="{y(a["score"]):.1f}" x2="{x(b["median_s"]):.1f}" '
-                       f'y2="{y(b["score"]):.1f}" stroke="{t["muted"]}" stroke-width="1.5" stroke-dasharray="1 4" '
+            out.append(f'<line x1="{x(a["median_s"]):.1f}" y1="{y(accuracy(a)):.1f}" x2="{x(b["median_s"]):.1f}" '
+                       f'y2="{y(accuracy(b)):.1f}" stroke="{t["muted"]}" stroke-width="1.5" stroke-dasharray="1 4" '
                        f'stroke-linecap="round"/>')
     # Largest bubbles first, so small ones stay visible on top.
     bubbles = []
     for point in sorted(points, key=lambda item: -radius(item)):
-        px, py, r = x(point["median_s"]), y(point["score"]), radius(point)
+        px, py, r = x(point["median_s"]), y(accuracy(point)), radius(point)
         bubbles.append((point, px, py, r))
         color = t["on" if point["thinking"] == "on" else "off"]
         dashed = ' stroke-dasharray="4 3"' if point["flag"] else ""
@@ -351,7 +355,7 @@ def svg_chart(points, theme, title):
     # stays inside the plot and clear of every bubble and earlier label.
     placed = []
     for point, px, py, r in sorted(bubbles, key=lambda item: item[2]):
-        label = f'{point["model"]} · {number(point["score"])}'
+        label = f'{point["model"]} · {accuracy(point):.0f}%'
         if point["flag"]:
             label += " (hung the Pi)"
         w, h = 6.6 * len(label), 14

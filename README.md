@@ -35,10 +35,10 @@ Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during 
 
 | Model | Score /65 | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Median time per case | Timed out | Peak memory in use (lowest free) | CPU °C (mean / peak) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| `gemma4:e4b` | **43.3** | 19.3 | 3 | 12 | 12 | 7 | 9.3 | 40.1 s | 0 | ❌ 9.9 GB≈ (10 MB free): hung the Pi in 1 of 4 passes | 62 / 67 |
-| `gemma4:e2b` | **39** | 14 | 4 | 9 | 12 | 8 | 6 | 19.5 s | 0 | ✅ 5.9 GB≈ (2.2 GB free) | 60 / 65 |
-| `qwen3.5:2b` | **32** | 15 | 4 | 6 | 11 | 4 | 7 | 10.5 s | 0 | ✅ 4.3 GB≈ (3.7 GB free) | 64 / 69 |
-| `qwen3.5:4b` | **31.7** | 14 | 4 | 7.7 | 3 | 8 | 9 | 20.0 s | 0 | ✅ 5.5 GB≈ (2.5 GB free) | 65 / 68 |
+| `gemma4:e4b` | **43.3** (67%) | 19.3 | 3 | 12 | 12 | 7 | 9.3 | 40.1 s | 0 | ❌ 9.9 GB≈ (10 MB free): hung the Pi in 1 of 4 passes | 62 / 67 |
+| `gemma4:e2b` | **39** (60%) | 14 | 4 | 9 | 12 | 8 | 6 | 19.5 s | 0 | ✅ 5.9 GB≈ (2.2 GB free) | 60 / 65 |
+| `qwen3.5:2b` | **32** (49%) | 15 | 4 | 6 | 11 | 4 | 7 | 10.5 s | 0 | ✅ 4.3 GB≈ (3.7 GB free) | 64 / 69 |
+| `qwen3.5:4b` | **31.7** (49%) | 14 | 4 | 7.7 | 3 | 8 | 9 | 20.0 s | 0 | ✅ 5.5 GB≈ (2.5 GB free) | 65 / 68 |
 
 Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs recorded before zram's own RAM use was measured: they add the separate peaks of RAM and swap, and count zram's compressed pages twice, so they overstate memory in use when zram is busy. ✅ more than 0.5 GB stayed free and swap stayed under 1 GB; ⚠️ less free or more swap; ❌ ran out of memory or hung the Pi.
 
@@ -64,13 +64,13 @@ Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in 
 
 | Model | Score /65 | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Median time per case | Timed out | Peak memory in use (lowest free) | CPU °C (mean / peak) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| `qwen3.5:2b` † | **33** | 15 | 4 | 7 | 11 | 4 | 7 | 0.5 s | 0 | — | — |
+| `qwen3.5:2b` † | **33** (51%) | 15 | 4 | 7 | 11 | 4 | 7 | 0.5 s | 0 | — | — |
 
 **Thinking on**
 
 | Model | Score /65 | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Median time per case | Timed out | Peak memory in use (lowest free) | CPU °C (mean / peak) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| `qwen3.5:2b` † | **46** | 24 | 11 | 10 | 8 | 7 | 10 | 16.6 s | 0 | — | — |
+| `qwen3.5:2b` † | **46** (71%) | 24 | 11 | 10 | 8 | 7 | 10 | 16.6 s | 0 | — | — |
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/score-vs-time-mac-apple-silicon-metal-dark.svg">

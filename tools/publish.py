@@ -34,6 +34,12 @@ TRACK_NAMES = {"arithmetic": "Arithmetic", "structured": "Structured", "agent": 
 
 # Chart tokens: validated two-slot categorical palette (thinking off, thinking on)
 # plus chrome, for each colour scheme.
+# The Pi used for the published results, shown under its setup line.
+HARDWARE_PHOTOS = (
+    ("docs/assets/hardware/raspberry-pi-hardware.jpg",
+     "Raspberry Pi 5 8 GB, Active Cooler, acrylic case, SanDisk Extreme 128 GB microSD card and 27 W power supply"),
+    ("docs/assets/hardware/raspberry-pi-assembled.jpg", "The assembled Raspberry Pi 5 in its vented acrylic case"),
+)
 MEMORY_NOTE = (
     "Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages "
     "swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs "
@@ -434,24 +440,16 @@ def build():
         setups = sorted({entry["setup"] for entry in group if entry["setup"]})
         for setup in setups:
             parts += [f"Setup: {setup}", ""]
+        photos = [(path, alt) for path, alt in HARDWARE_PHOTOS if (ROOT / path).exists()]
+        if name.startswith("Raspberry") and photos:
+            parts += ["<p>" + " ".join(f'<a href="{path}"><img src="{path}" alt="{alt}" height="220"></a>'
+                                       for path, alt in photos) + "</p>", ""]
         for note in sorted({entry["note"] for entry in group if entry["note"]}):
             parts += [f"Note: {note}", ""]
         if any(not entry["setup"] for entry in group):
             parts += ["† Exploratory run: one pass, no recorded hardware setup. "
                       "[Official runs](docs/OFFICIAL_RUNS.md) will replace these rows.", ""]
-        for mode in ("off", "on"):
-            subset = [entry for entry in group if entry["thinking"] == mode]
-            if subset:
-                rounds = sorted({entry["rounds"] for entry in subset})
-                label = f"**Thinking {mode}**"
-                if rounds != [1]:
-                    label += f" (scores averaged over {'/'.join(map(str, rounds))} passes)"
-                parts += [label, "", table(subset, totals), ""]
-                if any(entry["peak_mem_gb"] is not None for entry in subset if entry["device"].startswith("Raspberry")):
-                    parts += [MEMORY_NOTE, ""]
-        timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
-        if timed:
-            parts += ["**Load time and generation speed**", "", speed_table(timed), ""]
+        # Overview first (chart, then load time and speed), then the full tables.
         base = f"score-vs-time-{slug(name)}"
         for theme in THEMES:
             (ASSETS / f"{base}-{theme}.svg").write_text(svg_chart(group, theme, f"Accuracy and speed on {name}"))
@@ -460,6 +458,19 @@ def build():
                   f'  <img alt="Cases passed against median time per case on {name}; colour shows the thinking mode and bubble area the peak memory in use" '
                   f'src="docs/assets/{base}-light.svg" width="920">',
                   "</picture>", ""]
+        timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
+        if timed:
+            parts += ["**Load time and generation speed**", "", speed_table(timed), ""]
+        for mode in ("off", "on"):
+            subset = [entry for entry in group if entry["thinking"] == mode]
+            if subset:
+                rounds = sorted({entry["rounds"] for entry in subset})
+                label = f"**Thinking {mode}: full results**"
+                if rounds != [1]:
+                    label += f" (scores averaged over {'/'.join(map(str, rounds))} passes)"
+                parts += [label, "", table(subset, totals), ""]
+                if any(entry["peak_mem_gb"] is not None for entry in subset if entry["device"].startswith("Raspberry")):
+                    parts += [MEMORY_NOTE, ""]
     parts.append(END)
     text = README.read_text()
     if START not in text or END not in text:

@@ -40,7 +40,7 @@ With thinking off, every model fails some control cases:
 
 - **The answers look like guesses, not working.** qwen3.5:2b's 139 is 2 × 60 + 17, the time in minutes rather than seconds. Every remainder answer is non-zero, although 374 = 17 × 22.
 - **The clock case needs several steps.** At 7:38 the hour hand has moved 19° past the 7, to 229°, while the minute hand is at 228°, so the hands are 1° apart.
-- **Thinking on fixes most of this.** In an exploratory Mac run, qwen3.5:2b went from 4 to 11 of 13 arithmetic cases. Arithmetic is the clearest measure of what thinking adds.
+- **Thinking on should fix most of this.** In an exploratory run during development (not published), qwen3.5:2b went from 4 to 11 of 13 arithmetic cases with thinking on. The Pi thinking-on runs will show this properly.
 
 ## 🧾 Structured output: one case, three different mistakes
 

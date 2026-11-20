@@ -84,6 +84,14 @@ Every sustained request sends the same prompt (`DECODE_PROMPT` in `light_eval.py
 - **Prefix reuse is allowed.** The model stays loaded and repeats the same prompt, so later requests can reuse the processed prompt from the live slot. The phase therefore measures generation speed, not prompt processing.
 - **The thinking mode is the run's.** In the official thinking-off run, it's off.
 
+### Cross-device check
+
+Published results come from the Raspberry Pi. A Mac is used during development to try cases quickly. As a check that the setup gives consistent answers, `qwen3.5:2b` with the same model build (same Ollama model ID) was run with thinking off on both, during development:
+- word-for-word identical output on 60 of 65 cases on the Pi (CPU) and the Mac (Metal);
+- scores of 32 and 33, differing by one case: `json-null`, where the Pi run wrote `"ticket": null`.
+
+Small numerical differences between backends can change a token. Mac and Pi results are only comparable when the model IDs match, and the Mac numbers are not published.
+
 ## Fairness and repeatability
 
 - One cycle gives each model every run position exactly once. With three models, that means three rounds and nine model slots. Cycles are paired: the second cycle reverses the cyclic ordering, so for each leading model the remaining models run in reverse order. With three models, `--cycles 2` guarantees all six possible model orders exactly once, for any seed; each additional pair of cycles repeats that guarantee. Models see the same case order within each round.

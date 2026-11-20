@@ -132,6 +132,10 @@ def entries():
                 "oom": any(row["status"] == "out_of_memory" for row in mine)
                        or any(env.get("system_oom_kills") for env in envs),
                 "temperature": temperatures.get(model),
+                # Peak memory in use, system-wide: RAM in use plus zram swap, per warm phase.
+                "peak_mem_gb": max((((env.get("peak_system_used_estimate_kib") or 0)
+                                     + (env.get("peak_swap_used_kib") or 0)) / 2**20
+                                    for env in envs if env.get("peak_system_used_estimate_kib")), default=None),
                 "flag": published.get("flags", {}).get(model),
                 "note": published.get("note"),
                 **speed(all_rows, model),
@@ -242,18 +246,28 @@ def speed_table(group):
     return "\n".join(lines)
 
 
-def svg_chart(points, theme):
-    """Score against median time per case (log scale), one colour per thinking mode."""
+def svg_chart(points, theme, title):
+    """Accuracy against speed. Bubble area shows peak memory in use, colour shows the thinking
+    mode, and a thin connector joins each model's thinking-off and thinking-on points."""
     t = THEMES[theme]
-    width, height = 720, 400
-    left, right, top, bottom = 64, 40, 48, 56
-    plot_w, plot_h = width - left - right, height - top - bottom
+    width, height = 920, 470
+    left, top, plot_w, plot_h = 64, 92, 560, 300
+    legend_x = left + plot_w + 36
     total = len(dataset())
+    font = 'font-family="system-ui, -apple-system, Segoe UI, sans-serif"'
+    with_memory = [point for point in points if point["peak_mem_gb"]]
+    # Area encodes memory: radius grows with the square root, 10 GB -> 26 px.
+    scale = 26 / math.sqrt(10)
+
+    def radius(point):
+        return scale * math.sqrt(point["peak_mem_gb"]) if point["peak_mem_gb"] else 6
+
+    # Pad the log-scale time axis so the largest bubbles stay inside the plot.
     times = [point["median_s"] for point in points]
-    ticks = [tick for tick in TIME_TICKS if tick <= max(times)]
-    ticks = [tick for tick in ticks if tick >= max(t for t in TIME_TICKS if t <= min(times))]
-    ticks.append(min(t for t in TIME_TICKS if t > max(times)))
-    low, high = ticks[0], ticks[-1]
+    low = max(tick for tick in TIME_TICKS if tick <= min(times) / 1.4) if min(times) / 1.4 >= TIME_TICKS[0] \
+        else TIME_TICKS[0]
+    high = min((tick for tick in TIME_TICKS if tick >= max(times) * 1.4), default=TIME_TICKS[-1])
+    ticks = [tick for tick in TIME_TICKS if low <= tick <= high]
 
     def x(seconds):
         return left + plot_w * (math.log10(seconds) - math.log10(low)) / (math.log10(high) - math.log10(low))
@@ -261,43 +275,109 @@ def svg_chart(points, theme):
     def y(score):
         return top + plot_h * (1 - score / total)
 
-    font = 'font-family="system-ui, -apple-system, Segoe UI, sans-serif"'
+    def text(px, py, content, size=12, fill="ink2", anchor="start", weight="normal", halo=False):
+        # A halo in the surface colour keeps labels legible where they cross a connector.
+        outline = f'stroke="{t["surface"]}" stroke-width="4" paint-order="stroke" ' if halo else ""
+        return (f'<text x="{px:.1f}" y="{py:.1f}" font-size="{size}" font-weight="{weight}" '
+                f'text-anchor="{anchor}" fill="{t[fill]}" {outline}{font}>{content}</text>')
+
+    subtitle = "Higher is more accurate, further left is faster. Colour: thinking mode"
+    subtitle += "; bubble area: peak memory in use (RAM + zram)." if with_memory else "."
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-           f'viewBox="0 0 {width} {height}" role="img" aria-label="Score against median time per case">',
-           f'<rect width="{width}" height="{height}" rx="8" fill="{t["surface"]}"/>']
+           f'viewBox="0 0 {width} {height}" role="img" aria-label="{title}">',
+           f'<rect width="{width}" height="{height}" rx="8" fill="{t["surface"]}"/>',
+           text(left - 40, 34, title, size=16, fill="ink", weight="600"),
+           text(left - 40, 56, subtitle, size=12, fill="ink2")]
     for score in range(0, total + 1, 10):
         out.append(f'<line x1="{left}" x2="{left + plot_w}" y1="{y(score):.1f}" y2="{y(score):.1f}" '
                    f'stroke="{t["grid"] if score else t["axis"]}" stroke-width="1"/>')
-        out.append(f'<text x="{left - 10}" y="{y(score) + 4:.1f}" text-anchor="end" font-size="12" '
-                   f'fill="{t["muted"]}" {font}>{score}</text>')
+        out.append(text(left - 10, y(score) + 4, score, fill="muted", anchor="end"))
     for tick in ticks:
         out.append(f'<line x1="{x(tick):.1f}" x2="{x(tick):.1f}" y1="{top}" y2="{top + plot_h}" '
                    f'stroke="{t["grid"]}" stroke-width="1"/>')
         label = f"{tick:g} s" if tick < 60 else f"{tick / 60:g} min"
-        out.append(f'<text x="{x(tick):.1f}" y="{top + plot_h + 20}" text-anchor="middle" font-size="12" '
-                   f'fill="{t["muted"]}" {font}>{label}</text>')
-    out.append(f'<text x="{left + plot_w / 2}" y="{height - 12}" text-anchor="middle" font-size="12" '
-               f'fill="{t["ink2"]}" {font}>Median time per case (log scale)</text>')
-    out.append(f'<text x="{left}" y="{top - 20}" font-size="12" fill="{t["ink2"]}" {font}>'
-               f'Cases passed (of {total})</text>')
-    # Legend: always present for two series; identity never relies on colour alone
-    # because every point is also labelled with its model.
-    modes = [mode for mode in ("off", "on") if any(point["thinking"] == mode for point in points)]
-    for index, mode in enumerate(modes):
-        label = f"Thinking {mode}"
-        lx = left + plot_w - 115 * len(modes) + 10 + index * 115
-        out.append(f'<circle cx="{lx}" cy="{top - 24}" r="5" fill="{t[mode]}"/>')
-        out.append(f'<text x="{lx + 10}" y="{top - 20}" font-size="12" fill="{t["ink2"]}" {font}>{label}</text>')
-    for point in sorted(points, key=lambda item: item["score"]):
-        px, py = x(point["median_s"]), y(point["score"])
+        out.append(text(x(tick), top + plot_h + 20, label, fill="muted", anchor="middle"))
+    out.append(text(left + plot_w / 2, top + plot_h + 44, "Median time per case (log scale)", anchor="middle"))
+    out.append(text(left, top - 12, f"Cases passed (of {total})"))
+    out.append(text(left + plot_w - 6, top + 16, "better ↖", fill="muted", anchor="end"))
+
+    # Connectors first, so the bubbles sit on top of them.
+    by_model = defaultdict(dict)
+    for point in points:
+        by_model[point["model"]][point["thinking"]] = point
+    for modes in by_model.values():
+        if "off" in modes and "on" in modes:
+            a, b = modes["off"], modes["on"]
+            out.append(f'<line x1="{x(a["median_s"]):.1f}" y1="{y(a["score"]):.1f}" x2="{x(b["median_s"]):.1f}" '
+                       f'y2="{y(b["score"]):.1f}" stroke="{t["muted"]}" stroke-width="1.5" stroke-dasharray="1 4" '
+                       f'stroke-linecap="round"/>')
+    # Largest bubbles first, so small ones stay visible on top.
+    bubbles = []
+    for point in sorted(points, key=lambda item: -radius(item)):
+        px, py, r = x(point["median_s"]), y(point["score"]), radius(point)
+        bubbles.append((point, px, py, r))
         color = t["on" if point["thinking"] == "on" else "off"]
-        out.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="5" fill="{color}" stroke="{t["surface"]}" '
-                   f'stroke-width="2"/>')
-        # Labels near the right edge go on the left of the point so they stay inside the chart.
-        flip = px > left + plot_w - 160
-        out.append(f'<text x="{px - 10 if flip else px + 10:.1f}" y="{py + 4:.1f}" font-size="12" '
-                   f'text-anchor="{"end" if flip else "start"}" fill="{t["ink"]}" {font}>'
-                   f'{point["model"]} ({number(point["score"])})</text>')
+        dashed = ' stroke-dasharray="4 3"' if point["flag"] else ""
+        ring = t["ink2"] if point["flag"] else t["surface"]
+        out.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r:.1f}" fill="{color}" fill-opacity="0.78" '
+                   f'stroke="{ring}" stroke-width="2"{dashed}/>')
+
+    def hits_circle(box, cx, cy, r):
+        x0, y0, x1, y1 = box
+        nearest_x, nearest_y = min(max(cx, x0), x1), min(max(cy, y0), y1)
+        return (nearest_x - cx) ** 2 + (nearest_y - cy) ** 2 < r * r
+
+    # Each label tries right, left, above and below its bubble, taking the first spot that
+    # stays inside the plot and clear of every bubble and earlier label.
+    placed = []
+    for point, px, py, r in sorted(bubbles, key=lambda item: item[2]):
+        label = f'{point["model"]} · {number(point["score"])}'
+        if point["flag"]:
+            label += " (hung the Pi)"
+        w, h = 6.6 * len(label), 14
+        candidates = [(px + r + 8, py + 4, "start"), (px - r - 8, py + 4, "end"),
+                      (px, py - r - 8, "middle"), (px, py + r + 18, "middle")]
+
+        def box(cand):
+            lx, ly, anchor = cand
+            x0 = lx if anchor == "start" else lx - w if anchor == "end" else lx - w / 2
+            return (x0, ly - h + 3, x0 + w, ly + 3)
+
+        def clear(cand):
+            x0, y0, x1, y1 = box(cand)
+            inside = left <= x0 and x1 <= left + plot_w + 30 and top <= y0 and y1 <= top + plot_h
+            return inside and not any(hits_circle((x0, y0, x1, y1), cx, cy, cr)
+                                      for other, cx, cy, cr in bubbles if other is not point) \
+                and not any(x0 < b[2] and b[0] < x1 and y0 < b[3] and b[1] < y1 for b in placed)
+        choice = next((cand for cand in candidates if clear(cand)), candidates[0])
+        placed.append(box(choice))
+        out.append(text(choice[0], choice[1], label, fill="ink", anchor=choice[2], halo=True))
+
+    # Legend column: thinking modes, then memory sizes, then the flag marker.
+    ly = top + 6
+    modes = [mode for mode in ("off", "on") if any(point["thinking"] == mode for point in points)]
+    out.append(text(legend_x, ly, "Thinking", fill="ink", weight="600"))
+    for mode in modes:
+        ly += 22
+        out.append(f'<circle cx="{legend_x + 7}" cy="{ly - 4}" r="6" fill="{t[mode]}" fill-opacity="0.78"/>')
+        out.append(text(legend_x + 20, ly, mode))
+    if with_memory:
+        ly += 34
+        out.append(text(legend_x, ly, "Memory in use", fill="ink", weight="600"))
+        for gb in (2, 4, 8):
+            r = scale * math.sqrt(gb)
+            ly += 2 * r + 6
+            out.append(f'<circle cx="{legend_x + 22}" cy="{ly - r:.1f}" r="{r:.1f}" fill="none" '
+                       f'stroke="{t["muted"]}" stroke-width="1.5"/>')
+            out.append(text(legend_x + 54, ly - r + 4, f"{gb} GB"))
+        for offset, line in enumerate(("For scale: the Pi has", "8 GB of RAM and", "2 GB of zram.")):
+            out.append(text(legend_x, ly + 22 + 15 * offset, line, size=11, fill="muted"))
+        ly += 52
+    if any(point["flag"] for point in points):
+        ly += 34
+        out.append(f'<circle cx="{legend_x + 9}" cy="{ly - 4}" r="8" fill="none" stroke="{t["ink2"]}" '
+                   f'stroke-width="2" stroke-dasharray="4 3"/>')
+        out.append(text(legend_x + 24, ly, "Didn't reliably fit"))
     out.append("</svg>")
     return "\n".join(out) + "\n"
 
@@ -348,11 +428,11 @@ def build():
             parts += ["**Load time and generation speed**", "", speed_table(timed), ""]
         base = f"score-vs-time-{slug(name)}"
         for theme in THEMES:
-            (ASSETS / f"{base}-{theme}.svg").write_text(svg_chart(group, theme))
+            (ASSETS / f"{base}-{theme}.svg").write_text(svg_chart(group, theme, f"Accuracy and speed on {name}"))
         parts += ["<picture>",
                   f'  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/{base}-dark.svg">',
-                  f'  <img alt="Cases passed against median time per case on {name}, thinking off and on" '
-                  f'src="docs/assets/{base}-light.svg" width="720">',
+                  f'  <img alt="Cases passed against median time per case on {name}; colour shows the thinking mode and bubble area the peak memory in use" '
+                  f'src="docs/assets/{base}-light.svg" width="920">',
                   "</picture>", ""]
     parts.append(END)
     text = README.read_text()

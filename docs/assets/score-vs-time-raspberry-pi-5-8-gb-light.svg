@@ -1,35 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" aria-label="Score against median time per case">
-<rect width="720" height="400" rx="8" fill="#fcfcfb"/>
-<line x1="64" x2="680" y1="344.0" y2="344.0" stroke="#c3c2b7" stroke-width="1"/>
-<text x="54" y="348.0" text-anchor="end" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">0</text>
-<line x1="64" x2="680" y1="298.5" y2="298.5" stroke="#e1e0d9" stroke-width="1"/>
-<text x="54" y="302.5" text-anchor="end" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10</text>
-<line x1="64" x2="680" y1="252.9" y2="252.9" stroke="#e1e0d9" stroke-width="1"/>
-<text x="54" y="256.9" text-anchor="end" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">20</text>
-<line x1="64" x2="680" y1="207.4" y2="207.4" stroke="#e1e0d9" stroke-width="1"/>
-<text x="54" y="211.4" text-anchor="end" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">30</text>
-<line x1="64" x2="680" y1="161.8" y2="161.8" stroke="#e1e0d9" stroke-width="1"/>
-<text x="54" y="165.8" text-anchor="end" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">40</text>
-<line x1="64" x2="680" y1="116.3" y2="116.3" stroke="#e1e0d9" stroke-width="1"/>
-<text x="54" y="120.3" text-anchor="end" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">50</text>
-<line x1="64" x2="680" y1="70.8" y2="70.8" stroke="#e1e0d9" stroke-width="1"/>
-<text x="54" y="74.8" text-anchor="end" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">60</text>
-<line x1="64.0" x2="64.0" y1="48" y2="344" stroke="#e1e0d9" stroke-width="1"/>
-<text x="64.0" y="364" text-anchor="middle" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10 s</text>
-<line x1="441.7" x2="441.7" y1="48" y2="344" stroke="#e1e0d9" stroke-width="1"/>
-<text x="441.7" y="364" text-anchor="middle" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">30 s</text>
-<line x1="680.0" x2="680.0" y1="48" y2="344" stroke="#e1e0d9" stroke-width="1"/>
-<text x="680.0" y="364" text-anchor="middle" font-size="12" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">1 min</text>
-<text x="372.0" y="388" text-anchor="middle" font-size="12" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Median time per case (log scale)</text>
-<text x="64" y="28" font-size="12" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Cases passed (of 65)</text>
-<circle cx="575" cy="24" r="5" fill="#2a78d6"/>
-<text x="585" y="28" font-size="12" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Thinking off</text>
-<circle cx="302.9" cy="199.8" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="312.9" y="203.8" font-size="12" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b (31.7)</text>
-<circle cx="81.9" cy="198.3" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="91.9" y="202.3" font-size="12" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b (32)</text>
-<circle cx="293.9" cy="166.4" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="303.9" y="170.4" font-size="12" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b (39)</text>
-<circle cx="541.2" cy="146.7" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="531.2" y="150.7" font-size="12" text-anchor="end" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e4b (43.3)</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="470" viewBox="0 0 920 470" role="img" aria-label="Accuracy and speed on Raspberry Pi 5 (8 GB)">
+<rect width="920" height="470" rx="8" fill="#fcfcfb"/>
+<text x="24.0" y="34.0" font-size="16" font-weight="600" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Accuracy and speed on Raspberry Pi 5 (8 GB)</text>
+<text x="24.0" y="56.0" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Higher is more accurate, further left is faster. Colour: thinking mode; bubble area: peak memory in use (RAM + zram).</text>
+<line x1="64" x2="624" y1="392.0" y2="392.0" stroke="#c3c2b7" stroke-width="1"/>
+<text x="54.0" y="396.0" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">0</text>
+<line x1="64" x2="624" y1="345.8" y2="345.8" stroke="#e1e0d9" stroke-width="1"/>
+<text x="54.0" y="349.8" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10</text>
+<line x1="64" x2="624" y1="299.7" y2="299.7" stroke="#e1e0d9" stroke-width="1"/>
+<text x="54.0" y="303.7" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">20</text>
+<line x1="64" x2="624" y1="253.5" y2="253.5" stroke="#e1e0d9" stroke-width="1"/>
+<text x="54.0" y="257.5" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">30</text>
+<line x1="64" x2="624" y1="207.4" y2="207.4" stroke="#e1e0d9" stroke-width="1"/>
+<text x="54.0" y="211.4" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">40</text>
+<line x1="64" x2="624" y1="161.2" y2="161.2" stroke="#e1e0d9" stroke-width="1"/>
+<text x="54.0" y="165.2" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">50</text>
+<line x1="64" x2="624" y1="115.1" y2="115.1" stroke="#e1e0d9" stroke-width="1"/>
+<text x="54.0" y="119.1" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">60</text>
+<line x1="64.0" x2="64.0" y1="92" y2="392" stroke="#e1e0d9" stroke-width="1"/>
+<text x="64.0" y="412.0" font-size="12" font-weight="normal" text-anchor="middle" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">3 s</text>
+<line x1="289.1" x2="289.1" y1="92" y2="392" stroke="#e1e0d9" stroke-width="1"/>
+<text x="289.1" y="412.0" font-size="12" font-weight="normal" text-anchor="middle" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10 s</text>
+<line x1="494.4" x2="494.4" y1="92" y2="392" stroke="#e1e0d9" stroke-width="1"/>
+<text x="494.4" y="412.0" font-size="12" font-weight="normal" text-anchor="middle" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">30 s</text>
+<line x1="624.0" x2="624.0" y1="92" y2="392" stroke="#e1e0d9" stroke-width="1"/>
+<text x="624.0" y="412.0" font-size="12" font-weight="normal" text-anchor="middle" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">1 min</text>
+<text x="344.0" y="436.0" font-size="12" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Median time per case (log scale)</text>
+<text x="64.0" y="80.0" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Cases passed (of 65)</text>
+<text x="618.0" y="108.0" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">better ↖</text>
+<circle cx="548.5" cy="192.0" r="25.8" fill="#2a78d6" fill-opacity="0.78" stroke="#52514e" stroke-width="2" stroke-dasharray="4 3"/>
+<circle cx="414.1" cy="212.0" r="20.0" fill="#2a78d6" fill-opacity="0.78" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="419.0" cy="245.8" r="19.2" fill="#2a78d6" fill-opacity="0.78" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="298.8" cy="244.3" r="17.0" fill="#2a78d6" fill-opacity="0.78" stroke="#fcfcfb" stroke-width="2"/>
+<text x="548.5" y="158.2" font-size="12" font-weight="normal" text-anchor="middle" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e4b · 43.3 (hung the Pi)</text>
+<text x="386.0" y="216.0" font-size="12" font-weight="normal" text-anchor="end" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b · 39</text>
+<text x="273.8" y="248.3" font-size="12" font-weight="normal" text-anchor="end" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · 32</text>
+<text x="446.2" y="249.8" font-size="12" font-weight="normal" text-anchor="start" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · 31.7</text>
+<text x="660.0" y="98.0" font-size="12" font-weight="600" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Thinking</text>
+<circle cx="667" cy="116" r="6" fill="#2a78d6" fill-opacity="0.78"/>
+<text x="680.0" y="120.0" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">off</text>
+<text x="660.0" y="154.0" font-size="12" font-weight="600" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Memory in use</text>
+<circle cx="682" cy="171.6" r="11.6" fill="none" stroke="#898781" stroke-width="1.5"/>
+<text x="714.0" y="175.6" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">2 GB</text>
+<circle cx="682" cy="205.7" r="16.4" fill="none" stroke="#898781" stroke-width="1.5"/>
+<text x="714.0" y="209.7" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">4 GB</text>
+<circle cx="682" cy="251.4" r="23.3" fill="none" stroke="#898781" stroke-width="1.5"/>
+<text x="714.0" y="255.4" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">8 GB</text>
+<text x="660.0" y="296.7" font-size="11" font-weight="normal" text-anchor="start" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">For scale: the Pi has</text>
+<text x="660.0" y="311.7" font-size="11" font-weight="normal" text-anchor="start" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">8 GB of RAM and</text>
+<text x="660.0" y="326.7" font-size="11" font-weight="normal" text-anchor="start" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">2 GB of zram.</text>
+<circle cx="669" cy="356.6530085637446" r="8" fill="none" stroke="#52514e" stroke-width="2" stroke-dasharray="4 3"/>
+<text x="684.0" y="360.7" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Didn't reliably fit</text>
 </svg>

@@ -51,7 +51,7 @@ Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/score-vs-time-raspberry-pi-5-8-gb-dark.svg">
-  <img alt="Cases passed against median time per case on Raspberry Pi 5 (8 GB), thinking off and on" src="docs/assets/score-vs-time-raspberry-pi-5-8-gb-light.svg" width="720">
+  <img alt="Cases passed against median time per case on Raspberry Pi 5 (8 GB); colour shows the thinking mode and bubble area the peak memory in use" src="docs/assets/score-vs-time-raspberry-pi-5-8-gb-light.svg" width="920">
 </picture>
 
 ### Mac, Apple silicon (Metal)
@@ -72,7 +72,7 @@ Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/score-vs-time-mac-apple-silicon-metal-dark.svg">
-  <img alt="Cases passed against median time per case on Mac, Apple silicon (Metal), thinking off and on" src="docs/assets/score-vs-time-mac-apple-silicon-metal-light.svg" width="720">
+  <img alt="Cases passed against median time per case on Mac, Apple silicon (Metal); colour shows the thinking mode and bubble area the peak memory in use" src="docs/assets/score-vs-time-mac-apple-silicon-metal-light.svg" width="920">
 </picture>
 
 <!-- results:end -->

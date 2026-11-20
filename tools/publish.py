@@ -423,9 +423,10 @@ def svg_chart(points, theme, title):
     placed, leaders, labels = [], [], []
     for point, px, py, r in sorted(bubbles, key=lambda item: item[2]):
         label = f'{point["model"]} · {accuracy(point):.0f}%'
-        if point["flag"]:
-            label += " (hung the Pi)"
-        w, h = 6.6 * len(label), 14
+        # A flag goes on its own line under the name, so the label stays narrow.
+        note = "(hung the Pi)" if point["flag"] else None
+        w = 6.6 * max(len(label), len(note or ""))
+        extra = 13 if note else 0  # height of the second line
         candidates = [(px + r + 8, py + 4, "start"), (px - r - 8, py + 4, "end"),
                       (px, py - r - 8, "middle"), (px, py + r + 18, "middle"),
                       (px + r * 0.7 + 6, py - r * 0.7 - 6, "start"), (px - r * 0.7 - 6, py - r * 0.7 - 6, "end"),
@@ -435,7 +436,7 @@ def svg_chart(points, theme, title):
         def box(cand):
             lx, ly, anchor = cand
             x0 = lx if anchor == "start" else lx - w if anchor == "end" else lx - w / 2
-            return (x0, ly - h + 3, x0 + w, ly + 3)
+            return (x0, ly - 11, x0 + w, ly + 3 + extra)
 
         def overlaps(cand):
             """How badly a spot collides: leaving the plot counts most, then bubbles, then labels."""
@@ -456,6 +457,8 @@ def svg_chart(points, theme, title):
             leaders.append(f'<line x1="{px + ux * (r + 2):.1f}" y1="{py + uy * (r + 2):.1f}" x2="{nearest_x - ux * 3:.1f}" '
                            f'y2="{nearest_y - uy * 3:.1f}" stroke="{t["ink2"]}" stroke-width="1"/>')
         labels.append(text(choice[0], choice[1], label, fill="ink", anchor=choice[2], halo=True))
+        if note:
+            labels.append(text(choice[0], choice[1] + 14, note, size=11, fill="ink2", anchor=choice[2], halo=True))
     out += leaders + labels
 
     # Legend column: thinking modes, then memory sizes, then the flag marker.

@@ -39,14 +39,14 @@
 <circle cx="264.7" cy="245.8" r="19.2" fill="#2a78d6" fill-opacity="0.78" stroke="#fcfcfb" stroke-width="2"/>
 <circle cx="468.7" cy="193.5" r="17.0" fill="#eb6834" fill-opacity="0.78" stroke="#fcfcfb" stroke-width="2"/>
 <circle cx="196.8" cy="244.3" r="17.0" fill="#2a78d6" fill-opacity="0.78" stroke="#fcfcfb" stroke-width="2"/>
-<line x1="538.7" y1="176.8" x2="538.7" y2="158.8" stroke="#52514e" stroke-width="1"/>
 <text x="420.7" y="137.5" font-size="12" font-weight="normal" text-anchor="start" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b · 86%</text>
-<text x="362.0" y="167.9" font-size="12" font-weight="normal" text-anchor="start" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e4b · 67% (hung the Pi)</text>
-<text x="468.7" y="228.6" font-size="12" font-weight="normal" text-anchor="middle" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · 66%</text>
-<text x="538.7" y="152.8" font-size="12" font-weight="normal" text-anchor="middle" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · 65%</text>
+<text x="337.9" y="235.8" font-size="12" font-weight="normal" text-anchor="middle" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e4b · 67%</text>
+<text x="337.9" y="249.8" font-size="11" font-weight="normal" text-anchor="middle" fill="#52514e" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">(hung the Pi)</text>
+<text x="468.7" y="168.5" font-size="12" font-weight="normal" text-anchor="middle" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · 66%</text>
+<text x="538.7" y="235.5" font-size="12" font-weight="normal" text-anchor="middle" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · 65%</text>
 <text x="233.9" y="216.0" font-size="12" font-weight="normal" text-anchor="end" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b · 60%</text>
 <text x="171.8" y="248.3" font-size="12" font-weight="normal" text-anchor="end" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · 49%</text>
-<text x="291.9" y="249.8" font-size="12" font-weight="normal" text-anchor="start" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · 49%</text>
+<text x="264.7" y="283.1" font-size="12" font-weight="normal" text-anchor="middle" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="4" paint-order="stroke" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · 49%</text>
 <text x="660.0" y="98.0" font-size="12" font-weight="600" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Thinking</text>
 <circle cx="667" cy="116" r="6" fill="#2a78d6" fill-opacity="0.78"/>
 <text x="680.0" y="120.0" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">off</text>

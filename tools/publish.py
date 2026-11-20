@@ -34,6 +34,13 @@ TRACK_NAMES = {"arithmetic": "Arithmetic", "structured": "Structured", "agent": 
 
 # Chart tokens: validated two-slot categorical palette (thinking off, thinking on)
 # plus chrome, for each colour scheme.
+MEMORY_NOTE = (
+    "Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages "
+    "swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs "
+    "recorded before zram's own RAM use was measured: they add the separate peaks of RAM and swap, and count "
+    "zram's compressed pages twice, so they overstate memory in use when zram is busy. ✅ more than 0.5 GB "
+    "stayed free and swap stayed under 1 GB; ⚠️ less free or more swap; ❌ ran out of memory or hung the Pi."
+)
 # Round values for the log-scale time axis, in seconds.
 TIME_TICKS = (0.1, 0.3, 1, 3, 10, 30, 60, 180, 600, 1800)
 THEMES = {
@@ -132,15 +139,27 @@ def entries():
                 "oom": any(row["status"] == "out_of_memory" for row in mine)
                        or any(env.get("system_oom_kills") for env in envs),
                 "temperature": temperatures.get(model),
-                # Peak memory in use, system-wide: RAM in use plus zram swap, per warm phase.
-                "peak_mem_gb": max((((env.get("peak_system_used_estimate_kib") or 0)
-                                     + (env.get("peak_swap_used_kib") or 0)) / 2**20
-                                    for env in envs if env.get("peak_system_used_estimate_kib")), default=None),
+                **peak_memory(envs),
                 "flag": published.get("flags", {}).get(model),
                 "note": published.get("note"),
                 **speed(all_rows, model),
             })
     return found
+
+
+def peak_memory(envs):
+    """Peak memory in use (RAM + swap, system-wide) over the warm phases, in GiB.
+
+    Runs that recorded zram's own RAM use give an exact per-sample figure. Older runs only
+    have the separate peaks of RAM in use and swap in use, so their sum is an approximation:
+    the peaks may not coincide, and zram's compressed pages are counted twice."""
+    exact = [env["peak_memory_in_use_kib"] for env in envs if env.get("peak_memory_in_use_kib") is not None]
+    if exact and len(exact) == len(envs):
+        return {"peak_mem_gb": max(exact) / 2**20, "mem_exact": True}
+    approx = [(env.get("peak_system_used_estimate_kib") or 0) + (env.get("peak_swap_used_kib") or 0)
+              for env in envs if env.get("peak_system_used_estimate_kib")]
+    return {"peak_mem_gb": max(approx) / 2**20 if approx else None,
+            "mem_exact": not any(env.get("peak_swap_used_kib") for env in envs)}
 
 
 def decode_rate(turn):
@@ -200,24 +219,25 @@ def duration(seconds):
 
 
 def memory(entry):
-    if entry["flag"]:
-        return f"❌ {entry['flag']}"
-    if entry["oom"]:
-        return "❌ out of memory"
     available = entry["min_available_kib"]
-    if available is None or not entry["device"].startswith("Raspberry"):
+    if available is None or entry["peak_mem_gb"] is None or not entry["device"].startswith("Raspberry"):
         return "—"
-    free = (f"{available / 2**20:.1f} GB free" if available >= 2**20 else f"{available / 1024:.0f} MB free")
+    free = f"{available / 2**20:.1f} GB" if available >= 2**20 else f"{available / 1024:.0f} MB"
+    figure = f"{entry['peak_mem_gb']:.1f} GB{'' if entry['mem_exact'] else '≈'} ({free} free)"
+    if entry["flag"]:
+        return f"❌ {figure}: {entry['flag']}"
+    if entry["oom"]:
+        return f"❌ {figure}: out of memory"
     swap = entry["peak_swap_kib"] or 0
     if available < 2**20 // 2 or swap > 2**20:
-        return f"⚠️ tight: {free}, {swap / 2**20:.1f} GB swap"
-    return f"✅ {free}"
+        return f"⚠️ {figure}"
+    return f"✅ {figure}"
 
 
 def table(group, totals):
     head = ["Model", f"Score /{totals['all']}", f"Challenge /{totals['challenge']}",
             *(f"{TRACK_NAMES[track]} /{totals[track]}" for track in TRACKS),
-            "Median time per case", "Timed out", "Memory (lowest free)", "CPU °C (mean / peak)"]
+            "Median time per case", "Timed out", "Peak memory in use (lowest free)", "CPU °C (mean / peak)"]
     lines = ["| " + " | ".join(head) + " |", "|" + "|".join(["---"] + ["---:"] * (len(head) - 3) + ["---", "---"]) + "|"]
     for entry in sorted(group, key=lambda item: (-item["score"], item["median_s"])):
         temperature = entry["temperature"]
@@ -423,6 +443,8 @@ def build():
                 if rounds != [1]:
                     label += f" (scores averaged over {'/'.join(map(str, rounds))} passes)"
                 parts += [label, "", table(subset, totals), ""]
+                if any(entry["peak_mem_gb"] is not None for entry in subset if entry["device"].startswith("Raspberry")):
+                    parts += [MEMORY_NOTE, ""]
         timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
         if timed:
             parts += ["**Load time and generation speed**", "", speed_table(timed), ""]

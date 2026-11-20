@@ -228,6 +228,12 @@ def sample():
         if "SwapTotal" in mem and "SwapFree" in mem:
             mem["SwapUsed"] = mem["SwapTotal"] - mem["SwapFree"]
         mem["memory_page_bytes"] = os.sysconf("SC_PAGE_SIZE")
+        # zram keeps swapped pages compressed in RAM. mm_stat's third field is the RAM it uses,
+        # which lets memory in use count those pages once rather than twice.
+        zram = [read_text(path) for path in sorted(Path("/sys/block").glob("zram*/mm_stat"))]
+        zram = [int(text.split()[2]) for text in zram if text and len(text.split()) > 2]
+        if zram:
+            mem["zram_ram_kib"] = sum(zram) // 1024
         vm = linux_fields("/proc/vmstat", {"pswpin", "pswpout", "oom_kill"})
     return {"t": time.monotonic(), "cpu_c": float(temperature) / 1000 if temperature else None,
             "throttled_bits": throttled, **mem, **vm}
@@ -266,6 +272,11 @@ def range_stats(rows):
         "min_free_memory_kib": min(values("MemFree"), default=None),
         "peak_compressed_memory_kib": max(values("memory_compressed_kib"), default=None),
         "peak_swap_used_kib": max(values("SwapUsed"), default=None),
+        # RAM in use plus swapped pages, sample by sample, minus the RAM zram uses to hold them.
+        "peak_memory_in_use_kib": max((row["MemTotal"] - row["MemAvailable"] + (row.get("SwapUsed") or 0)
+                                       - (row.get("zram_ram_kib") or 0)
+                                       for row in rows if row.get("MemTotal") and row.get("MemAvailable") is not None
+                                       and ("zram_ram_kib" in row or not row.get("SwapUsed"))), default=None),
         "swap_in_pages": delta("pswpin"), "swap_out_pages": delta("pswpout"),
         "swap_in_mib": swap_mib("pswpin"), "swap_out_mib": swap_mib("pswpout"),
         "system_oom_kills": delta("oom_kill"),

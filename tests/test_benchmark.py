@@ -647,6 +647,19 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(stats["active_throttling_bits_or"], 4)
         self.assertEqual(stats["new_throttling_history_bits"], 4)
         self.assertAlmostEqual(stats["mean_cpu_c"], 55.75)
+        # No swap in use, so memory in use is just RAM in use.
+        self.assertEqual(stats["peak_memory_in_use_kib"], 2000)
+
+    def test_memory_in_use_counts_zram_pages_once(self):
+        stats = range_stats([
+            {"MemTotal": 8000, "MemAvailable": 1000, "SwapUsed": 2000, "zram_ram_kib": 600},
+            {"MemTotal": 8000, "MemAvailable": 500, "SwapUsed": 1000, "zram_ram_kib": 300},
+        ])
+        # 7000 + 2000 - 600 = 8400 beats 7500 + 1000 - 300 = 8200.
+        self.assertEqual(stats["peak_memory_in_use_kib"], 8400)
+        # Without zram's own figure, a sample with swap in use can't be computed exactly.
+        self.assertIsNone(range_stats([{"MemTotal": 8000, "MemAvailable": 1000, "SwapUsed": 2000}])
+                          ["peak_memory_in_use_kib"])
 
     def test_temperature_summary_per_run(self):
         def row(model, start, peak, mean, samples, throttled=0, round_num=1):

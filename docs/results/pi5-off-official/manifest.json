@@ -888,7 +888,7 @@
   "platform": "Linux-6.18.50+rpt-rpi-2712-aarch64-with-glibc2.41",
   "published": {
     "flags": {
-      "gemma4:e4b": "hung the Pi in 1 of 4 passes (RAM and zram full; 10 MB free at the lowest)"
+      "gemma4:e4b": "hung the Pi in 1 of 4 passes"
     },
     "note": "Official thinking-off run, rounds 1\u20133 of 4. Round 4 is left out: during it, gemma4:e4b exhausted the Pi's memory (RAM and zram full) and the Pi hung and rebooted after 49 of its 65 cases.",
     "original_status": "running",

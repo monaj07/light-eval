@@ -93,6 +93,24 @@ done
 
 A run that stops early leaves a partial folder, and `--out` must name a new folder. To retry, give the retry a new name and keep the partial run for reference.
 
+## Thread count
+
+The official runs use `--threads 2`: Ollama's runner is started with `-t 2`, which was confirmed on the Pi with `ps`. So the published runs use 2 of the Pi 5's 4 cores. Ollama on its own normally uses all physical cores, so these timings are probably slower than with Ollama's defaults. The thread count mainly affects prompt processing, which is limited by computation. Generation, which is limited mostly by memory bandwidth, should change less. Accuracy should stay within the normal variation between passes.
+
+### Planned: thinking off with 4 threads
+
+To be run after the thinking-on runs, with the same preflight checks and a reboot first:
+
+```bash
+python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b \
+  --cycles 1 --threads 4 --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off_threads4
+```
+
+- **Design:** 3 rounds, giving each model 3 passes like the published thinking-off run, with all phases. The only difference is `--threads 4`. `gemma4:e4b` is left out, because it hung the Pi with thinking off. Expect about 3–4 hours.
+- **Check:** once the first model has loaded, `ps -o args= -C llama-server` should include `-t 4`.
+- **Compare per model, at 2 and 4 threads:** prompt processing speed and median time per case; generation, in cases and sustained; accuracy and repeatability; CPU temperature and throttling; total run time and gate waits.
+- **Decision:** if 4 threads is clearly faster, with the same accuracy and no throttling, later official runs should use 4 threads. The comparison will be shown separately from the main results, so tables never mix thread counts.
+
 ## What happened in the official thinking-off run
 
 The Pi hung and rebooted in round 4, after 49 of `gemma4:e4b`'s 65 cases, because memory ran out. Rounds 1–3 had completed for all four models, so those were published with `--rounds 1-3`. The published manifest records the reason, and the run's own `"status": "running"` is kept as it was. See [the results](../README.md#results).

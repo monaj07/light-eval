@@ -42,7 +42,8 @@ HARDWARE_PHOTOS = (
 )
 SPEED_NOTE = (
     "Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how "
-    "fast it writes, and it is limited mostly by memory bandwidth. \"In cases\" is generation during the 65 cases, "
+    "fast it writes, and it is limited mostly by memory bandwidth. All published Pi runs use 2 of the Pi's 4 cores "
+    "(`--threads 2`), which mostly limits prompt processing. \"In cases\" is generation during the 65 cases, "
     "whose answers are short JSON; \"sustained\" is 90 seconds of continuous free prose. The Gemma builds include a "
     "small draft model for speculative decoding, which likely explains why they generate faster on short, "
     "predictable JSON than on prose."

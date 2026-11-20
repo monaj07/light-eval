@@ -47,7 +47,7 @@ Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during 
 | `qwen3.5:4b` | 42 s | 13.4 tokens/s | 4.2 tokens/s | 4.0 tokens/s | -1.5% |
 | `gemma4:e4b` | 88 s | 10.7 tokens/s | 6.7 tokens/s | 4.5 tokens/s | +0.8% |
 
-Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how fast it writes, and it is limited mostly by memory bandwidth. "In cases" is generation during the 65 cases, whose answers are short JSON; "sustained" is 90 seconds of continuous free prose. The Gemma builds include a small draft model for speculative decoding, which likely explains why they generate faster on short, predictable JSON than on prose.
+Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how fast it writes, and it is limited mostly by memory bandwidth. All published Pi runs use 2 of the Pi's 4 cores (`--threads 2`), which mostly limits prompt processing. "In cases" is generation during the 65 cases, whose answers are short JSON; "sustained" is 90 seconds of continuous free prose. The Gemma builds include a small draft model for speculative decoding, which likely explains why they generate faster on short, predictable JSON than on prose.
 
 **Where the time per case goes** (thinking off)
 
@@ -126,7 +126,7 @@ python3 light_eval.py run --models qwen3.5:2b --phases warm --out results/my-fir
 python3 light_eval.py run --models qwen3.5:2b --phases warm --thinking on --out results/my-thinking-run
 ```
 
-On a Mac, add `--no-thermal-gate`. A Mac is handy for developing and checking cases quickly, but published results come from the Pi. For results you intend to publish, follow [docs/OFFICIAL_RUNS.md](docs/OFFICIAL_RUNS.md). It covers the schedule, the preflight checks, and `--setup "…"`, which records your cooling, power supply and storage in the manifest.
+The runner uses 2 CPU threads by default (`--threads`). The published Pi results use 2 of the Pi 5's 4 cores, so their timings are probably slower than with Ollama's own default of using all cores. On a Mac, add `--no-thermal-gate`. A Mac is handy for developing and checking cases quickly, but published results come from the Pi. For results you intend to publish, follow [docs/OFFICIAL_RUNS.md](docs/OFFICIAL_RUNS.md). It covers the schedule, the preflight checks, and `--setup "…"`, which records your cooling, power supply and storage in the manifest.
 
 **3. Read the results.**
 
@@ -157,6 +157,7 @@ Compare models only within one suite version and one thinking mode. Mac and Pi r
 - [x] Per-run temperature and throttling report
 - [ ] Thinking-on runs on the Pi
 - [ ] Official runs on a Pi in a fixed, documented setup ([protocol](docs/OFFICIAL_RUNS.md))
+- [ ] Thinking off with 4 threads instead of 2, to measure how much the thread count changes speed, temperature and accuracy ([plan](docs/OFFICIAL_RUNS.md#planned-thinking-off-with-4-threads))
 - [ ] More Pi-sized models: the LFM family (LFM2.5 1.2B and 2.6B, `lfm3-vl`)
 - [ ] Held-out cases that were never used to tune the protocol
 

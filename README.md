@@ -8,7 +8,7 @@
 ![Suite 1.7.0](https://img.shields.io/badge/suite-1.7.0-informational.svg)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)
 
-**[Results](#results)** · **[What it measures](#what-it-measures)** · **[Quick start](#quick-start)** · **[Methodology](docs/METHODOLOGY.md)** · **[Changelog](CHANGELOG.md)**
+**[Results](#results)** · **[Failure analysis](docs/ANALYSIS.md)** · **[What it measures](#what-it-measures)** · **[Quick start](#quick-start)** · **[Methodology](docs/METHODOLOGY.md)** · **[Changelog](CHANGELOG.md)**
 
 ## Why Light Eval
 
@@ -80,6 +80,8 @@ Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in 
 <!-- results:end -->
 
 ### Findings so far
+
+For what the models actually answered in each track, and why it was scored as it was, see the **[failure analysis](docs/ANALYSIS.md)**.
 
 - **Thinking helps a lot, except on agent tasks.** With thinking on, `qwen3.5:2b` goes from 33 to 46 of 65 on the Mac, but its agent score drops from 11 to 8. The thinking models tested tend to add tool calls nobody asked for, and strict trace scoring counts those as failures.
 - **The Pi and the Mac agree.** `qwen3.5:2b` with the same model build gave word-for-word identical output on 60 of 65 cases on the Pi (CPU) and the Mac (Metal), and the scores differ by one case.

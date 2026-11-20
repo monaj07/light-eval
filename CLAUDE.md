@@ -27,6 +27,9 @@ python3 light_eval.py report results/<name>
 # Regenerate the challenge images (needs Pillow and macOS fonts; the runner never imports it)
 python3 fixtures/make_fixtures.py
 
+# Show one case's prompt, expected answer and every model's output from a published run
+python3 tools/show_case.py docs/results/pi5-off-official json-24h-times
+
 # Publish a run (copies it into docs/results/, which is committed) and rebuild the README results
 python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>   # --rounds 1-3 --note "why" for a partial run
 python3 tools/publish.py build
@@ -54,7 +57,7 @@ There are three modules; each depends only on the ones listed before it.
   - `summarize()` produces `summary.json`.
   - `apply_budget_defaults()` sets context/max-tokens by thinking mode: 4096/1024 with thinking off, 10240/6144 with thinking on.
 
-`tools/publish.py` imports `summarize` and `temperature_summary` from `light_eval.py`. `build` keeps only published runs of the current `VERSION`, and rewrites the README between `<!-- results:start -->` and `<!-- results:end -->` plus the light/dark SVG charts in `docs/assets/`. Never hand-edit that part of the README. CI (`.github/workflows/tests.yml`) runs the tests and fails if `build` changes `README.md` or `docs/assets/`, so run `build` after publishing or after changing `VERSION`.
+`tools/publish.py` imports `summarize` and `temperature_summary` from `light_eval.py`. `build` keeps only published runs of the current `VERSION`, and rewrites the README between `<!-- results:start -->` and `<!-- results:end -->` plus the light/dark SVG charts in `docs/assets/`. Never hand-edit that part of the README. `docs/ANALYSIS.md` is hand-written from `docs/results/pi5-off-official`, round 1: if that run is replaced or the suite version changes, update the analysis too. CI (`.github/workflows/tests.yml`) runs the tests and fails if `build` changes `README.md` or `docs/assets/`, so run `build` after publishing or after changing `VERSION`.
 
 Each run writes five files: `manifest.json` (options, hashes, model digests, server settings, swap devices), `cases.jsonl`, `blocks.jsonl`, `telemetry.jsonl` and `summary.json`.
 

@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from cases import TRACKS, VERSION, dataset  # noqa: E402
 from light_eval import read_rows, summarize, temperature_summary, write_json  # noqa: E402
+import charts  # noqa: E402  (tools/charts.py)
 
 PUBLISHED = ROOT / "docs" / "results"
 ASSETS = ROOT / "docs" / "assets"
@@ -526,6 +527,61 @@ def svg_chart(points, theme, title):
     return "\n".join(out) + "\n"
 
 
+def picture(base, alt, width=920):
+    """README markup for a chart with light and dark versions."""
+    return ["<picture>",
+            f'  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/{base}-dark.svg">',
+            f'  <img alt="{alt}" src="docs/assets/{base}-light.svg" width="{width}">',
+            "</picture>", ""]
+
+
+def write_chart(base, render):
+    for theme in THEMES:
+        (ASSETS / f"{base}-{theme}.svg").write_text(render(theme))
+    return base
+
+
+def short_memory(entry):
+    if entry["peak_mem_gb"] is None:
+        return "—"
+    icon = "❌" if entry["flag"] or entry["oom"] else "⚠️" if "⚠️" in memory(entry) else "✅"
+    return f"{icon} {entry['peak_mem_gb']:.1f} GB{'' if entry['mem_exact'] else '≈'}"
+
+
+def glance_table(entries, total):
+    lines = ["| Model | Thinking | Accuracy | Time per case | Memory | Note |", "|---|---|---:|---:|---|---|"]
+    for entry in entries:
+        notes = [entry["flag"]] if entry["flag"] else []
+        if entry["timeouts"]:
+            count = number(entry["timeouts"])
+            notes.append(f"{count} case{'' if count == '1' else 's'} hit the 10-minute limit")
+        note = "; ".join(notes)
+        lines.append(f"| `{entry['model']}` | {entry['thinking']} | **{100 * entry['score'] / total:.0f}%** | "
+                     f"{duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
+    return "\n".join(lines)
+
+
+def dumbbell_rows(entries, total):
+    by_model = defaultdict(dict)
+    for entry in entries:
+        by_model[entry["model"]][entry["thinking"]] = entry
+    rows = []
+    for model, modes in by_model.items():
+        flag = next((entry["flag"] for entry in modes.values() if entry["flag"]), None)
+        # Keep notes short: they sit under the model name. A missing orange dot already shows "not run".
+        note = "hung the Pi; thinking off only" if flag and "on" not in modes else ("hung the Pi" if flag else None)
+        rows.append({"model": model, "note": note,
+                     **{mode: ({"accuracy": 100 * modes[mode]["score"] / total, "median_s": modes[mode]["median_s"]}
+                               if mode in modes else None) for mode in ("off", "on")}})
+    return sorted(rows, key=lambda row: -max(row[mode]["accuracy"] for mode in ("off", "on") if row[mode]))
+
+
+def heatmap_rows(entries, totals):
+    return [{"label": f"{entry['model']} · thinking {entry['thinking']}", "mode": entry["thinking"],
+             "values": [100 * entry["tracks"][track] / totals[track] for track in TRACKS]
+                       + [100 * entry["score"] / totals["all"]]} for entry in entries]
+
+
 def slug(text):
     return "".join(ch if ch.isalnum() else "-" for ch in text.lower()).strip("-").replace("--", "-")
 
@@ -560,20 +616,58 @@ def build():
         if name.startswith("Raspberry") and photos:
             parts += ["<p>" + " ".join(f'<a href="{path}"><img src="{path}" alt="{alt}" height="220"></a>'
                                        for path, alt in photos) + "</p>", ""]
-        for note in sorted({entry["note"] for entry in group if entry["note"]}):
-            parts += [f"Note: {note}", ""]
         if any(not entry["setup"] for entry in group):
             parts += ["† Exploratory run: one pass, no recorded hardware setup. "
                       "[Official runs](docs/OFFICIAL_RUNS.md) will replace these rows.", ""]
-        # Overview first (chart, then load time and speed), then the full tables.
-        base = f"score-vs-time-{slug(name)}"
+        slug_name = slug(name)
+        official = sorted((entry for entry in group if entry["setup"]), key=lambda entry: -entry["score"])
+        pairs = [(base_entry, other) for other in others for base_entry in group
+                 if base_entry["setup"] and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
+        total = totals["all"]
+        if official:
+            parts += ["#### At a glance", "", glance_table(official, total), "",
+                      "Accuracy is the share of all 65 cases passed. Time is the median per case. Memory is the "
+                      "peak in use, RAM plus zram, against the Pi's 7.9 GB of usable RAM.", ""]
+            parts += picture(write_chart(f"thinking-{slug_name}", lambda theme: charts.dumbbell(
+                dumbbell_rows(official, total), theme, "What thinking buys")),
+                "Accuracy and median time per case for each model with thinking off and on")
+            parts += ["#### Strengths and weaknesses by track", ""]
+            parts += picture(write_chart(f"tracks-{slug_name}", lambda theme: charts.heatmap(
+                heatmap_rows(official, totals), [TRACK_NAMES[track] for track in TRACKS] + ["All"], theme,
+                "Where each model succeeds")), "Share of each track's cases passed, per model and thinking mode")
+        if pairs:
+            high = pairs[0][1]["threads"]
+            parts += [f"#### {PRIMARY_THREADS} vs {high} CPU threads", ""]
+            parts += picture(write_chart(f"threads-{slug_name}", lambda theme: charts.threads(
+                [{"label": f"{a['model']} · thinking {a['thinking']}", "mode": a["thinking"],
+                  "before": a["median_s"], "after": b["median_s"]}
+                 for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["model"]))],
+                theme, "Does using all four cores help?", PRIMARY_THREADS, high)),
+                f"Median time per case with {PRIMARY_THREADS} and {high} threads per model and thinking mode")
+            parts += [f"The main results use {PRIMARY_THREADS} threads. More threads speed up prompt processing, "
+                      "but generation can get slower; details are in the full results below.", ""]
+
+        # Everything else stays available, one click away.
+        parts += ["#### Full results", "", "<details>",
+                  "<summary>All tables: per-track scores, speed, where the time goes, memory, temperature, "
+                  "threads, and the accuracy, speed and memory chart</summary>", ""]
+        base = f"score-vs-time-{slug_name}"
         for theme in THEMES:
             (ASSETS / f"{base}-{theme}.svg").write_text(svg_chart(group, theme, f"Accuracy and speed on {name}"))
-        parts += ["<picture>",
-                  f'  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/{base}-dark.svg">',
-                  f'  <img alt="Cases passed against median time per case on {name}; colour shows the thinking mode and bubble area the peak memory in use" '
-                  f'src="docs/assets/{base}-light.svg" width="920">',
-                  "</picture>", ""]
+        parts += picture(base, f"Cases passed against median time per case on {name}; colour shows the thinking "
+                               "mode and bubble area the peak memory in use")
+        for note in sorted({entry["note"] for entry in group if entry["note"]}):
+            parts += [f"Note: {note}", ""]
+        for mode in ("off", "on"):
+            subset = [entry for entry in group if entry["thinking"] == mode]
+            if subset:
+                rounds = sorted({entry["rounds"] for entry in subset})
+                label = f"**Thinking {mode}: scores by track**"
+                if rounds != [1]:
+                    label += f" (averaged over {'/'.join(map(str, rounds))} passes)"
+                parts += [label, "", table(subset, totals), ""]
+        if any(entry["peak_mem_gb"] is not None for entry in group):
+            parts += [MEMORY_NOTE, ""]
         timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
         if timed:
             parts += ["**Speed** (thinking off)", "", speed_table(timed), "", SPEED_NOTE, ""]
@@ -581,21 +675,10 @@ def build():
                  and entry["setup"]]
         if split:
             parts += ["**Where the time per case goes** (thinking off)", "", time_table(split), "", TIME_NOTE, ""]
-        for mode in ("off", "on"):
-            subset = [entry for entry in group if entry["thinking"] == mode]
-            if subset:
-                rounds = sorted({entry["rounds"] for entry in subset})
-                label = f"**Thinking {mode}: full results**"
-                if rounds != [1]:
-                    label += f" (scores averaged over {'/'.join(map(str, rounds))} passes)"
-                parts += [label, "", table(subset, totals), ""]
-                if any(entry["peak_mem_gb"] is not None for entry in subset if entry["device"].startswith("Raspberry")):
-                    parts += [MEMORY_NOTE, ""]
-        pairs = [(base_entry, other) for other in others for base_entry in group
-                 if base_entry["setup"] and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
         if pairs:
-            parts += [f"**Thread count: {PRIMARY_THREADS} vs {pairs[0][1]['threads']} threads**", "",
+            parts += [f"**{PRIMARY_THREADS} vs {pairs[0][1]['threads']} threads**", "",
                       threads_table(pairs), "", THREADS_NOTE, ""]
+        parts += ["</details>", ""]
     parts.append(END)
     text = README.read_text()
     if START not in text or END not in text:

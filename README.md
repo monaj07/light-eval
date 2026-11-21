@@ -21,7 +21,7 @@
 
 ## Results
 
-**Bottom line:** on an 8 GB Raspberry Pi 5, run **`gemma4:e2b`**. With thinking on it is the most accurate model tested (86% of cases) and still the fastest of the accurate options, at about a minute per case in under 6 GB of memory. With thinking off it answers in about 20 seconds per case at 60%.
+**Bottom line:** on an 8 GB Raspberry Pi 5, run **`gemma4:e2b`** and give it all 4 CPU threads. With thinking on it is the most accurate model tested (86% of cases) and the fastest of the accurate options. 4 threads instead of 2 cuts its median time per case from 1.1 minutes to 47 seconds, with the same accuracy, in under 6 GB of memory. With thinking off it scores 60% at about 12 seconds per case. The extra threads raise peak CPU temperature to about 77 °C with the official Active Cooler, without throttling. Set the thread count with Ollama's `num_thread` option, or `--threads 4` in this benchmark. The main tables below use 2 threads, so that all four models are compared under one setting.
 
 <!-- results:start -->
 

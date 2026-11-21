@@ -78,7 +78,7 @@ def dumbbell(rows, theme, title):
     rows: [{"model", "note", "off": {"accuracy", "median_s"} or None, "on": {...} or None}]
     """
     label_w, panel_w, gap = 230, 290, 56
-    top, row_h = 104, 44
+    top, row_h = 92, 44
     height = top + row_h * len(rows) + 54
     c = Canvas(theme, 920, height, title,
                "For each model: the accuracy thinking adds, and the extra time per case it costs.")
@@ -90,8 +90,10 @@ def dumbbell(rows, theme, title):
     def acc_x(percent):
         return x0_acc + panel_w * percent / 100
 
-    legend_x = c.legend_dot(x0_acc, 80, c.t["off"], "thinking off")
-    c.legend_dot(legend_x, 80, c.t["on"], "thinking on")
+    # Legend in the top-right corner, clear of the title and the panel headings.
+    legend_x = c.width - 24 - (30 + 6.8 * len("thinking off")) - (18 + 6.8 * len("thinking on"))
+    legend_x = c.legend_dot(legend_x, 34, c.t["off"], "thinking off")
+    c.legend_dot(legend_x, 34, c.t["on"], "thinking on")
     bottom = top + row_h * len(rows) - 10
     c.text(x0_acc, top - 8, "Accuracy (cases passed)", fill="ink", weight="600")
     c.text(x0_time, top - 8, "Median time per case (log scale)", fill="ink", weight="600")
@@ -103,9 +105,10 @@ def dumbbell(rows, theme, title):
         c.text(time_x(tick), bottom + 18, time_label(tick), fill="muted", anchor="middle")
     for index, row in enumerate(rows):
         y = top + row_h * index + row_h / 2
-        c.text(label_w - 16, y + (0 if row["note"] else 4), row["model"], fill="ink", anchor="end", weight="600")
+        # Left-aligned from the frame edge, so a long note can never run off the left side.
+        c.text(24, y + (0 if row["note"] else 4), row["model"], fill="ink", weight="600")
         if row["note"]:
-            c.text(label_w - 16, y + 15, row["note"], size=11, anchor="end")
+            c.text(24, y + 15, row["note"], size=11)
         for scale, key, fmt in ((acc_x, "accuracy", lambda v: f"{v:.0f}%"), (time_x, "median_s", duration)):
             points = [(mode, row[mode][key]) for mode in ("off", "on") if row[mode]]
             if len(points) == 2:

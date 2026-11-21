@@ -97,19 +97,28 @@ A run that stops early leaves a partial folder, and `--out` must name a new fold
 
 The official runs use `--threads 2`: Ollama's runner is started with `-t 2`, which was confirmed on the Pi with `ps`. So the published runs use 2 of the Pi 5's 4 cores. Ollama on its own normally uses all physical cores, so these timings are probably slower than with Ollama's defaults. The thread count mainly affects prompt processing, which is limited by computation. Generation, which is limited mostly by memory bandwidth, should change less. Accuracy should stay within the normal variation between passes.
 
-### Planned: thinking off with 4 threads
+### 4 threads: protocol and outcome
 
-To be run after the thinking-on runs, with the same preflight checks and a reboot first:
+The 4-thread runs repeated the official runs with `--threads 4` and nothing else changed. They left out `gemma4:e4b`, which hung the Pi with thinking off. They were chained in one tmux session:
 
 ```bash
-python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b \
-  --cycles 1 --threads 4 --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off_threads4
+python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b --cycles 1 --threads 4 \
+  --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off_threads4 ; \
+for model in gemma4:e2b qwen3.5:2b qwen3.5:4b; do
+  python3 light_eval.py run --models "$model" --phases warm --thinking on --threads 4 \
+    --temp-min 30 --temp-max 50 --setup "$SETUP" --out "results/official_v1_7_on_threads4_${model//[:.]/_}"
+done
 ```
 
-- **Design:** 3 rounds, giving each model 3 passes like the published thinking-off run, with all phases. The only difference is `--threads 4`. `gemma4:e4b` is left out, because it hung the Pi with thinking off. Expect about 3–4 hours.
-- **Check:** once the first model has loaded, `ps -o args= -C llama-server` should include `-t 4`.
-- **Compare per model, at 2 and 4 threads:** prompt processing speed and median time per case; generation, in cases and sustained; accuracy and repeatability; CPU temperature and throttling; total run time and gate waits.
-- **Decision:** if 4 threads is clearly faster, with the same accuracy and no throttling, later official runs should use 4 threads. The comparison will be shown separately from the main results, so tables never mix thread counts.
+Once a model had loaded, `ps -ww -o args= -C llama-server | tr ' ' '\n' | grep -x -A1 -- '-t'` printed `4`. All four runs completed with no gate timeouts, no swap, no out-of-memory kills and no throttling. The whole chain took about 17 hours.
+
+**Outcome** (see the comparison table under the [results](../README.md#results)):
+- **`gemma4:e2b` gets faster at everything:** prompt processing +67%, generation +12–15%, and 31–40% less time per case, with thinking off and on.
+- **The Qwen models generate 11–14% slower with 4 threads.** `qwen3.5:4b` still gains 66% in prompt processing, so with thinking off it is 32% faster per case, but with thinking on it is 13% slower. `qwen3.5:2b` gains nothing in prompt processing (−8 to −10%).
+- **Accuracy is unchanged with thinking off.** With thinking on, Qwen timeouts fell from 11 to 9 and from 13 to 11. That is a single pass each, within the usual variation between passes.
+- **Temperature rose by 3–12 °C,** to peaks of 72–78 °C, close to the roughly 80 °C throttling point, though no case throttled.
+
+**Decision.** The main results stay at 2 threads. That's the only setting with results for all four models, and the 4-thread effect differs by model family, so no single setting is best. For a Pi 5 deployment: use 4 threads for the Gemma models. For the Qwen models, 4 threads helps short answers but slows long reasoning. Two possible explanations, both untested: generation is limited by memory bandwidth, which the cores share; and the Qwen3.5 architecture, which mixes attention with recurrent layers, may do too little work per token to split well across 4 cores.
 
 ## What happened in the official thinking-off run
 

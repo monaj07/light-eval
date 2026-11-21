@@ -1,0 +1,575 @@
+{
+  "groups": [
+    {
+      "agent_metrics": {
+        "final_answer_pass_rate": 1.0,
+        "final_answer_passed": 13,
+        "n": 13,
+        "tool_use_pass_rate": 0.6923076923076923,
+        "tool_use_passed": 9
+      },
+      "by_difficulty": {
+        "challenge": {
+          "n": 7,
+          "outcomes": {
+            "pass": 4,
+            "wrong_tool_trace": 3
+          },
+          "pass_rate": 0.5714285714285714,
+          "passed": 4,
+          "supported": 7
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 5,
+            "wrong_tool_trace": 1
+          },
+          "pass_rate": 0.8333333333333334,
+          "passed": 5,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1267.0,
+        "median": 655.0,
+        "min": 0.0,
+        "n": 55,
+        "p95": 1087.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 5.2419133294284315,
+        "median": 5.1123034380512555,
+        "min": 4.950205672638419,
+        "n": 55,
+        "p95": 5.219032402540017
+      },
+      "generated_tokens": {
+        "max": 2268,
+        "median": 519,
+        "min": 267,
+        "n": 13,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.008468628,
+        "median": 0.001943963,
+        "min": 0.001672759,
+        "n": 55,
+        "p95": 0.006396885
+      },
+      "model": "qwen3.5:2b",
+      "n": 13,
+      "outcomes": {
+        "pass": 9,
+        "wrong_tool_trace": 4
+      },
+      "pass_rate": 0.6923076923076923,
+      "peak_system_used_estimate_kib": 4533328,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 15.58134,
+        "median": 1.365412,
+        "min": 0.655278,
+        "n": 55,
+        "p95": 15.03742
+      },
+      "prompt_tokens": {
+        "max": 1284.0,
+        "median": 680.0,
+        "min": 117.0,
+        "n": 55,
+        "p95": 1109.0
+      },
+      "track": "agent",
+      "ttft_s": {
+        "max": 15.593887406001159,
+        "median": 13.618360545999167,
+        "min": 12.827590073997271,
+        "n": 13,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 473.413231221999,
+        "median": 125.85844633000306,
+        "min": 70.16078194700094,
+        "n": 13,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 7,
+          "outcomes": {
+            "pass": 5,
+            "timeout": 2
+          },
+          "pass_rate": 0.7142857142857143,
+          "passed": 5,
+          "supported": 7
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 6
+          },
+          "pass_rate": 1.0,
+          "passed": 6,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 3.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 11,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 5.15521976006216,
+        "median": 5.036604473452562,
+        "min": 4.996737449280313,
+        "n": 11,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 2066,
+        "median": 1699,
+        "min": 431,
+        "n": 11,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.003630223,
+        "median": 0.001706168,
+        "min": 0.001570043,
+        "n": 11,
+        "p95": null
+      },
+      "model": "qwen3.5:2b",
+      "n": 13,
+      "outcomes": {
+        "pass": 11,
+        "timeout": 2
+      },
+      "pass_rate": 0.8461538461538461,
+      "peak_system_used_estimate_kib": 4335936,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.777617,
+        "median": 1.327786,
+        "min": 1.017177,
+        "n": 11,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 65.0,
+        "median": 47.0,
+        "min": 37.0,
+        "n": 11,
+        "p95": null
+      },
+      "track": "arithmetic",
+      "ttft_s": {
+        "max": 1.7826062259991886,
+        "median": 1.334478411001328,
+        "min": 1.0215490229966235,
+        "n": 11,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 414.5712733850014,
+        "median": 340.002717829997,
+        "min": 85.52874066799995,
+        "n": 11,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 4,
+          "outcomes": {
+            "timeout": 4
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 4
+        },
+        "control": {
+          "n": 3,
+          "outcomes": {
+            "pass": 3
+          },
+          "pass_rate": 1.0,
+          "passed": 3,
+          "supported": 3
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 1.0,
+        "n": 3,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 4.800478790408491,
+        "median": 4.742600093932052,
+        "min": 4.725094993876768,
+        "n": 3,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 625,
+        "median": 339,
+        "min": 332,
+        "n": 3,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.001711057,
+        "median": 0.001698686,
+        "min": 0.0016923,
+        "n": 3,
+        "p95": null
+      },
+      "model": "qwen3.5:2b",
+      "n": 7,
+      "outcomes": {
+        "pass": 3,
+        "timeout": 4
+      },
+      "pass_rate": 0.42857142857142855,
+      "peak_system_used_estimate_kib": 4339680,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 51.94447,
+        "median": 51.858541,
+        "min": 51.788825,
+        "n": 3,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 2019.0,
+        "median": 2019.0,
+        "min": 2019.0,
+        "n": 3,
+        "p95": null
+      },
+      "track": "context-long",
+      "ttft_s": {
+        "max": 51.95143079399713,
+        "median": 51.86829997300083,
+        "min": 51.79829386500205,
+        "n": 3,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 184.13899644599587,
+        "median": 122.57015436000074,
+        "min": 121.80062341099983,
+        "n": 3,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 4,
+          "outcomes": {
+            "pass": 3,
+            "timeout": 1
+          },
+          "pass_rate": 0.75,
+          "passed": 3,
+          "supported": 4
+        },
+        "control": {
+          "n": 2,
+          "outcomes": {
+            "pass": 2
+          },
+          "pass_rate": 1.0,
+          "passed": 2,
+          "supported": 2
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 3.0,
+        "median": 1.0,
+        "min": 1.0,
+        "n": 5,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 5.131368260729304,
+        "median": 5.097127800059794,
+        "min": 4.901663728353953,
+        "n": 5,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 2099,
+        "median": 1017,
+        "min": 554,
+        "n": 5,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.001982776,
+        "median": 0.001853273,
+        "min": 0.001589503,
+        "n": 5,
+        "p95": null
+      },
+      "model": "qwen3.5:2b",
+      "n": 6,
+      "outcomes": {
+        "pass": 5,
+        "timeout": 1
+      },
+      "pass_rate": 0.8333333333333334,
+      "peak_system_used_estimate_kib": 4330016,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 10.01326,
+        "median": 7.87616,
+        "min": 5.212739,
+        "n": 5,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 407.0,
+        "median": 320.0,
+        "min": 215.0,
+        "n": 5,
+        "p95": null
+      },
+      "track": "context-short",
+      "ttft_s": {
+        "max": 10.018095938001352,
+        "median": 7.880860790995939,
+        "min": 5.217203636999329,
+        "n": 5,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 438.2412857679992,
+        "median": 207.40652273500018,
+        "min": 113.30519256800108,
+        "n": 5,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 7,
+          "outcomes": {
+            "pass": 6,
+            "timeout": 1
+          },
+          "pass_rate": 0.8571428571428571,
+          "passed": 6,
+          "supported": 7
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 3,
+            "timeout": 1,
+            "wrong_answer": 2
+          },
+          "pass_rate": 0.5,
+          "passed": 3,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 3.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 11,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 5.152152086608138,
+        "median": 5.076325136183851,
+        "min": 4.897345728176988,
+        "n": 11,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 2745,
+        "median": 1213,
+        "min": 268,
+        "n": 11,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.004766822,
+        "median": 0.001775577,
+        "min": 0.00159404,
+        "n": 11,
+        "p95": null
+      },
+      "model": "qwen3.5:2b",
+      "n": 13,
+      "outcomes": {
+        "pass": 9,
+        "timeout": 2,
+        "wrong_answer": 2
+      },
+      "pass_rate": 0.6923076923076923,
+      "peak_system_used_estimate_kib": 4341648,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 2.654842,
+        "median": 1.336183,
+        "min": 0.992835,
+        "n": 11,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 92.0,
+        "median": 48.0,
+        "min": 36.0,
+        "n": 11,
+        "p95": null
+      },
+      "track": "structured",
+      "ttft_s": {
+        "max": 2.6615948639955604,
+        "median": 1.3411677889962448,
+        "min": 0.9972373139971751,
+        "n": 11,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 562.2859680869988,
+        "median": 240.28715638299764,
+        "min": 53.14736185299989,
+        "n": 11,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 7,
+          "outcomes": {
+            "pass": 5,
+            "wrong_answer": 2
+          },
+          "pass_rate": 0.7142857142857143,
+          "passed": 5,
+          "supported": 7
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 4,
+            "wrong_answer": 2
+          },
+          "pass_rate": 0.6666666666666666,
+          "passed": 4,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 3.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 13,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 5.289096214114515,
+        "median": 5.13252450672927,
+        "min": 5.07638727950026,
+        "n": 13,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 776,
+        "median": 325,
+        "min": 32,
+        "n": 13,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.00762731,
+        "median": 0.001826649,
+        "min": 0.001568947,
+        "n": 13,
+        "p95": null
+      },
+      "model": "qwen3.5:2b",
+      "n": 13,
+      "outcomes": {
+        "pass": 9,
+        "wrong_answer": 4
+      },
+      "pass_rate": 0.6923076923076923,
+      "peak_system_used_estimate_kib": 4364032,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 8.291692999,
+        "median": 8.107434,
+        "min": 7.733207,
+        "n": 13,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 206.0,
+        "median": 188.0,
+        "min": 185.0,
+        "n": 13,
+        "p95": null
+      },
+      "track": "vision",
+      "ttft_s": {
+        "max": 8.302864650999254,
+        "median": 8.153764653998223,
+        "min": 7.739912375000131,
+        "n": 13,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 160.7907710590007,
+        "median": 70.53745755899945,
+        "min": 14.305067918001441,
+        "n": 13,
+        "p95": null
+      }
+    }
+  ],
+  "repeatability": {},
+  "sustained": [],
+  "temperature": [
+    {
+      "case_start_cpu_c": {
+        "max": 66.65,
+        "median": 64.45,
+        "min": 56.75,
+        "n": 65,
+        "p95": 66.1
+      },
+      "cases": 65,
+      "mean_cpu_c": 64.89818505560415,
+      "model": "qwen3.5:2b",
+      "peak_cpu_c": 72.15,
+      "phase": "warm",
+      "round": 1,
+      "throttled_cases": 0
+    }
+  ]
+}

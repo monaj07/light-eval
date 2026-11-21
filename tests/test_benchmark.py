@@ -727,6 +727,21 @@ class BenchmarkTest(unittest.TestCase):
                 patch("runtime.read_text", return_value=None):
             self.assertIsNone(server_setting("LLAMA_ARG_CACHE_RAM"))
 
+    def test_temperature_report_is_one_line_per_model_unless_throttled(self):
+        from light_eval import print_temperatures
+        def item(model, phase, round_num, mean, peak, throttled=0, cases=65):
+            return {"model": model, "phase": phase, "round": round_num, "cases": cases, "mean_cpu_c": mean,
+                    "peak_cpu_c": peak, "throttled_cases": throttled, "case_start_cpu_c": {}}
+        items = [item("a", "warm", 1, 60.0, 66.0), item("a", "warm", 2, 62.0, 68.0),
+                 item("b", "warm", 1, 70.0, 79.0, throttled=3)]
+        with patch("sys.stdout", new_callable=io.StringIO) as out:
+            print_temperatures(items)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(lines[0], "a CPU temperature: mean 61.0 C, peak 68.0 C, no throttling")
+        self.assertIn("b CPU temperature: mean 70.0 C, peak 79.0 C, THROTTLED", lines[1])
+        self.assertEqual(lines[2], "  throttled in 3 of 65 warm cases in round 1")
+        self.assertEqual(len(lines), 3)
+
     def test_memory_telemetry_is_passive_even_when_pressure_and_swap_increase(self):
         warning = {"t": 0, "memory_pressure_level": 2, "pswpout": 100,
                    "memory_page_bytes": 16384}

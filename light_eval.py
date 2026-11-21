@@ -491,15 +491,29 @@ def print_summary(summary):
             score_label += ", " + ", ".join(
                 f"{level} {levels[level]['passed']}/{levels[level]['supported']}" for level in ("control", "challenge"))
         print(f"{row['model']} {row['phase']}/{row['track']} ({n} cases{score_label}{timing}) {status}")
-    for item in summary.get("temperature", []):
-        starts = item["case_start_cpu_c"]
-        mean = f", mean {item['mean_cpu_c']:.1f}" if item["mean_cpu_c"] is not None else ""
-        print(f"{item['model']} {item['phase']} round {item['round']} CPU temperature: cases started at "
-              f"{starts['min']:.1f}-{starts['max']:.1f} C (median {starts['median']:.1f}){mean}, peak "
-              f"{item['peak_cpu_c']:.1f} C, {item['throttled_cases']}/{item['cases']} cases with throttling flags")
+    print_temperatures(summary.get("temperature", []))
     for block in summary["sustained"]:
         if block["failure"]:
             print(f"{block['model']} sustained round {block['round']} stopped: {block['failure']['status']}")
+
+
+def print_temperatures(items):
+    """One line per model; per-round detail only where throttling occurred.
+
+    summary.json keeps every model, round and phase. On screen, a run without throttling
+    needs just the temperatures, and any throttling has to stand out."""
+    by_model = defaultdict(list)
+    for item in items:
+        by_model[item["model"]].append(item)
+    for model, model_items in by_model.items():
+        weighted = [(item["mean_cpu_c"], item["cases"]) for item in model_items if item["mean_cpu_c"] is not None]
+        mean = (f"mean {sum(m * n for m, n in weighted) / sum(n for _, n in weighted):.1f} C, " if weighted else "")
+        peak = max(item["peak_cpu_c"] for item in model_items)
+        throttled = [item for item in model_items if item["throttled_cases"]]
+        verdict = "no throttling" if not throttled else "THROTTLED (timings may be slowed by heat)"
+        print(f"{model} CPU temperature: {mean}peak {peak:.1f} C, {verdict}")
+        for item in throttled:
+            print(f"  throttled in {item['throttled_cases']} of {item['cases']} {item['phase']} cases in round {item['round']}")
 
 
 def build_parser():

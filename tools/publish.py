@@ -40,6 +40,15 @@ HARDWARE_PHOTOS = (
      "Raspberry Pi 5 8 GB, Active Cooler, acrylic case, SanDisk Extreme 128 GB microSD card and 27 W power supply"),
     ("docs/assets/hardware/raspberry-pi-assembled.jpg", "The assembled Raspberry Pi 5 in its vented acrylic case"),
 )
+# Thread count used by the main results; runs with other thread counts feed the comparison table.
+PRIMARY_THREADS = 2
+THREADS_NOTE = (
+    "Each pair compares an official run at the main thread count with one at the other, for the same model and "
+    "thinking mode; everything else is identical. Percentages are changes from the main thread count. Prompt "
+    "processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory "
+    "bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking "
+    "on, a change in speed also changes how many cases finish inside the 10-minute limit."
+)
 SPEED_NOTE = (
     "Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how "
     "fast it writes, and it is limited mostly by memory bandwidth. All published Pi runs use 2 of the Pi's 4 cores "
@@ -143,6 +152,7 @@ def entries():
                 "thinking": manifest["options"]["thinking"], "cycles": manifest["options"]["cycles"],
                 # Official runs record the hardware setup (--setup); everything else is exploratory.
                 "setup": (manifest["options"].get("setup") or "").strip(),
+                "threads": manifest["options"].get("threads"),
                 "rounds": rounds,
                 "score": sum(row["status"] == "pass" for row in mine) / rounds,
                 "challenge": sum(row["status"] == "pass" and row["difficulty"] == "challenge"
@@ -321,6 +331,32 @@ def speed_table(group):
         change = f"{entry['sustained_change'] * 100:+.1f}%" if entry["sustained_change"] is not None else "—"
         lines.append(f"| `{entry['model']}` | {load} | {rate(entry.get('prefill_tok_s'))} | "
                      f"{rate(entry.get('case_decode_tok_s'))} | {rate(entry['sustained_tok_s'])} | {change} |")
+    return "\n".join(lines)
+
+
+def threads_table(pairs):
+    def change(a, b, fmt):
+        if a is None or b is None:
+            return "—"
+        text = f"{fmt(a)} → {fmt(b)}"
+        if a and abs(b / a - 1) >= 0.005:
+            text += f" ({(b / a - 1) * 100:+.0f}%)"
+        return text
+    temp = lambda entry: entry["temperature"]["peak_cpu_c"] if entry["temperature"] else None
+    lines = ["| Model | Thinking | Accuracy | Median time per case | Prompt processing (tokens/s) | "
+             "Generation in cases (tokens/s) | Generation sustained (tokens/s) | Timed out | Peak CPU °C |",
+             "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["median_s"])):
+        total = len(dataset())
+        lines.append(" | ".join([
+            f"| `{a['model']}`", a["thinking"],
+            f"{100 * a['score'] / total:.0f}% → {100 * b['score'] / total:.0f}%",
+            change(a["median_s"], b["median_s"], duration),
+            change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), lambda v: f"{v:.1f}"),
+            change(a.get("case_decode_tok_s"), b.get("case_decode_tok_s"), lambda v: f"{v:.1f}"),
+            change(a.get("sustained_tok_s"), b.get("sustained_tok_s"), lambda v: f"{v:.1f}"),
+            f"{number(a['timeouts'])} → {number(b['timeouts'])}",
+            (f"{temp(a):.0f} → {temp(b):.0f} ({temp(b) - temp(a):+.0f} °C)" if temp(a) and temp(b) else "—") + " |"]))
     return "\n".join(lines)
 
 
@@ -511,9 +547,11 @@ def build():
     ASSETS.mkdir(parents=True, exist_ok=True)
     for name in sorted(by_device, key=lambda item: (not item.startswith("Raspberry"), item)):
         # An official run replaces exploratory runs of the same model and thinking mode.
-        official = {(entry["model"], entry["thinking"]) for entry in by_device[name] if entry["setup"]}
-        group = [entry for entry in by_device[name]
-                 if entry["setup"] or (entry["model"], entry["thinking"]) not in official]
+        # The main tables and chart use one thread count; other thread counts go to a comparison table.
+        main = [entry for entry in by_device[name] if entry["threads"] == PRIMARY_THREADS]
+        official = {(entry["model"], entry["thinking"]) for entry in main if entry["setup"]}
+        group = [entry for entry in main if entry["setup"] or (entry["model"], entry["thinking"]) not in official]
+        others = [entry for entry in by_device[name] if entry["threads"] != PRIMARY_THREADS and entry["setup"]]
         parts += [f"### {name}", ""]
         setups = sorted({entry["setup"] for entry in group if entry["setup"]})
         for setup in setups:
@@ -553,6 +591,11 @@ def build():
                 parts += [label, "", table(subset, totals), ""]
                 if any(entry["peak_mem_gb"] is not None for entry in subset if entry["device"].startswith("Raspberry")):
                     parts += [MEMORY_NOTE, ""]
+        pairs = [(base_entry, other) for other in others for base_entry in group
+                 if base_entry["setup"] and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
+        if pairs:
+            parts += [f"**Thread count: {PRIMARY_THREADS} vs {pairs[0][1]['threads']} threads**", "",
+                      threads_table(pairs), "", THREADS_NOTE, ""]
     parts.append(END)
     text = README.read_text()
     if START not in text or END not in text:

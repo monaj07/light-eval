@@ -81,6 +81,19 @@ Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in 
 
 Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs recorded before zram's own RAM use was measured: they add the separate peaks of RAM and swap, and count zram's compressed pages twice, so they overstate memory in use when zram is busy. ✅ more than 0.5 GB stayed free and swap stayed under 1 GB; ⚠️ less free or more swap; ❌ ran out of memory or hung the Pi.
 
+**Thread count: 2 vs 4 threads**
+
+| Model | Thinking | Accuracy | Median time per case | Prompt processing (tokens/s) | Generation in cases (tokens/s) | Generation sustained (tokens/s) | Timed out | Peak CPU °C |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen3.5:2b` | off | 49% → 49% | 10.5 s → 9.3 s (-12%) | 40.3 → 37.3 (-8%) | 6.3 → 5.5 (-12%) | 6.1 → 5.3 (-14%) | 0 → 0 | 69 → 75 (+6 °C) |
+| `gemma4:e2b` | off | 60% → 60% | 19.5 s → 11.8 s (-40%) | 22.0 → 36.8 (+67%) | 12.5 → 14.3 (+15%) | 7.5 → 8.4 (+12%) | 0 → 0 | 65 → 77 (+12 °C) |
+| `qwen3.5:4b` | off | 49% → 49% | 20.0 s → 13.7 s (-32%) | 13.4 → 22.3 (+66%) | 4.2 → 3.8 (-11%) | 4.0 → 3.5 (-12%) | 0 → 0 | 68 → 78 (+9 °C) |
+| `gemma4:e2b` | on | 86% → 86% | 1.1 min → 46.9 s (-31%) | 22.0 → 36.9 (+67%) | 11.3 → 12.8 (+13%) | — | 1 → 1 | 68 → 77 (+9 °C) |
+| `qwen3.5:2b` | on | 66% → 71% | 2.3 min → 2.7 min (+17%) | 39.6 → 35.7 (-10%) | 5.8 → 5.1 (-12%) | — | 11 → 9 | 69 → 72 (+3 °C) |
+| `qwen3.5:4b` | on | 65% → 66% | 4.5 min → 5.1 min (+13%) | 13.4 → 21.4 (+60%) | 3.8 → 3.3 (-14%) | — | 13 → 11 | 69 → 77 (+8 °C) |
+
+Each pair compares an official run at the main thread count with one at the other, for the same model and thinking mode; everything else is identical. Percentages are changes from the main thread count. Prompt processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking on, a change in speed also changes how many cases finish inside the 10-minute limit.
+
 <!-- results:end -->
 
 ### Findings so far
@@ -94,6 +107,7 @@ For what the models actually answered in each track, and why it was scored as it
 - **Bigger isn't better at tool use, and thinking doesn't help it.** With thinking off, `qwen3.5:4b` passes 3 of 13 agent cases against 11 for `qwen3.5:2b`, mostly by adding tool calls the task didn't ask for. With thinking on, the Qwen models do worse still (2 and 7), while `gemma4:e2b` stays at 12.
 - **Ollama's prompt cache can use up to 8 GiB.** By default each runner keeps earlier prompts in RAM, which swamps an 8 GB Pi. Set `LLAMA_ARG_CACHE_RAM=0` on the Ollama server (see [Quick start](#quick-start)).
 - **The Pi stays cool enough with the official Active Cooler.** In the official run, CPU temperature averaged 60–65 °C and peaked at 69 °C, below the roughly 80 °C at which the Pi 5 starts throttling. No case recorded a throttling flag, and sustained generation speed changed by less than 2% over each 90-second phase.
+- **More threads help Gemma and slow down Qwen's writing.** Going from 2 to 4 threads speeds up `gemma4:e2b` at both reading and writing, cutting its time per case by 31–40%. Prompt processing is also about 66% faster for `qwen3.5:4b`, but generation is 11–14% *slower* for both Qwen models. So with thinking on, where long reasoning is mostly generation, the Qwen models get 13–17% slower overall. Scores are unchanged with thinking off. The Pi runs 3–12 °C hotter, peaking at 78 °C, close to the roughly 80 °C at which it throttles, though no case throttled. The main results use 2 threads; the comparison table is under the results.
 - **Repeat runs are close, but not identical.** Across three passes on the Pi, 74–82% of cases produced word-for-word the same output, and the pass or fail result differed between passes for only 2 of 260 model–case pairs. Scores are therefore averaged over the passes.
 - **On the Pi, the time limit, not the token budget, is what stops thinking.** No case used up the 6,144-token budget. All 25 thinking-on timeouts reached the 10-minute limit while the model was still reasoning. They had generated an estimated 800–3,200 tokens, since part of the 10 minutes goes to reading the prompt, and generation with thinking on runs at only 3.8–11.3 tokens/s.
 
@@ -137,7 +151,7 @@ python3 light_eval.py run --models qwen3.5:2b --phases warm --out results/my-fir
 python3 light_eval.py run --models qwen3.5:2b --phases warm --thinking on --out results/my-thinking-run
 ```
 
-The runner uses 2 CPU threads by default (`--threads`). The published Pi results use 2 of the Pi 5's 4 cores, so their timings are probably slower than with Ollama's own default of using all cores. On a Mac, add `--no-thermal-gate`. A Mac is handy for developing and checking cases quickly, but published results come from the Pi. For results you intend to publish, follow [docs/OFFICIAL_RUNS.md](docs/OFFICIAL_RUNS.md). It covers the schedule, the preflight checks, and `--setup "…"`, which records your cooling, power supply and storage in the manifest.
+The runner uses 2 CPU threads by default (`--threads`). The main Pi results use 2 of the Pi 5's 4 cores, and the results include a 2-vs-4-thread comparison: 4 threads help the Gemma models but slow down the Qwen models' generation. On a Mac, add `--no-thermal-gate`. A Mac is handy for developing and checking cases quickly, but published results come from the Pi. For results you intend to publish, follow [docs/OFFICIAL_RUNS.md](docs/OFFICIAL_RUNS.md). It covers the schedule, the preflight checks, and `--setup "…"`, which records your cooling, power supply and storage in the manifest.
 
 **3. Read the results.**
 
@@ -168,7 +182,7 @@ Compare models only within one suite version and one thinking mode. Mac and Pi r
 - [x] Per-run temperature and throttling report
 - [ ] Thinking-on runs on the Pi
 - [ ] Official runs on a Pi in a fixed, documented setup ([protocol](docs/OFFICIAL_RUNS.md))
-- [ ] Thinking off with 4 threads instead of 2, to measure how much the thread count changes speed, temperature and accuracy ([plan](docs/OFFICIAL_RUNS.md#planned-thinking-off-with-4-threads))
+- [x] 4 threads instead of 2, with thinking off and on, to measure the effect on speed, temperature and accuracy ([protocol and outcome](docs/OFFICIAL_RUNS.md#thread-count))
 - [ ] More Pi-sized models: the LFM family (LFM2.5 1.2B and 2.6B, `lfm3-vl`)
 - [ ] Held-out cases that were never used to tune the protocol
 

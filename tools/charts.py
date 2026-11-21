@@ -162,8 +162,9 @@ def threads(rows, theme, title, low, high):
     """
     label_w, plot_w, top, row_h = 250, 470, 104, 40
     height = top + row_h * len(rows) + 54
-    c = Canvas(theme, label_w + plot_w + 120, height, title,
-               f"Median time per case with {low} and {high} CPU threads. Further left is faster.")
+    c = Canvas(theme, label_w + plot_w + 200, height, title,
+               f"Median time per case. Each arrow goes from {low} threads (outline) to {high} threads (filled); "
+               "left is faster.")
     values = [row[key] for row in rows for key in ("before", "after")]
     x, ticks = log_scale(values, label_w, plot_w)
     legend_x = c.legend_dot(label_w, 80, c.t["ink2"], f"{low} threads", hollow=True)
@@ -177,10 +178,16 @@ def threads(rows, theme, title, low, high):
         c.dot(24 + 6, y - 4, 6, c.t[row["mode"]])
         c.text(42, y, row["label"], fill="ink")
         before, after = x(row["before"]), x(row["after"])
-        c.line(before, y - 4, after, y - 4, stroke="axis", width=3)
-        c.dot(before, y - 4, 7, c.t[row["mode"]], hollow=True)
-        c.dot(after, y - 4, 7, c.t[row["mode"]])
+        cy = y - 4
+        c.dot(before, cy, 7, c.t[row["mode"]], hollow=True)
+        # An arrow from the fewer-threads dot to the more-threads dot, so each row reads as a change.
+        direction = 1 if after > before else -1
+        if abs(after - before) > 22:
+            tip = after - direction * 10
+            c.line(before + direction * 9, cy, tip - direction * 6, cy, stroke="ink2", width=2)
+            c.parts.append(f'<path d="M{tip:.1f},{cy:.1f} l{-direction * 8:.1f},-5 v10 z" fill="{c.t["ink2"]}"/>')
+        c.dot(after, cy, 7, c.t[row["mode"]])
         change = (row["after"] / row["before"] - 1) * 100
         word = "faster" if change < 0 else "slower"
-        c.text(max(before, after) + 14, y, f"{abs(change):.0f}% {word}", fill="ink", weight="600")
+        c.text(max(before, after) + 16, y, f"{high} threads: {abs(change):.0f}% {word}", fill="ink", weight="600")
     return c.svg()

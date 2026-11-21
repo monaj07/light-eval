@@ -163,12 +163,12 @@ def threads(rows, theme, title, low, high):
     label_w, plot_w, top, row_h = 250, 470, 104, 40
     height = top + row_h * len(rows) + 54
     c = Canvas(theme, label_w + plot_w + 200, height, title,
-               f"Median time per case. Each arrow goes from {low} threads (outline) to {high} threads (filled); "
-               "left is faster.")
+               f"Median time per case. Each arrow goes from {low} threads (filled, as in the other charts) to "
+               f"{high} threads (outline); left is faster.")
     values = [row[key] for row in rows for key in ("before", "after")]
     x, ticks = log_scale(values, label_w, plot_w)
-    legend_x = c.legend_dot(label_w, 80, c.t["ink2"], f"{low} threads", hollow=True)
-    c.legend_dot(legend_x, 80, c.t["ink2"], f"{high} threads")
+    legend_x = c.legend_dot(label_w, 80, c.t["ink2"], f"{low} threads")
+    c.legend_dot(legend_x, 80, c.t["ink2"], f"{high} threads", hollow=True)
     bottom = top + row_h * len(rows) - 6
     for tick in ticks:
         c.line(x(tick), top - 6, x(tick), bottom)
@@ -179,14 +179,15 @@ def threads(rows, theme, title, low, high):
         c.text(42, y, row["label"], fill="ink")
         before, after = x(row["before"]), x(row["after"])
         cy = y - 4
-        c.dot(before, cy, 7, c.t[row["mode"]], hollow=True)
-        # An arrow from the fewer-threads dot to the more-threads dot, so each row reads as a change.
+        # A thin arrow joins the two dots, edge to edge, pointing at the higher thread count.
         direction = 1 if after > before else -1
-        if abs(after - before) > 22:
-            tip = after - direction * 10
-            c.line(before + direction * 9, cy, tip - direction * 6, cy, stroke="ink2", width=2)
-            c.parts.append(f'<path d="M{tip:.1f},{cy:.1f} l{-direction * 8:.1f},-5 v10 z" fill="{c.t["ink2"]}"/>')
-        c.dot(after, cy, 7, c.t[row["mode"]])
+        start_x, tip = before + direction * 8, after - direction * 9
+        if (tip - start_x) * direction > 6:
+            c.line(start_x, cy, tip - direction * 4, cy, stroke="ink2", width=1.25)
+            c.parts.append(f'<path d="M{tip:.1f},{cy:.1f} l{-direction * 6:.1f},-3.5 v7 z" fill="{c.t["ink2"]}"/>')
+        # Main thread count filled, like every other chart; the other count as an outline.
+        c.dot(before, cy, 7, c.t[row["mode"]])
+        c.dot(after, cy, 7, c.t[row["mode"]], hollow=True)
         change = (row["after"] / row["before"] - 1) * 100
         word = "faster" if change < 0 else "slower"
         c.text(max(before, after) + 16, y, f"{high} threads: {abs(change):.0f}% {word}", fill="ink", weight="600")

@@ -47,7 +47,8 @@ PRIMARY_THREADS = 4
 TEXT_TRACKS = ("arithmetic", "structured", "agent", "context")
 THREADS_NOTE = (
     "Each pair compares an official run at the main thread count with one at the other, for the same model and "
-    "thinking mode; everything else is identical. Percentages are changes from the main thread count. Prompt "
+    "thinking mode; everything else is identical. Each change reads from fewer threads to more: 🟢 marks an "
+    "improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the worse. Prompt "
     "processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory "
     "bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking "
     "on, a change in speed also changes how many cases finish inside the 10-minute limit."
@@ -379,13 +380,22 @@ def speed_table(group):
 
 
 def threads_table(pairs):
-    def change(a, b, fmt):
+    def change(a, b, fmt, higher_is_better):
+        """'a → b (+x%)' with 🟢 when the change is an improvement and 🔴 when it is worse.
+
+        GitHub strips colour from Markdown, so a coloured marker carries better/worse; the sign
+        alone can't, since for time a minus is good and for speed a plus is."""
         if a is None or b is None:
             return "—"
         text = f"{fmt(a)} → {fmt(b)}"
         if a and abs(b / a - 1) >= 0.005:
-            text += f" ({(b / a - 1) * 100:+.0f}%)"
+            better = (b > a) == higher_is_better
+            text += f" ({'🟢' if better else '🔴'} {(b / a - 1) * 100:+.0f}%)"
         return text
+
+    def count_change(a, b):
+        text = f"{number(a)} → {number(b)}"
+        return text + (" (🟢)" if b < a else " (🔴)" if b > a else "")
     temp = lambda entry: entry["temperature"]["peak_cpu_c"] if entry["temperature"] else None
     lines = ["| Model | Thinking | Accuracy | Median time per case | Prompt processing (tokens/s) | "
              "Generation in cases (tokens/s) | Generation sustained (tokens/s) | Timed out | Peak CPU °C |",
@@ -394,13 +404,15 @@ def threads_table(pairs):
         total = len(dataset())
         lines.append(" | ".join([
             f"| `{display_name(a['model'])}`", a["thinking"],
-            f"{a['accuracy']:.0f}% → {b['accuracy']:.0f}%",
-            change(a["median_s"], b["median_s"], duration),
-            change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), lambda v: f"{v:.1f}"),
-            change(a.get("case_decode_tok_s"), b.get("case_decode_tok_s"), lambda v: f"{v:.1f}"),
-            change(a.get("sustained_tok_s"), b.get("sustained_tok_s"), lambda v: f"{v:.1f}"),
-            f"{number(a['timeouts'])} → {number(b['timeouts'])}",
-            (f"{temp(a):.0f} → {temp(b):.0f} ({temp(b) - temp(a):+.0f} °C)" if temp(a) and temp(b) else "—") + " |"]))
+            f"{a['accuracy']:.0f}% → {b['accuracy']:.0f}%" + (" (🟢)" if round(b["accuracy"]) > round(a["accuracy"])
+                                                              else " (🔴)" if round(b["accuracy"]) < round(a["accuracy"]) else ""),
+            change(a["median_s"], b["median_s"], duration, higher_is_better=False),
+            change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
+            change(a.get("case_decode_tok_s"), b.get("case_decode_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
+            change(a.get("sustained_tok_s"), b.get("sustained_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
+            count_change(a["timeouts"], b["timeouts"]),
+            (f"{temp(a):.0f} → {temp(b):.0f} ({'🔴' if temp(b) > temp(a) else '🟢'} {temp(b) - temp(a):+.0f} °C)"
+             if temp(a) and temp(b) else "—") + " |"]))
     return "\n".join(lines)
 
 
@@ -417,8 +429,8 @@ def svg_chart(points, theme, title):
     """Accuracy against speed. Bubble area shows peak memory in use, colour shows the thinking
     mode, and a thin connector joins each model's thinking-off and thinking-on points."""
     t = THEMES[theme]
-    width, height = 920, 470
-    left, top, plot_w, plot_h = 64, 92, 560, 300
+    width, height = 920, 540
+    left, top, plot_w, plot_h = 68, 104, 560, 350
     legend_x = left + plot_w + 36
     total = len(dataset())
     font = 'font-family="system-ui, -apple-system, Segoe UI, sans-serif"'
@@ -431,10 +443,11 @@ def svg_chart(points, theme, title):
 
     # Pad the log-scale time axis so the largest bubbles stay inside the plot.
     times = [point["median_s"] for point in points]
-    low = max(tick for tick in TIME_TICKS if tick <= min(times) / 1.4) if min(times) / 1.4 >= TIME_TICKS[0] \
-        else TIME_TICKS[0]
-    high = min((tick for tick in TIME_TICKS if tick >= max(times) * 1.4), default=TIME_TICKS[-1])
-    ticks = [tick for tick in TIME_TICKS if low <= tick <= high]
+    # Finer round ticks than the other charts, so the axis can hug the data and spread the bubbles out.
+    fine = (1, 2, 5, 10, 20, 30, 60, 120, 300, 600, 1200)
+    low = max((tick for tick in fine if tick <= min(times) / 1.25), default=fine[0])
+    high = min((tick for tick in fine if tick >= max(times) * 1.25), default=fine[-1])
+    ticks = [tick for tick in fine if low <= tick <= high]
 
     def x(seconds):
         return left + plot_w * (math.log10(seconds) - math.log10(low)) / (math.log10(high) - math.log10(low))
@@ -446,7 +459,7 @@ def svg_chart(points, theme, title):
         # Over the tracks the model supports, as in the tables.
         return point["accuracy"]
 
-    def text(px, py, content, size=12, fill="ink2", anchor="start", weight="normal", halo=False):
+    def text(px, py, content, size=13, fill="ink2", anchor="start", weight="normal", halo=False):
         # A halo in the surface colour keeps labels legible where they cross a connector.
         outline = f'stroke="{t["surface"]}" stroke-width="4" paint-order="stroke" ' if halo else ""
         return (f'<text x="{px:.1f}" y="{py:.1f}" font-size="{size}" font-weight="{weight}" '
@@ -457,20 +470,21 @@ def svg_chart(points, theme, title):
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
            f'viewBox="0 0 {width} {height}" role="img" aria-label="{title}">',
            f'<rect width="{width}" height="{height}" rx="8" fill="{t["surface"]}"/>',
-           text(left - 40, 34, title, size=16, fill="ink", weight="600"),
-           text(left - 40, 56, subtitle, size=12, fill="ink2")]
+           text(24, 36, title, size=19, fill="ink", weight="700"),
+           text(24, 60, subtitle, size=13.5, fill="ink2")]
     for percent in range(0, 101, 20):
         out.append(f'<line x1="{left}" x2="{left + plot_w}" y1="{y(percent):.1f}" y2="{y(percent):.1f}" '
                    f'stroke="{t["grid"] if percent else t["axis"]}" stroke-width="1"/>')
-        out.append(text(left - 10, y(percent) + 4, f"{percent}%", fill="muted", anchor="end"))
+        out.append(text(left - 10, y(percent) + 4, f"{percent}%", size=12.5, anchor="end"))
     for tick in ticks:
         out.append(f'<line x1="{x(tick):.1f}" x2="{x(tick):.1f}" y1="{top}" y2="{top + plot_h}" '
                    f'stroke="{t["grid"]}" stroke-width="1"/>')
         label = f"{tick:g} s" if tick < 60 else f"{tick / 60:g} min"
-        out.append(text(x(tick), top + plot_h + 20, label, fill="muted", anchor="middle"))
-    out.append(text(left + plot_w / 2, top + plot_h + 44, "Median time per case (log scale)", anchor="middle"))
-    out.append(text(left, top - 12, "Accuracy (cases passed on supported tracks)"))
-    out.append(text(left + plot_w - 6, top + 16, "better ↖", fill="muted", anchor="end"))
+        out.append(text(x(tick), top + plot_h + 20, label, size=12.5, anchor="middle"))
+    out.append(text(left + plot_w / 2, top + plot_h + 46, "Median time per case (log scale)", size=14, fill="ink",
+                    weight="700", anchor="middle"))
+    out.append(text(left - 44, top - 14, "Accuracy (cases passed on supported tracks)", size=14, fill="ink", weight="700"))
+    out.append(text(left + plot_w - 6, top + 18, "better ↖", size=13, anchor="end"))
 
     # Connectors first, so the bubbles sit on top of them.
     by_model = defaultdict(dict)
@@ -480,7 +494,7 @@ def svg_chart(points, theme, title):
         if "off" in modes and "on" in modes:
             a, b = modes["off"], modes["on"]
             out.append(f'<line x1="{x(a["median_s"]):.1f}" y1="{y(accuracy(a)):.1f}" x2="{x(b["median_s"]):.1f}" '
-                       f'y2="{y(accuracy(b)):.1f}" stroke="{t["muted"]}" stroke-width="1.5" stroke-dasharray="1 4" '
+                       f'y2="{y(accuracy(b)):.1f}" stroke="{t["ink2"]}" stroke-width="1.75" stroke-dasharray="1 4" '
                        f'stroke-linecap="round"/>')
     # Largest bubbles first, so small ones stay visible on top.
     bubbles = []
@@ -490,7 +504,7 @@ def svg_chart(points, theme, title):
         color = t["on" if point["thinking"] == "on" else "off"]
         dashed = ' stroke-dasharray="4 3"' if point["flag"] else ""
         ring = t["ink2"] if point["flag"] else t["surface"]
-        out.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r:.1f}" fill="{color}" fill-opacity="0.78" '
+        out.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r:.1f}" fill="{color}" fill-opacity="0.9" '
                    f'stroke="{ring}" stroke-width="2"{dashed}/>')
 
     def hits_circle(box, cx, cy, r):
@@ -502,11 +516,13 @@ def svg_chart(points, theme, title):
     # stays inside the plot and clear of every bubble and earlier label.
     placed, leaders, labels = [], [], []
     for point, px, py, r in sorted(bubbles, key=lambda item: item[2]):
-        label = f'{point["model"]} · {accuracy(point):.0f}%'
-        # A flag goes on its own line under the name, so the label stays narrow.
-        note = "(hung the Pi)" if point["flag"] else None
-        w = 6.6 * max(len(label), len(note or ""))
-        extra = 13 if note else 0  # height of the second line
+        label = f'{display_name(point["model"])} · {accuracy(point):.0f}%'
+        # Flags and a different thread count go on a second line under the name, so the label stays narrow.
+        notes = (["hung the Pi"] if point["flag"] else []) + ([point["threads_note"]] if point.get("threads_note") else [])
+        note = f"({', '.join(notes)})" if notes else None
+        # Width estimates for 14 px semibold labels and 12.5 px notes, on the generous side.
+        w = max(8.2 * len(label), 7.2 * len(note or ""))
+        extra = 15 if note else 0  # height of the second line
         candidates = [(px + r + 8, py + 4, "start"), (px - r - 8, py + 4, "end"),
                       (px, py - r - 8, "middle"), (px, py + r + 18, "middle"),
                       (px + r * 0.7 + 6, py - r * 0.7 - 6, "start"), (px - r * 0.7 - 6, py - r * 0.7 - 6, "end"),
@@ -516,7 +532,7 @@ def svg_chart(points, theme, title):
         def box(cand):
             lx, ly, anchor = cand
             x0 = lx if anchor == "start" else lx - w if anchor == "end" else lx - w / 2
-            return (x0, ly - 11, x0 + w, ly + 3 + extra)
+            return (x0, ly - 12, x0 + w, ly + 4 + extra)
 
         def overlaps(cand):
             """How badly a spot collides: leaving the plot counts most, then bubbles, then labels."""
@@ -536,36 +552,36 @@ def svg_chart(points, theme, title):
             ux, uy = (nearest_x - px) / (gap + r), (nearest_y - py) / (gap + r)
             leaders.append(f'<line x1="{px + ux * (r + 2):.1f}" y1="{py + uy * (r + 2):.1f}" x2="{nearest_x - ux * 3:.1f}" '
                            f'y2="{nearest_y - uy * 3:.1f}" stroke="{t["ink2"]}" stroke-width="1"/>')
-        labels.append(text(choice[0], choice[1], label, fill="ink", anchor=choice[2], halo=True))
+        labels.append(text(choice[0], choice[1], label, size=14, fill="ink", weight="600", anchor=choice[2], halo=True))
         if note:
-            labels.append(text(choice[0], choice[1] + 14, note, size=11, fill="ink2", anchor=choice[2], halo=True))
+            labels.append(text(choice[0], choice[1] + 16, note, size=12.5, fill="ink2", anchor=choice[2], halo=True))
     out += leaders + labels
 
     # Legend column: thinking modes, then memory sizes, then the flag marker.
     ly = top + 6
     modes = [mode for mode in ("off", "on") if any(point["thinking"] == mode for point in points)]
-    out.append(text(legend_x, ly, "Thinking", fill="ink", weight="600"))
+    out.append(text(legend_x, ly, "Thinking", size=14, fill="ink", weight="700"))
     for mode in modes:
-        ly += 22
-        out.append(f'<circle cx="{legend_x + 7}" cy="{ly - 4}" r="6" fill="{t[mode]}" fill-opacity="0.78"/>')
-        out.append(text(legend_x + 20, ly, mode))
+        ly += 24
+        out.append(f'<circle cx="{legend_x + 7}" cy="{ly - 4}" r="7" fill="{t[mode]}"/>')
+        out.append(text(legend_x + 22, ly, mode, fill="ink"))
     if with_memory:
         ly += 34
-        out.append(text(legend_x, ly, "Memory in use", fill="ink", weight="600"))
+        out.append(text(legend_x, ly, "Memory in use", size=14, fill="ink", weight="700"))
         for gb in (2, 4, 8):
             r = scale * math.sqrt(gb)
             ly += 2 * r + 6
             out.append(f'<circle cx="{legend_x + 22}" cy="{ly - r:.1f}" r="{r:.1f}" fill="none" '
-                       f'stroke="{t["muted"]}" stroke-width="1.5"/>')
-            out.append(text(legend_x + 54, ly - r + 4, f"{gb} GB"))
+                       f'stroke="{t["ink2"]}" stroke-width="1.5"/>')
+            out.append(text(legend_x + 54, ly - r + 4, f"{gb} GB", fill="ink"))
         for offset, line in enumerate(("For scale: the Pi has", "8 GB of RAM and", "2 GB of zram.")):
-            out.append(text(legend_x, ly + 22 + 15 * offset, line, size=11, fill="muted"))
-        ly += 52
+            out.append(text(legend_x, ly + 24 + 17 * offset, line, size=12.5))
+        ly += 58
     if any(point["flag"] for point in points):
         ly += 34
         out.append(f'<circle cx="{legend_x + 9}" cy="{ly - 4}" r="8" fill="none" stroke="{t["ink2"]}" '
                    f'stroke-width="2" stroke-dasharray="4 3"/>')
-        out.append(text(legend_x + 24, ly, "Didn't reliably fit"))
+        out.append(text(legend_x + 24, ly, "Didn't reliably fit", fill="ink"))
     out.append("</svg>")
     return "\n".join(out) + "\n"
 

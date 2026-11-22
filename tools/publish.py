@@ -930,7 +930,8 @@ def build():
         renamed = sorted({(display_name(entry["model"]), entry["model"]) for entry in group
                           if display_name(entry["model"]) != entry["model"] and entry["model"].startswith("hf.co/")})
         if renamed:
-            parts += ["Ollama names, for `ollama pull`: " + "; ".join(f"`{short}` is `{full}`" for short, full in renamed), ""]
+            for short, full in renamed:
+                parts += [f"Note: Official filename for pulling `{short}` through Ollama is `{full}`.", ""]
         for mode in ("off", "on"):
             subset = [entry for entry in group if entry["thinking"] == mode]
             if subset:

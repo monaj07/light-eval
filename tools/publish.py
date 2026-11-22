@@ -13,6 +13,7 @@
 Standard library only, like the runner.
 """
 import argparse
+import hashlib
 import json
 import math
 import statistics
@@ -23,7 +24,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from cases import TRACKS, VERSION, dataset  # noqa: E402
-from light_eval import read_rows, summarize, temperature_summary, write_json  # noqa: E402
+from light_eval import (INFRASTRUCTURE_STATUSES, apply_budget_defaults, build_parser, read_rows,  # noqa: E402
+                        summarize, temperature_summary, write_json)
 import charts  # noqa: E402  (tools/charts.py)
 
 PUBLISHED = ROOT / "docs" / "results"
@@ -47,12 +49,12 @@ PRIMARY_THREADS = 4
 TEXT_TRACKS = ("arithmetic", "structured", "agent", "context")
 THREADS_NOTE = (
     "Each pair compares an official run at the main thread count with one at the other, for the same model and "
-    "thinking mode; everything else is identical. Each cell reads from 2 threads to 4 (\"19.5 → 11.8 s\"), with the "
+    "thinking mode; everything else is identical. Each cell reads from {low} threads to {high} (\"19.5 → 11.8 s\"), with the "
     "relative change where it helps: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 "
     "a change for the worse. Prompt "
     "processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory "
     "bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking "
-    "on, a change in speed also changes how many cases finish inside the 10-minute limit."
+    "on, a change in speed also changes how many cases finish inside the {limit} limit."
 )
 SPEED_NOTE = (
     "Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how "
@@ -94,35 +96,124 @@ def parse_rounds(text):
     return sorted(rounds)
 
 
-def add(run, name, rounds=None, note=None, flags=()):
+# Options that change what a score or a time means. Threads may differ (that is the thread
+# comparison); everything else must match the runner's defaults for the thinking mode.
+PROTOCOL_OPTIONS = ("context", "max_tokens", "timeout", "tool_rounds", "tool_calls")
+
+
+def standard_options(thinking):
+    args = build_parser().parse_args(["run", "--models", "model", "--thinking", thinking])
+    return {key: getattr(args, key) for key in PROTOCOL_OPTIONS if hasattr(args, key)} | {
+        key: getattr(apply_budget_defaults(args), key) for key in ("context", "max_tokens")}
+
+
+def file_hash(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def parse_flags(flags, models):
+    parsed = {}
+    for flag in flags:
+        model, sep, text = flag.partition("=")
+        if not sep or not model or not text:
+            sys.exit(f"--flag needs MODEL=TEXT, got {flag!r}")
+        if model not in models:
+            sys.exit(f"--flag names {model!r}, which isn't in this run (models: {', '.join(sorted(models))})")
+        parsed[model] = text
+    return parsed
+
+
+def run_problems(manifest, rows, keep=None, allow_errors=False):
+    """Everything that would make a run's results mean something different from the published ones.
+
+    Returns a list of problems; an empty list means the run can be published as it is."""
+    problems = []
+    options = manifest.get("options", {})
+    if manifest.get("suite_version") != VERSION:
+        problems.append(f"suite {manifest.get('suite_version')}, but the current suite is {VERSION}")
+    if list(options.get("tracks") or []) != list(TRACKS):
+        problems.append(f"ran only some tracks ({', '.join(options.get('tracks') or [])}); a published run "
+                        "needs every track, or a missing track reads as a missing capability")
+    if options.get("thinking") not in ("off", "on"):
+        problems.append(f"thinking {options.get('thinking')!r}; published runs set it explicitly, off or on")
+    else:
+        for key, value in standard_options(options["thinking"]).items():
+            if key in options and options[key] != value:
+                problems.append(f"--{key.replace('_', '-')} {options[key]} instead of the standard {value}")
+    if str(manifest.get("server_prompt_cache_ram_mib")) != "0":
+        problems.append(f"the server's LLAMA_ARG_CACHE_RAM was {manifest.get('server_prompt_cache_ram_mib')!r}, "
+                        "not 0, so memory grew with every case")
+    hashes = manifest.get("sha256", {})
+    for path in [ROOT / "cases.py", *sorted((ROOT / "fixtures").glob("*.png"))]:
+        relative = str(path.relative_to(ROOT))
+        if hashes.get(relative) != file_hash(path):
+            problems.append(f"{relative} differs from the version this run used")
+    errors = defaultdict(int)
+    for row in rows:
+        if row.get("status") in INFRASTRUCTURE_STATUSES:
+            errors[f"{row['model']}: {row['status']}"] += 1
+    if errors and not allow_errors:
+        problems.append("cases failed for infrastructure reasons, which would count against the model: "
+                        + ", ".join(f"{key} ×{count}" for key, count in sorted(errors.items()))
+                        + ". Rerun, or pass --allow-errors with a --note if they are the model's own failures")
+    expected = len(manifest.get("case_metadata") or {})
+    warm = defaultdict(int)
+    for row in rows:
+        if row["phase"] == "warm":
+            warm[row["model"], row["round"]] += 1
+    for model in manifest.get("models", {}):
+        for round_num in sorted(keep or {r for m, r in warm}):
+            if warm.get((model, round_num), 0) != expected:
+                problems.append(f"round {round_num} of {model} has {warm.get((model, round_num), 0)} of "
+                                f"{expected} warm cases")
+    return problems
+
+
+def add(run, name, rounds=None, note=None, flags=(), allow_errors=False):
     manifest = json.loads((run / "manifest.json").read_text())
-    if manifest.get("status") != "complete" and not rounds:
+    if manifest.get("status") not in ("complete", "complete_with_errors") and not rounds:
         sys.exit(f"{run} is not a complete run (status {manifest.get('status')!r}). To publish only its "
                  "complete rounds, pass --rounds and a --note saying why the rest are left out.")
-    if rounds and not note:
-        sys.exit("--rounds needs a --note saying why the other rounds are left out")
+    if (rounds or allow_errors) and not note:
+        sys.exit("--rounds and --allow-errors need a --note saying why")
     target = PUBLISHED / (name or run.name)
     if target.exists():
         sys.exit(f"{target} already exists")
-    target.mkdir(parents=True)
+    # Check everything before creating anything, so a failed add leaves nothing behind.
     keep = set(parse_rounds(rounds)) if rounds else None
+    parsed_flags = parse_flags(flags, set(manifest.get("models", {})))
+    files = {}
     for file in ("cases.jsonl", "blocks.jsonl"):
-        lines = (run / file).read_text().splitlines()
+        lines = [line for line in (run / file).read_text().splitlines() if line.strip()]
+        rows = read_rows(run / file)  # skips a truncated last line
+        lines = lines[:len(rows)]
         if keep is not None:
-            lines = [line for line in lines if json.loads(line)["round"] in keep]
+            lines = [line for row, line in zip(rows, lines) if row["round"] in keep]
+        files[file] = lines
+    kept_rows = [json.loads(line) for line in files["cases.jsonl"]]
+    problems = run_problems(manifest, kept_rows, keep, allow_errors)
+    if problems:
+        sys.exit(f"{run} can't be published as it is:\n" + "\n".join(f"  - {problem}" for problem in problems))
+    target.mkdir(parents=True)
+    for file, lines in files.items():
         (target / file).write_text("".join(line + "\n" for line in lines))
     published = {}
     if keep is not None:
         # The run's own status stays as recorded; this records what was published and why.
         published.update({"rounds": sorted(keep), "note": note, "original_status": manifest.get("status")})
-    if flags:
-        published["flags"] = dict(flag.split("=", 1) for flag in flags)
+    elif note:
+        published["note"] = note
+    if allow_errors:
+        published["errors_accepted"] = True
+    if parsed_flags:
+        published["flags"] = parsed_flags
     if published:
         manifest["published"] = published
     write_json(target / "manifest.json", manifest)
     write_json(target / "summary.json", summarize(read_rows(target / "cases.jsonl"),
                                                   read_rows(target / "blocks.jsonl")))
-    print(f"Published {run} as {target.relative_to(ROOT)}; now run: python3 tools/publish.py build")
+    shown = target.relative_to(ROOT) if target.is_relative_to(ROOT) else target
+    print(f"Published {run} as {shown}; now run: python3 tools/publish.py build")
 
 
 def device(manifest):
@@ -142,7 +233,7 @@ def entries():
         manifest = json.loads((directory / "manifest.json").read_text())
         published = manifest.get("published", {})
         if manifest.get("suite_version") != VERSION or (
-                manifest.get("status") != "complete" and not published.get("rounds")):
+                manifest.get("status") not in ("complete", "complete_with_errors") and not published.get("rounds")):
             continue
         all_rows = read_rows(directory / "cases.jsonl")
         rows = [row for row in all_rows if row["phase"] == "warm"]
@@ -151,6 +242,13 @@ def entries():
         for model in sorted({row["model"] for row in rows}):
             mine = [row for row in rows if row["model"] == model and row["status"] != "unsupported"]
             rounds = len({row["round"] for row in mine}) or 1
+            times = [row["wall_s"] for row in mine if row.get("wall_s") is not None]
+            if not times:
+                # Every case failed before timing started (e.g. every warmup ran out of memory).
+                print(f"warning: {directory.name}: {model} has no timed cases; left out of the README",
+                      file=sys.stderr)
+                continue
+            capabilities = manifest["models"].get(model, {}).get("capabilities")
             envs = [block["environment"] for block in blocks if block["model"] == model]
             found.append({
                 "run": directory.name, "device": device(manifest), "model": model,
@@ -165,10 +263,12 @@ def entries():
                 "tracks": {track: sum(row["status"] == "pass" and row["track"] == track for row in mine) / rounds
                            for track in TRACKS},
                 "unsupported": sum(row["status"] == "unsupported" for row in rows if row["model"] == model),
-                "capabilities": manifest["models"].get(model, {}).get("capabilities", []),
-                **coverage(mine, rounds),
+                "capabilities": capabilities or [],
+                **coverage(mine, rounds, capabilities),
                 "timeouts": sum(row["status"] == "timeout" for row in mine) / rounds,
-                "median_s": statistics.median(row["wall_s"] for row in mine if row.get("wall_s") is not None),
+                "timeout_s": manifest["options"].get("timeout"),
+                "infrastructure_errors": sum(row["status"] in INFRASTRUCTURE_STATUSES for row in mine) / rounds,
+                "median_s": statistics.median(times),
                 "min_available_kib": min((env["min_mem_available_kib"] for env in envs
                                           if env.get("min_mem_available_kib") is not None), default=None),
                 "peak_swap_kib": max((env["peak_swap_used_kib"] for env in envs
@@ -198,19 +298,37 @@ def row_name(entry):
     return display_name(entry["model"]) + (f" ({note})" if note else "")
 
 
-def coverage(rows, rounds):
+# Tracks that need a model capability; the runner records "unsupported" for these without one.
+CAPABILITY_TRACKS = {"vision": "vision", "agent": "tools"}
+
+
+def supported_tracks(capabilities):
+    return [track for track in TRACKS
+            if track not in CAPABILITY_TRACKS or CAPABILITY_TRACKS[track] in capabilities]
+
+
+def coverage(rows, rounds, capabilities=None):
     """Accuracy over the tracks a model supports, and over the text tracks every model has.
 
     A case the model can't attempt (no vision, no tools) is "not applicable", never a 0:
-    it is left out of that model's accuracy, and the supported tracks are reported alongside."""
-    supported = {track: sum(row["track"] == track for row in rows) / rounds for track in TRACKS}
+    it is left out of that model's accuracy, and the supported tracks are reported alongside.
+    Which tracks are supported comes from the model's recorded capabilities, not from which
+    rows happen to exist, so a run that left out a track can't pass for a missing capability."""
+    cases = {track: sum(row["track"] == track for row in rows) / rounds for track in TRACKS}
     passed = {track: sum(row["track"] == track and row["status"] == "pass" for row in rows) / rounds
               for track in TRACKS}
-    tracks = [track for track in TRACKS if supported[track]]
+    if capabilities is None:  # older manifests: fall back to the tracks that have results
+        tracks = [track for track in TRACKS if cases[track]]
+    else:
+        tracks = supported_tracks(capabilities)
+        missing = [track for track in tracks if not cases[track]]
+        if missing:
+            raise ValueError(f"no results for supported track(s) {', '.join(missing)}")
     text = [track for track in tracks if track in TEXT_TRACKS]
-    return {"supported_tracks": tracks, "track_cases": supported,
-            "accuracy": 100 * sum(passed[t] for t in tracks) / sum(supported[t] for t in tracks),
-            "text_accuracy": 100 * sum(passed[t] for t in text) / sum(supported[t] for t in text)}
+    share = lambda chosen: (100 * sum(passed[t] for t in chosen) / sum(cases[t] for t in chosen)
+                            if chosen and sum(cases[t] for t in chosen) else None)
+    return {"supported_tracks": tracks, "track_cases": cases,
+            "accuracy": share(tracks), "text_accuracy": share(text)}
 
 
 def coverage_label(entry):
@@ -305,7 +423,10 @@ def combined_temperatures(items):
         by_model[item["model"]].append(item)
     combined = {}
     for model, rounds in by_model.items():
-        weighted = [(item["mean_cpu_c"], item["cases"]) for item in rounds if item["mean_cpu_c"] is not None]
+        # Weighted by telemetry samples (about one a second), so the mean is time-weighted; older
+        # summaries without sample counts fall back to cases.
+        weighted = [(item["mean_cpu_c"], item.get("samples") or item["cases"]) for item in rounds
+                    if item["mean_cpu_c"] is not None]
         combined[model] = {
             "mean_cpu_c": (sum(mean * n for mean, n in weighted) / sum(n for _, n in weighted)
                            if weighted else None),
@@ -317,6 +438,11 @@ def combined_temperatures(items):
 
 def number(value):
     return f"{value:.0f}" if float(value).is_integer() else f"{value:.1f}"
+
+
+def limit_label(entry):
+    seconds = entry.get("timeout_s") or 600
+    return f"{seconds / 60:g}-minute" if seconds >= 60 else f"{seconds:g}-second"
 
 
 def duration(seconds):
@@ -636,7 +762,7 @@ def glance_table(entries, total):
         notes = [entry["flag"]] if entry["flag"] else []
         if entry["timeouts"]:
             count = number(entry["timeouts"])
-            notes.append(f"{count} case{'' if count == '1' else 's'} hit the 10-minute limit")
+            notes.append(f"{count} case{'' if count == '1' else 's'} hit the {limit_label(entry)} limit")
         note = "; ".join(notes)
         lines.append(f"| `{display_name(entry['model'])}`{' (' + entry['threads_note'] + ')' if entry.get('threads_note') else ''} | {entry['thinking']} | **{entry['accuracy']:.0f}%** | "
                      f"{coverage_label(entry)} | {duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
@@ -674,8 +800,23 @@ def slug(text):
     return "".join(ch if ch.isalnum() else "-" for ch in text.lower()).strip("-").replace("--", "-")
 
 
+def check_duplicates(found):
+    """Two official runs of the same model, mode and thread count on one device would both appear
+    in the tables and pair up twice; refuse rather than pick one silently."""
+    seen = {}
+    for entry in found:
+        if not entry["setup"]:
+            continue
+        key = (entry["device"], entry["model"], entry["thinking"], entry["threads"])
+        if key in seen:
+            sys.exit(f"{seen[key]} and {entry['run']} are both official runs of {entry['model']}, thinking "
+                     f"{entry['thinking']}, {entry['threads']} threads, on {entry['device']}. Keep one.")
+        seen[key] = entry["run"]
+
+
 def build():
     found = entries()
+    check_duplicates(found)
     cases = dataset()
     totals = {"all": len(cases), "challenge": sum(case.difficulty == "challenge" for case in cases),
               **{track: sum(case.track == track for case in cases) for track in TRACKS}}
@@ -779,12 +920,16 @@ def build():
                 rounds = sorted({entry["rounds"] for entry in subset})
                 note = (f"Challenge counts are out of {totals['challenge']} cases and each track out of "
                         f"{totals['arithmetic']}.")
+                if any(len(entry["supported_tracks"]) < len(TRACKS) for entry in subset):
+                    note += (" A model without vision or tools has fewer challenge cases, and its unsupported "
+                             "tracks show n/a.")
                 if rounds != [1]:
                     note = f"Scores are averaged over {'/'.join(map(str, rounds))} passes. " + note
                 parts += [f"#### Thinking {mode}: scores by track", "", table(subset, totals), "", note, ""]
         if any(entry["peak_mem_gb"] is not None for entry in group):
             parts += [MEMORY_NOTE, ""]
-        timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
+        timed = [entry for entry in group if entry["thinking"] == "off"
+                 and (entry["first_load_s"] is not None or entry["sustained_tok_s"])]
         if timed:
             parts += ["#### Speed (thinking off)", "", speed_table(timed), "", SPEED_NOTE, ""]
         split = [entry for entry in group if entry["thinking"] == "off" and entry.get("read_s") is not None
@@ -796,7 +941,8 @@ def build():
             low_t, high_t = pairs[0][0]["threads"], pairs[0][1]["threads"]
             parts += [f"#### {low_t} → {high_t} threads: speed", "",
                       "Prompt processing and generation are in tokens/s.", "", speed_rows, "",
-                      f"#### {low_t} → {high_t} threads: outcomes", "", outcome_rows, "", THREADS_NOTE, ""]
+                      f"#### {low_t} → {high_t} threads: outcomes", "", outcome_rows, "",
+                      THREADS_NOTE.format(low=low_t, high=high_t, limit=limit_label(pairs[0][1])), ""]
         parts += ["</details>", ""]
     parts.append(END)
     text = README.read_text()
@@ -815,13 +961,17 @@ def main():
     add_command.add_argument("run", type=Path)
     add_command.add_argument("--name", help="published directory name (default: the run's name)")
     add_command.add_argument("--rounds", help="publish only these complete rounds, e.g. 1-3 (needs --note)")
-    add_command.add_argument("--note", help="why some rounds are left out; shown with the results")
+    add_command.add_argument("--note", help="why some rounds are left out, or why errors are accepted; "
+                                            "shown with the results")
+    add_command.add_argument("--allow-errors", action="store_true",
+                             help="publish although some cases failed with server or connection errors "
+                                  "(needs --note)")
     add_command.add_argument("--flag", action="append", default=[], metavar="MODEL=TEXT",
                              help="a warning shown in that model's memory column, e.g. a hang")
     commands.add_parser("build", help="rebuild the README results section and charts")
     args = parser.parse_args()
     if args.command == "add":
-        add(args.run, args.name, args.rounds, args.note, args.flag)
+        add(args.run, args.name, args.rounds, args.note, args.flag, args.allow_errors)
     else:
         build()
 

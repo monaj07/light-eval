@@ -18,9 +18,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cases import ROOT, TRACKS, VERSION, Case, dataset, dispatch, parse_json, score, score_answer, score_tools
-from runtime import BenchError, Ollama, Telemetry, read_text, server_setting
+from runtime import BenchError, Ollama, Telemetry, read_text, server_environment, server_setting
 
 PHASES = ("cold", "warm", "sustained")
+# How runs are made, separate from the suite VERSION (which covers cases and scoring). Bump it
+# when a change could alter timings or outcomes without changing any case; see CHANGELOG.md.
+#   (not recorded): runs before 2026-11-22.
+#   2: prompts are never silently truncated; the model is reloaded after any infrastructure
+#      error; tool-call parse errors are the model's failure. See CHANGELOG.md, "Protocol 2".
+PROTOCOL_VERSION = 2
+# Outcomes that come from the infrastructure, not the model's answer.
+INFRASTRUCTURE_STATUSES = ("api_error", "connection_error", "protocol_error")
 # Keep prompt-processing workspace small without shortening the context.
 INFERENCE_OPTIONS = {"num_batch": 64}
 COLD = Case("cold-request", "performance", 'Reply with only the JSON string "ready".', None)
@@ -128,8 +136,8 @@ def run_case(api, args, model, metadata, case, images, *, cap=None):
         body["format"] = schema
     if case.track == "agent":
         body["tools"] = case.tools
-    if case.track == "context":
-        body["truncate"] = False
+    # An input that doesn't fit the context fails loudly instead of losing earlier messages.
+    body["truncate"] = False
     if metadata["thinking_requested"] is not None:
         body["think"] = metadata["thinking_requested"]
     trace, turns = [], []
@@ -304,8 +312,9 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                         needs_load = True
                         continue
                 row = measured(case, "warm", start=monitor.take())
-                if row["status"] == "out_of_memory":
-                    # /api/ps can still list a crashed runner, so force a reload.
+                if row["status"] == "out_of_memory" or row["status"] in INFRASTRUCTURE_STATUSES:
+                    # The runner may have crashed, and /api/ps can still list it, so force a fresh
+                    # load and warmup outside the next case's timing.
                     needs_load = True
             record_phase("warm", start, started, resident=resident, failure=failure, warmups=warmups)
             api.unload(model)
@@ -454,6 +463,7 @@ def temperature_summary(rows):
             continue  # no temperature sensor, e.g. on a Mac
         summary.append({
             "model": model, "round": round_num, "phase": phase, "cases": len(envs),
+            "samples": sum(n for _, n in weighted),
             "case_start_cpu_c": starts,
             "mean_cpu_c": (sum(mean * n for mean, n in weighted) / sum(n for _, n in weighted)
                            if weighted else None),
@@ -472,7 +482,38 @@ def write_json(path, value):
 
 
 def read_rows(path):
-    return [json.loads(line) for line in path.read_text().splitlines()]
+    """Read a JSONL file. A malformed last line, left by a crash or hang mid-write, is skipped
+    with a warning; a malformed line anywhere else is an error."""
+    lines = [line for line in path.read_text().splitlines() if line.strip()]
+    rows = []
+    for index, line in enumerate(lines):
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            if index < len(lines) - 1:
+                raise
+            print(f"light-eval: warning: skipped a truncated last line in {path}", file=sys.stderr)
+    return rows
+
+
+def thermal_band(baseline, temp_max):
+    """A 7 °C band around the idle baseline, capped at temp_max.
+
+    If the baseline gate timed out hot (above the cap), the band becomes the 7 °C below the cap,
+    not an empty range that no later gate could meet (each would wait the full --cooldown)."""
+    high = min(temp_max, baseline + 3)
+    return (max(0, min(baseline - 4, high - 7)), high)
+
+
+def infrastructure_errors(rows):
+    """Count, per status, the cases that failed for infrastructure reasons (server, connection or
+    protocol errors) rather than because of the model's answer. A failed warmup's rows carry its
+    status, so they count too, except out of memory: not fitting is a real result."""
+    counts = defaultdict(int)
+    for row in rows:
+        if row.get("status") in INFRASTRUCTURE_STATUSES:
+            counts[row["status"]] += 1
+    return dict(sorted(counts.items()))
 
 
 def print_summary(summary):
@@ -510,7 +551,9 @@ def print_temperatures(items):
     for item in items:
         by_model[item["model"]].append(item)
     for model, model_items in by_model.items():
-        weighted = [(item["mean_cpu_c"], item["cases"]) for item in model_items if item["mean_cpu_c"] is not None]
+        # Weighted by telemetry samples (about one per second), so the mean is time-weighted.
+        weighted = [(item["mean_cpu_c"], item.get("samples") or item["cases"]) for item in model_items
+                    if item["mean_cpu_c"] is not None]
         mean = (f"mean {sum(m * n for m, n in weighted) / sum(n for _, n in weighted):.1f} C, " if weighted else "")
         peak = max(item["peak_cpu_c"] for item in model_items)
         throttled = [item for item in model_items if item["throttled_cases"]]
@@ -620,7 +663,8 @@ def run_locked(args, api, models, plan, selection):
     by_id = {case.id: case for case in selection}
     paths = [*sorted(ROOT.glob("*.py")), *sorted((ROOT / "fixtures").glob("*.png"))]
     manifest = {
-        "suite_version": VERSION, "start_utc": timestamp.isoformat(), "status": "running",
+        "suite_version": VERSION, "protocol_version": PROTOCOL_VERSION,
+        "start_utc": timestamp.isoformat(), "status": "running",
         "ollama_version": version, "python": platform.python_version(), "platform": platform.platform(),
         "device_tree_model": read_text("/proc/device-tree/model"), "os_release": read_text("/etc/os-release"),
         "cpu_governor": read_text("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"),
@@ -629,6 +673,7 @@ def run_locked(args, api, models, plan, selection):
                             "all swap counters are system-wide, not model-specific",
         "storage_page_cache": "OS page cache retained and uncontrolled",
         "server_prompt_cache_ram_mib": cache_ram,
+        "server_environment": server_environment(),
         "warm_prompt_cache": "one load and warmup for all warm cases, outside case timing; reload after a "
                              "failed warmup, out-of-memory error or eviction; cross-request prompt cache "
                              "set by server_prompt_cache_ram_mib",
@@ -655,7 +700,7 @@ def run_locked(args, api, models, plan, selection):
             if not args.no_thermal_gate:
                 if args.temp_min is None:
                     baseline = monitor.gate((0, args.temp_max), args.cooldown)["cpu_c"]
-                    band = (max(0, baseline - 4), min(args.temp_max, baseline + 3))
+                    band = thermal_band(baseline, args.temp_max)
                 else:
                     band = (args.temp_min, args.temp_max)
             manifest["temperature_band_c"] = band
@@ -666,7 +711,12 @@ def run_locked(args, api, models, plan, selection):
                 for position, model in enumerate(row["models"], 1):
                     identity = {"round": round_num, "position": position, "model": model, "metadata": metadata[model]}
                     run_slot(api, args, monitor, band, identity, candidates, images, records, blocks)
-        manifest["status"] = "complete"
+        errors = infrastructure_errors(read_rows(out / "cases.jsonl"))
+        manifest["status"] = "complete_with_errors" if errors else "complete"
+        if errors:
+            manifest["infrastructure_errors"] = errors
+            print(f"light-eval: warning: {sum(errors.values())} cases failed for infrastructure reasons "
+                  f"(not the model's answers): {errors}", file=sys.stderr)
     except (Exception, KeyboardInterrupt) as exc:
         manifest["status"] = "aborted"
         manifest["error"] = str(exc) or type(exc).__name__
@@ -674,9 +724,14 @@ def run_locked(args, api, models, plan, selection):
         raise
     finally:
         write_json(out / "manifest.json", manifest)
-        summary = summarize(read_rows(out / "cases.jsonl"), read_rows(out / "blocks.jsonl"))
-        write_json(out / "summary.json", summary)
-    print_summary(summary)
+        try:
+            summary = summarize(read_rows(out / "cases.jsonl"), read_rows(out / "blocks.jsonl"))
+            write_json(out / "summary.json", summary)
+        except Exception as exc:  # don't let a summary failure replace the run's own error
+            print(f"light-eval: warning: couldn't write summary.json: {exc}", file=sys.stderr)
+            summary = None
+    if summary is not None:
+        print_summary(summary)
     return 0
 
 

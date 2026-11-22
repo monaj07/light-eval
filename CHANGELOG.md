@@ -2,6 +2,31 @@
 
 Each run records the suite version in `manifest.json`. Scores are comparable only between runs with the same suite version and the same thinking mode.
 
+Since protocol 2, runs also record `protocol_version`: how runs are made, separately from the suite version, which covers cases and scoring. A protocol change can alter timings or how failures are classified without changing any case, so it no longer needs a new suite version, which would retire every published result.
+
+## Protocol 2 (2026-11-22)
+
+Cases and scoring are unchanged (suite 1.7.0). Changes from an independent review of the runner and the publishing step:
+
+- **Runner.**
+  - `manifest.json` records `protocol_version` and `server_environment`, every `OLLAMA_*` and `LLAMA_ARG_*` setting of the Ollama server (flash attention, KV-cache type, parallelism and so on), not only `LLAMA_ARG_CACHE_RAM`.
+  - Prompts are never silently truncated, on every track, not only context: an input that doesn't fit `--context` fails explicitly.
+  - After a server or connection error, not only out of memory, the model is reloaded and warmed up before the next case, so a crashed runner's reload isn't timed as part of a case.
+  - A model's malformed tool call that Ollama reports as a server error (such as "XML syntax error") is `invalid_tool_call`, the model's failure, not `api_error`.
+  - A run with server or connection errors ends as `complete_with_errors`, with counts under `infrastructure_errors`, instead of `complete`.
+  - If the first temperature gate times out hot, the thermal band is the 7 °C below `--temp-max`, not an empty range that every later gate would wait out in full.
+  - On Linux, every sample records `zram_ram_kib`, 0 without zram, so swap on disk counts in full. A peak that can't be computed for every sample is reported as unknown, not as the peak of the others.
+  - Temperature means across rounds are weighted by time (telemetry samples), as documented, not by cases.
+  - A truncated last line in `cases.jsonl` or `blocks.jsonl`, left by a crash or hang mid-write, is skipped with a warning, and a failure writing `summary.json` no longer hides the run's own error.
+- **Publishing (`tools/publish.py`).**
+  - `add` refuses a run whose results would mean something different from the published ones: only some tracks, non-standard budgets for its thinking mode, the prompt cache not disabled, changed `cases.py` or fixtures, an incomplete round, or server or connection errors (`--allow-errors` with a `--note` accepts these). It checks everything, including `--flag`, before creating any files.
+  - Supported tracks come from the model's recorded capabilities, not from which tracks have results.
+  - `build` fails on two official runs of the same model, thinking mode and thread count, and leaves out, with a warning, a model with no timed cases.
+  - Labels follow the data: the case time limit, the thread counts compared, and challenge totals for models without every track. The speed table shows only thinking-off runs, as its title says.
+- **Tests and CI.** New tests in `tests/test_publish.py` cover the publishing step and the cases above. CI also fails when `build` leaves new, uncommitted chart files.
+
+All published results are unchanged: `build` produces the same README and charts.
+
 ## 1.7.0 (2026-11-18)
 
 - Replaced two arithmetic controls that every model passed (`math-decimal`, `math-fraction`) with two challenges: clock-hand angle and mixture. Arithmetic now has six controls and seven challenges, like the structured, agent and vision tracks.

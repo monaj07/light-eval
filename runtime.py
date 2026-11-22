@@ -131,7 +131,10 @@ def api_error(detail, code=None):
     lower = detail.lower()
     oom = ("out of memory", "unable to allocate", "failed to allocate", "more system memory",
            "failed to reserve memory", "not enough memory", "available memory")
-    status = "out_of_memory" if any(phrase in lower for phrase in oom) else "api_error"
+    # Ollama reports a model's malformed tool call as a server error; it is the model's failure.
+    tool_parse = ("xml syntax error", "error parsing tool call", "failed to parse tool call", "invalid tool call")
+    status = ("out_of_memory" if any(phrase in lower for phrase in oom)
+              else "invalid_tool_call" if any(phrase in lower for phrase in tool_parse) else "api_error")
     return BenchError(f"HTTP {code}: {detail}" if code is not None else detail, status)
 
 
@@ -160,6 +163,30 @@ def command_output(command):
         return ""
 
 
+def _server_environment_sources():
+    pids = command_output(["pgrep", "-f", "ollama serve"]).split()
+    if platform.system() == "Darwin":
+        return [command_output(["ps", "-E", "-ww", "-p", pid, "-o", "command="]) for pid in pids]
+    sources = [(read_text(f"/proc/{pid}/environ") or "").replace("\x00", " ") for pid in pids]
+    sources.append(command_output(["systemctl", "show", "ollama", "-p", "Environment", "--value"]))
+    return sources
+
+
+def server_environment(prefixes=("OLLAMA_", "LLAMA_ARG_")):
+    """Every OLLAMA_* and LLAMA_ARG_* variable of the running Ollama server, as recorded settings.
+
+    Flash attention, the KV-cache type, parallelism and similar settings change memory and
+    speed, so the manifest records them all. Returns None when the environment can't be read."""
+    sources = _server_environment_sources()
+    if not any(text.strip() for text in sources):
+        return None
+    found = {}
+    for text in sources:
+        for key, value in re.findall(r"(?:^|\s)((?:%s)[A-Z0-9_]+)=(\S*)" % "|".join(prefixes), text):
+            found.setdefault(key, value)
+    return dict(sorted(found.items()))
+
+
 def server_setting(key):
     """Return an environment setting of the running Ollama server.
 
@@ -167,12 +194,7 @@ def server_setting(key):
     the value they use. Returns "unset" when the server has no such variable and
     None when the server environment can't be read.
     """
-    pids = command_output(["pgrep", "-f", "ollama serve"]).split()
-    if platform.system() == "Darwin":
-        sources = [command_output(["ps", "-E", "-ww", "-p", pid, "-o", "command="]) for pid in pids]
-    else:
-        sources = [(read_text(f"/proc/{pid}/environ") or "").replace("\x00", " ") for pid in pids]
-        sources.append(command_output(["systemctl", "show", "ollama", "-p", "Environment", "--value"]))
+    sources = _server_environment_sources()
     for text in sources:
         if match := re.search(rf"(?:^|\s){key}=(\S*)", text):
             return match[1]
@@ -232,11 +254,25 @@ def sample():
         # which lets memory in use count those pages once rather than twice.
         zram = [read_text(path) for path in sorted(Path("/sys/block").glob("zram*/mm_stat"))]
         zram = [int(text.split()[2]) for text in zram if text and len(text.split()) > 2]
-        if zram:
-            mem["zram_ram_kib"] = sum(zram) // 1024
+        # Always recorded on Linux, as 0 without zram: swap on disk then counts in full, and no
+        # sample falls back to the old, approximate calculation.
+        mem["zram_ram_kib"] = sum(zram) // 1024
         vm = linux_fields("/proc/vmstat", {"pswpin", "pswpout", "oom_kill"})
     return {"t": time.monotonic(), "cpu_c": float(temperature) / 1000 if temperature else None,
             "throttled_bits": throttled, **mem, **vm}
+
+
+def peak_memory_in_use(rows):
+    """Peak of RAM in use plus swapped pages, minus the RAM zram uses to hold them, in KiB.
+
+    A sample with swap in use but no zram figure (from before zram_ram_kib was always recorded)
+    can't be computed exactly. Then the peak is unknown (None): taking the maximum of the other
+    samples would drop exactly the high-memory ones and understate the peak."""
+    usable = [row for row in rows if row.get("MemTotal") and row.get("MemAvailable") is not None]
+    if any(row.get("SwapUsed") and "zram_ram_kib" not in row for row in usable):
+        return None
+    return max((row["MemTotal"] - row["MemAvailable"] + (row.get("SwapUsed") or 0) - (row.get("zram_ram_kib") or 0)
+                for row in usable), default=None)
 
 
 def range_stats(rows):
@@ -273,10 +309,7 @@ def range_stats(rows):
         "peak_compressed_memory_kib": max(values("memory_compressed_kib"), default=None),
         "peak_swap_used_kib": max(values("SwapUsed"), default=None),
         # RAM in use plus swapped pages, sample by sample, minus the RAM zram uses to hold them.
-        "peak_memory_in_use_kib": max((row["MemTotal"] - row["MemAvailable"] + (row.get("SwapUsed") or 0)
-                                       - (row.get("zram_ram_kib") or 0)
-                                       for row in rows if row.get("MemTotal") and row.get("MemAvailable") is not None
-                                       and ("zram_ram_kib" in row or not row.get("SwapUsed"))), default=None),
+        "peak_memory_in_use_kib": peak_memory_in_use(rows),
         "swap_in_pages": delta("pswpin"), "swap_out_pages": delta("pswpout"),
         "swap_in_mib": swap_mib("pswpin"), "swap_out_mib": swap_mib("pswpout"),
         "system_oom_kills": delta("oom_kill"),

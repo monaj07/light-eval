@@ -9,7 +9,7 @@ Light Eval benchmarks local Ollama models for a **Raspberry Pi 5 with 8 GB RAM**
 ## Commands
 
 ```bash
-# Tests (mock Ollama server; no models needed)
+# Tests (mock Ollama server; no models needed; tests/test_publish.py covers the publishing step)
 python3 -m unittest discover -s tests -v
 python3 -m pytest -q                                   # pytest.ini sets pythonpath
 python3 -m pytest -q -k test_cli_mock_ollama           # a single test
@@ -63,7 +63,9 @@ Each run writes five files: `manifest.json` (options, hashes, model digests, ser
 
 ## Rules that span files
 
-- **Any change to cases, scoring or the run protocol bumps `cases.VERSION`.** Also add an entry to `CHANGELOG.md`, update the suite badge in `README.md` and `version` in `CITATION.cff`, and update the tests that pin the suite version and the per-track and per-difficulty counts (`test_expanded_suite_preserves_controls_and_fits_tool_budgets`, `test_cli_mock_ollama`). Compare results only within one suite version and one thinking mode.
+- **Any change to cases or scoring bumps `cases.VERSION`.** Also add an entry to `CHANGELOG.md`, update the suite badge in `README.md` and `version` in `CITATION.cff`, and update the tests that pin the suite version and the per-track and per-difficulty counts (`test_expanded_suite_preserves_controls_and_fits_tool_budgets`, `test_cli_mock_ollama`). Compare results only within one suite version and one thinking mode.
+- **A change to how runs are made that could alter timings or failure classification, without changing any case, bumps `light_eval.PROTOCOL_VERSION`** instead, with a `CHANGELOG.md` entry. A new suite version would retire every published result, since `build` shows only the current one.
+- **`tools/publish.py add` refuses runs that don't match the published protocol** (`run_problems`): only some tracks, non-standard budgets, the prompt cache not disabled, changed cases or fixtures, incomplete rounds, or server/connection errors. Don't work around a refusal; fix the run or ask. Its tests are in `tests/test_publish.py`.
 - **Prompts must not leak answers.** `test_requests_do_not_depend_on_expected_answers_or_scoring_rules` enforces this. New or changed cases are checked by a fresh subagent that sees only the exported prompts and images, never the repo; it must answer 100% correctly before the case is committed. Agent cases are excluded from that check, because solving them needs the tool simulator in the source.
 - **When adding a vision case**, add a drawing function to `fixtures/make_fixtures.py`, commit the PNG, and check that the existing images still regenerate byte for byte.
 - **The warm phase loads each model once** and reloads only after a failed warmup, an out-of-memory error or an eviction. This depends on the Ollama server running with `LLAMA_ARG_CACHE_RAM=0`; with the default 8 GiB prompt cache, memory grows with every case. The runner records the value as `server_prompt_cache_ram_mib` and warns when it isn't 0. Setup is in `README.md` (Quick start) and `docs/METHODOLOGY.md` (Prompt cache).

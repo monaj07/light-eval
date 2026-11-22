@@ -250,8 +250,8 @@ Compare models only within one suite version and one thinking mode. Mac and Pi r
 - [x] Thinking off and on as separate runs
 - [x] Bounded memory on 8 GB devices (`LLAMA_ARG_CACHE_RAM=0`)
 - [x] Per-run temperature and throttling report
-- [ ] Thinking-on runs on the Pi
-- [ ] Official runs on a Pi in a fixed, documented setup ([protocol](docs/OFFICIAL_RUNS.md))
+- [x] Thinking-on runs on the Pi
+- [x] Official runs on a Pi in a fixed, documented setup ([protocol](docs/OFFICIAL_RUNS.md))
 - [x] 4 threads instead of 2, with thinking off and on, to measure the effect on speed, temperature and accuracy ([protocol and outcome](docs/OFFICIAL_RUNS.md#thread-count))
 - [ ] More Pi-sized models: the LFM family (LFM2.5 1.2B and 2.6B, `lfm3-vl`)
 - [ ] Held-out cases that were never used to tune the protocol

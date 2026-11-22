@@ -43,6 +43,8 @@ HARDWARE_PHOTOS = (
 )
 # Thread count used by the main results; runs with other thread counts feed the comparison table.
 PRIMARY_THREADS = 2
+# Tracks every model can attempt; vision needs the vision capability.
+TEXT_TRACKS = ("arithmetic", "structured", "agent", "context")
 THREADS_NOTE = (
     "Each pair compares an official run at the main thread count with one at the other, for the same model and "
     "thinking mode; everything else is identical. Percentages are changes from the main thread count. Prompt "
@@ -161,6 +163,8 @@ def entries():
                 "tracks": {track: sum(row["status"] == "pass" and row["track"] == track for row in mine) / rounds
                            for track in TRACKS},
                 "unsupported": sum(row["status"] == "unsupported" for row in rows if row["model"] == model),
+                "capabilities": manifest["models"].get(model, {}).get("capabilities", []),
+                **coverage(mine, rounds),
                 "timeouts": sum(row["status"] == "timeout" for row in mine) / rounds,
                 "median_s": statistics.median(row["wall_s"] for row in mine if row.get("wall_s") is not None),
                 "min_available_kib": min((env["min_mem_available_kib"] for env in envs
@@ -176,6 +180,35 @@ def entries():
                 **speed(all_rows, model),
             })
     return found
+
+
+def display_name(model):
+    """The name used everywhere in the README; full Ollama names are listed under the full results.
+
+    hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M -> LFM2.5-1.2B-Instruct-GGUF:Q4_K_M, lfm3:latest -> lfm3."""
+    name = model.split("/")[-1] if model.startswith("hf.co/") else model
+    return name[:-len(":latest")] if name.endswith(":latest") else name
+
+
+def coverage(rows, rounds):
+    """Accuracy over the tracks a model supports, and over the text tracks every model has.
+
+    A case the model can't attempt (no vision, no tools) is "not applicable", never a 0:
+    it is left out of that model's accuracy, and the supported tracks are reported alongside."""
+    supported = {track: sum(row["track"] == track for row in rows) / rounds for track in TRACKS}
+    passed = {track: sum(row["track"] == track and row["status"] == "pass" for row in rows) / rounds
+              for track in TRACKS}
+    tracks = [track for track in TRACKS if supported[track]]
+    text = [track for track in tracks if track in TEXT_TRACKS]
+    return {"supported_tracks": tracks, "track_cases": supported,
+            "accuracy": 100 * sum(passed[t] for t in tracks) / sum(supported[t] for t in tracks),
+            "text_accuracy": 100 * sum(passed[t] for t in text) / sum(supported[t] for t in text)}
+
+
+def coverage_label(entry):
+    missing = [TRACK_NAMES[track].lower() for track in TRACKS if track not in entry["supported_tracks"]]
+    label = f"{len(entry['supported_tracks'])}/{len(TRACKS)}"
+    return label + (f" (no {', '.join(missing)})" if missing else "")
 
 
 def peak_memory(envs):
@@ -299,11 +332,11 @@ def memory(entry):
 
 
 def table(group, totals):
-    head = ["Model", f"Score /{totals['all']}", f"Challenge /{totals['challenge']}",
+    head = ["Model", f"Accuracy (all {len(TRACKS)} tracks)", "Accuracy (text tracks)", f"Challenge /{totals['challenge']}",
             *(f"{TRACK_NAMES[track]} /{totals[track]}" for track in TRACKS),
             "Median time per case", "Timed out", "Peak memory in use (lowest free)", "CPU °C (mean / peak)"]
     lines = ["| " + " | ".join(head) + " |", "|" + "|".join(["---"] + ["---:"] * (len(head) - 3) + ["---", "---"]) + "|"]
-    for entry in sorted(group, key=lambda item: (-item["score"], item["median_s"])):
+    for entry in sorted(group, key=lambda item: (-item["accuracy"], item["median_s"])):
         temperature = entry["temperature"]
         peak = "—"
         if temperature:
@@ -313,8 +346,11 @@ def table(group, totals):
             if temperature["throttled_cases"]:
                 peak += f" ⚠️ {temperature['throttled_cases']} throttled"
         lines.append("| " + " | ".join([
-            f"`{entry['model']}`" + ("" if entry["setup"] else " †"), f"**{number(entry['score'])}** ({100 * entry['score'] / totals['all']:.0f}%)", number(entry["challenge"]),
-            *(number(entry["tracks"][track]) for track in TRACKS),
+            f"`{display_name(entry['model'])}`" + ("" if entry["setup"] else " †"),
+            (f"**{entry['accuracy']:.0f}%**" if len(entry["supported_tracks"]) == len(TRACKS)
+             else coverage_label(entry).split("(")[-1].rstrip(")")), f"{entry['text_accuracy']:.0f}%",
+            number(entry["challenge"]),
+            *(number(entry["tracks"][track]) if track in entry["supported_tracks"] else "n/a" for track in TRACKS),
             duration(entry["median_s"]), number(entry["timeouts"]), memory(entry), peak]) + " |")
     return "\n".join(lines)
 
@@ -351,7 +387,7 @@ def threads_table(pairs):
         total = len(dataset())
         lines.append(" | ".join([
             f"| `{a['model']}`", a["thinking"],
-            f"{100 * a['score'] / total:.0f}% → {100 * b['score'] / total:.0f}%",
+            f"{a['accuracy']:.0f}% → {b['accuracy']:.0f}%",
             change(a["median_s"], b["median_s"], duration),
             change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), lambda v: f"{v:.1f}"),
             change(a.get("case_decode_tok_s"), b.get("case_decode_tok_s"), lambda v: f"{v:.1f}"),
@@ -400,8 +436,8 @@ def svg_chart(points, theme, title):
         return top + plot_h * (1 - percent / 100)
 
     def accuracy(point):
-        # Out of all cases: a case a model can't attempt (no vision, no tools) counts as not passed.
-        return 100 * point["score"] / total
+        # Over the tracks the model supports, as in the tables.
+        return point["accuracy"]
 
     def text(px, py, content, size=12, fill="ink2", anchor="start", weight="normal", halo=False):
         # A halo in the surface colour keeps labels legible where they cross a connector.
@@ -426,7 +462,7 @@ def svg_chart(points, theme, title):
         label = f"{tick:g} s" if tick < 60 else f"{tick / 60:g} min"
         out.append(text(x(tick), top + plot_h + 20, label, fill="muted", anchor="middle"))
     out.append(text(left + plot_w / 2, top + plot_h + 44, "Median time per case (log scale)", anchor="middle"))
-    out.append(text(left, top - 12, f"Accuracy (share of all {total} cases passed)"))
+    out.append(text(left, top - 12, "Accuracy (cases passed on supported tracks)"))
     out.append(text(left + plot_w - 6, top + 16, "better ↖", fill="muted", anchor="end"))
 
     # Connectors first, so the bubbles sit on top of them.
@@ -549,15 +585,15 @@ def short_memory(entry):
 
 
 def glance_table(entries, total):
-    lines = ["| Model | Thinking | Accuracy | Time per case | Memory | Note |", "|---|---|---:|---:|---|---|"]
+    lines = ["| Model | Thinking | Accuracy | Tracks | Time per case | Memory | Note |", "|---|---|---:|---|---:|---|---|"]
     for entry in entries:
         notes = [entry["flag"]] if entry["flag"] else []
         if entry["timeouts"]:
             count = number(entry["timeouts"])
             notes.append(f"{count} case{'' if count == '1' else 's'} hit the 10-minute limit")
         note = "; ".join(notes)
-        lines.append(f"| `{entry['model']}` | {entry['thinking']} | **{100 * entry['score'] / total:.0f}%** | "
-                     f"{duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
+        lines.append(f"| `{display_name(entry['model'])}` | {entry['thinking']} | **{entry['accuracy']:.0f}%** | "
+                     f"{coverage_label(entry)} | {duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
     return "\n".join(lines)
 
 
@@ -568,18 +604,23 @@ def dumbbell_rows(entries, total):
     rows = []
     for model, modes in by_model.items():
         flag = next((entry["flag"] for entry in modes.values() if entry["flag"]), None)
-        # Keep notes short: they sit under the model name. A missing orange dot already shows "not run".
-        note = "hung the Pi; thinking off only" if flag and "on" not in modes else ("hung the Pi" if flag else None)
-        rows.append({"model": model, "note": note,
-                     **{mode: ({"accuracy": 100 * modes[mode]["score"] / total, "median_s": modes[mode]["median_s"]}
+        # Short badges under the model name; a missing orange dot already shows "not run".
+        any_entry = next(iter(modes.values()))
+        badges = ["hung the Pi"] if flag else []
+        if "on" not in modes:
+            badges.append("thinking off only" if "thinking" in any_entry["capabilities"] else "no thinking mode")
+        badges += [f"no {TRACK_NAMES[t].lower()}" for t in TRACKS if t not in any_entry["supported_tracks"]]
+        rows.append({"model": display_name(model), "badges": badges,
+                     **{mode: ({"accuracy": modes[mode]["accuracy"], "median_s": modes[mode]["median_s"]}
                                if mode in modes else None) for mode in ("off", "on")}})
     return sorted(rows, key=lambda row: -max(row[mode]["accuracy"] for mode in ("off", "on") if row[mode]))
 
 
 def heatmap_rows(entries, totals):
-    return [{"label": f"{entry['model']} · thinking {entry['thinking']}", "mode": entry["thinking"],
-             "values": [100 * entry["tracks"][track] / totals[track] for track in TRACKS]
-                       + [100 * entry["score"] / totals["all"]]} for entry in entries]
+    return [{"label": display_name(entry["model"]), "mode": entry["thinking"],
+             "values": [100 * entry["tracks"][track] / entry["track_cases"][track]
+                        if track in entry["supported_tracks"] else None for track in TRACKS]
+                       + [entry["accuracy"]]} for entry in entries]
 
 
 def slug(text):
@@ -620,14 +661,16 @@ def build():
             parts += ["† Exploratory run: one pass, no recorded hardware setup. "
                       "[Official runs](docs/OFFICIAL_RUNS.md) will replace these rows.", ""]
         slug_name = slug(name)
-        official = sorted((entry for entry in group if entry["setup"]), key=lambda entry: -entry["score"])
+        official = sorted((entry for entry in group if entry["setup"]), key=lambda entry: -entry["accuracy"])
         pairs = [(base_entry, other) for other in others for base_entry in group
                  if base_entry["setup"] and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
         total = totals["all"]
         if official:
             parts += ["#### At a glance", "", glance_table(official, total), "",
-                      "Accuracy is the share of all 65 cases passed. Time is the median per case. Memory is the "
-                      "peak in use, RAM plus zram, against the Pi's 7.9 GB of usable RAM.", ""]
+                      "Accuracy is the share of cases passed on the tracks the model supports; Tracks shows how many "
+                      "of the 5 that is. A track a model can't attempt (no vision, for example) is not counted as "
+                      "0%. Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's "
+                      "7.9 GB of usable RAM.", ""]
             parts += picture(write_chart(f"thinking-{slug_name}", lambda theme: charts.dumbbell(
                 dumbbell_rows(official, total), theme, "What thinking buys")),
                 "Accuracy and median time per case for each model with thinking off and on")
@@ -639,7 +682,7 @@ def build():
             high = pairs[0][1]["threads"]
             parts += [f"#### {PRIMARY_THREADS} vs {high} CPU threads", ""]
             parts += picture(write_chart(f"threads-{slug_name}", lambda theme: charts.threads(
-                [{"label": f"{a['model']} · thinking {a['thinking']}", "mode": a["thinking"],
+                [{"label": f"{display_name(a['model'])} · thinking {a['thinking']}", "mode": a["thinking"],
                   "before": a["median_s"], "after": b["median_s"]}
                  for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["model"]))],
                 theme, "Does using all four cores help?", PRIMARY_THREADS, high)),
@@ -658,6 +701,10 @@ def build():
                                "mode and bubble area the peak memory in use")
         for note in sorted({entry["note"] for entry in group if entry["note"]}):
             parts += [f"Note: {note}", ""]
+        renamed = sorted({(display_name(entry["model"]), entry["model"]) for entry in group
+                          if display_name(entry["model"]) != entry["model"] and entry["model"].startswith("hf.co/")})
+        if renamed:
+            parts += ["Ollama names, for `ollama pull`: " + "; ".join(f"`{short}` is `{full}`" for short, full in renamed), ""]
         for mode in ("off", "on"):
             subset = [entry for entry in group if entry["thinking"] == mode]
             if subset:

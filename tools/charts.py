@@ -75,7 +75,7 @@ def duration(seconds):
 def dumbbell(rows, theme, title):
     """One row per model: thinking-off and thinking-on dots, accuracy on the left, time on the right.
 
-    rows: [{"model", "note", "off": {"accuracy", "median_s"} or None, "on": {...} or None}]
+    rows: [{"model", "badges": [short labels], "off": {"accuracy", "median_s"} or None, "on": {...} or None}]
     """
     label_w, panel_w, gap = 230, 290, 56
     top, row_h = 92, 44
@@ -106,9 +106,15 @@ def dumbbell(rows, theme, title):
     for index, row in enumerate(rows):
         y = top + row_h * index + row_h / 2
         # Left-aligned from the frame edge, so a long note can never run off the left side.
-        c.text(24, y + (0 if row["note"] else 4), row["model"], fill="ink", weight="600")
-        if row["note"]:
-            c.text(24, y + 15, row["note"], size=11)
+        c.text(24, y + (-2 if row["badges"] else 4), row["model"], fill="ink", weight="600")
+        # Missing capabilities and incidents as small outlined badges, so they read as labels, not captions.
+        bx = 24
+        for badge in row["badges"]:
+            w = 6.1 * len(badge) + 12
+            c.parts.append(f'<rect x="{bx:.1f}" y="{y + 5:.1f}" width="{w:.1f}" height="16" rx="8" fill="none" '
+                           f'stroke="{c.t["ink2"]}" stroke-width="1"/>')
+            c.text(bx + w / 2, y + 16.5, badge, size=10.5, fill="ink", anchor="middle")
+            bx += w + 6
         for scale, key, fmt in ((acc_x, "accuracy", lambda v: f"{v:.0f}%"), (time_x, "median_s", duration)):
             points = [(mode, row[mode][key]) for mode in ("off", "on") if row[mode]]
             if len(points) == 2:
@@ -129,10 +135,14 @@ def heatmap(rows, columns, theme, title):
 
     rows: [{"label", "mode", "values": [percent per column]}]
     """
-    label_w, cell_w, cell_h, top = 230, 104, 38, 100
+    label_w, cell_w, cell_h, top = 250, 104, 38, 100
     width = label_w + cell_w * len(columns) + 30
     height = top + cell_h * len(rows) + 46
     c = Canvas(theme, width, height, title, "Share of each track's cases passed. Stronger colour is better.")
+    # The dot before each name gives the thinking mode, so names can stay short.
+    legend_x = c.width - 24 - (30 + 6.8 * len("thinking off")) - (18 + 6.8 * len("thinking on"))
+    legend_x = c.legend_dot(legend_x, 34, c.t["off"], "thinking off")
+    c.legend_dot(legend_x, 34, c.t["on"], "thinking on")
     for index, name in enumerate(columns):
         c.text(label_w + cell_w * index + cell_w / 2, top - 12, name, fill="ink", anchor="middle", weight="600")
     for r, row in enumerate(rows):
@@ -141,6 +151,12 @@ def heatmap(rows, columns, theme, title):
         c.text(42, y + cell_h / 2 + 4, row["label"], fill="ink")
         for col, value in enumerate(row["values"]):
             x = label_w + cell_w * col
+            if value is None:
+                # Not applicable: the model can't attempt this track. Neutral, never shaded as a score.
+                c.parts.append(f'<rect x="{x + 2}" y="{y + 2}" width="{cell_w - 4}" height="{cell_h - 4}" rx="4" '
+                               f'fill="none" stroke="{c.t["axis"]}" stroke-dasharray="3 3"/>')
+                c.text(x + cell_w / 2, y + cell_h / 2 + 5, "n/a", size=12, anchor="middle", fill="muted")
+                continue
             # One hue, opacity by value: low scores fade into the surface in both themes.
             opacity = 0.08 + 0.87 * value / 100
             c.parts.append(f'<rect x="{x + 2}" y="{y + 2}" width="{cell_w - 4}" height="{cell_h - 4}" rx="4" '
@@ -151,7 +167,8 @@ def heatmap(rows, columns, theme, title):
     # The overall column is set apart by a gap line.
     x = label_w + cell_w * (len(columns) - 1)
     c.line(x, top - 4, x, top + cell_h * len(rows), stroke="axis", width=1.5)
-    c.text(24, height - 16, "Each track has 13 cases; the last column is all 65.", size=11, fill="muted")
+    c.text(24, height - 16, "Each track has 13 cases. n/a: the model can't attempt that track (for example, "
+           "no vision). The last column covers the tracks each model supports.", size=11, fill="muted")
     return c.svg()
 
 

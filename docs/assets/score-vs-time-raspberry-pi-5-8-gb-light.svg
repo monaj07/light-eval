@@ -27,7 +27,7 @@
 <line x1="624.0" x2="624.0" y1="92" y2="392" stroke="#e1e0d9" stroke-width="1"/>
 <text x="624.0" y="412.0" font-size="12" font-weight="normal" text-anchor="middle" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10 min</text>
 <text x="344.0" y="436.0" font-size="12" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Median time per case (log scale)</text>
-<text x="64.0" y="80.0" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Accuracy (share of all 65 cases passed)</text>
+<text x="64.0" y="80.0" font-size="12" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Accuracy (cases passed on supported tracks)</text>
 <text x="618.0" y="108.0" font-size="12" font-weight="normal" text-anchor="end" fill="#898781" font-family="system-ui, -apple-system, Segoe UI, sans-serif">better ↖</text>
 <line x1="261.9" y1="212.0" x2="393.1" y2="133.5" stroke="#898781" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
 <line x1="196.8" y1="244.3" x2="468.7" y2="193.5" stroke="#898781" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>

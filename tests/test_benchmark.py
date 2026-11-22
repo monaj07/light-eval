@@ -477,9 +477,13 @@ class BenchmarkTest(unittest.TestCase):
             {"models": [{"name": "a:latest", "digest": "a"}, {"name": "b:latest", "digest": "b"}]} if path == "tags"
             else {"capabilities": ["completion", "thinking"] if body["model"] == "a:latest" else ["completion"]})
         with patch("light_eval.installed_models", return_value={"a:latest": {"digest": "a"}, "b:latest": {"digest": "b"}}):
-            metadata = inspect_models(api, ["a:latest", "b:latest"], "on")
-        self.assertIs(metadata["a:latest"]["thinking_requested"], True)
-        self.assertIsNone(metadata["b:latest"]["thinking_requested"])
+            metadata = inspect_models(api, ["a:latest"], "on")
+            self.assertIs(metadata["a:latest"]["thinking_requested"], True)
+            # A model without a thinking mode is refused, rather than run with thinking off under an "on" label.
+            with self.assertRaisesRegex(BenchError, "no thinking mode"):
+                inspect_models(api, ["a:latest", "b:latest"], "on")
+            # With thinking off or the model's default, it runs normally.
+            self.assertIsNone(inspect_models(api, ["b:latest"], "off")["b:latest"]["thinking_requested"])
 
     def test_commutative_calculator_operands_are_equivalent(self):
         case = next(case for case in dataset() if case.id == "agent-chain-arithmetic")

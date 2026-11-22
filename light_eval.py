@@ -78,7 +78,11 @@ def inspect_models(api, models, requested_thinking):
             if "values" in thinking and not any(item is False for item in thinking["values"]):
                 raise BenchError(f"{name} cannot disable thinking. Choose --thinking default for this run.")
             setting = False
-        elif "thinking" in capabilities and requested_thinking == "on":
+        elif requested_thinking == "on":
+            if "thinking" not in capabilities:
+                # Running it anyway would produce a thinking-off result labelled "thinking on".
+                raise BenchError(f"{name} has no thinking mode, so it can't run with --thinking on. "
+                                 "Leave it out of thinking-on runs; its thinking-off run covers it.")
             setting = True
         template = info.get("template", "")
         metadata[name] = {

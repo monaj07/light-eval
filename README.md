@@ -33,7 +33,7 @@ Setup: Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 
 <p><a href="docs/assets/hardware/raspberry-pi-hardware.jpg"><img src="docs/assets/hardware/raspberry-pi-hardware.jpg" alt="Raspberry Pi 5 8 GB, Active Cooler, acrylic case, SanDisk Extreme 128 GB microSD card and 27 W power supply" height="220"></a> <a href="docs/assets/hardware/raspberry-pi-assembled.jpg"><img src="docs/assets/hardware/raspberry-pi-assembled.jpg" alt="The assembled Raspberry Pi 5 in its vented acrylic case" height="220"></a></p>
 
-#### At a glance
+### At a glance
 
 | Model | Thinking | Accuracy | Tracks | Time per case | Memory | Note |
 |---|---|---:|---|---:|---|---|
@@ -54,7 +54,7 @@ Accuracy is the share of cases passed on the tracks the model supports; Tracks s
   <img alt="Accuracy and median time per case for each model with thinking off and on" src="docs/assets/thinking-raspberry-pi-5-8-gb-light.svg" width="920">
 </picture>
 
-#### Strengths and weaknesses by track
+### Strengths and weaknesses by track
 
 <picture>
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/assets/tracks-raspberry-pi-5-8-gb-mobile-dark.svg">
@@ -63,7 +63,7 @@ Accuracy is the share of cases passed on the tracks the model supports; Tracks s
   <img alt="Share of each track's cases passed, per model and thinking mode" src="docs/assets/tracks-raspberry-pi-5-8-gb-light.svg" width="920">
 </picture>
 
-#### 2 vs 4 CPU threads
+### 2 vs 4 CPU threads
 
 <picture>
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/assets/threads-raspberry-pi-5-8-gb-mobile-dark.svg">
@@ -74,10 +74,12 @@ Accuracy is the share of cases passed on the tracks the model supports; Tracks s
 
 The main results use 4 threads, all of the Pi's cores. Compared with 2 threads, prompt processing is faster, but generation can be slower; details are in the full results below.
 
-#### Full results
+### Full results
 
 <details>
 <summary>All tables: per-track scores, speed, where the time goes, memory, temperature, threads, and the accuracy, speed and memory chart</summary>
+
+#### Accuracy, speed and memory
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/score-vs-time-raspberry-pi-5-8-gb-dark.svg">
@@ -86,26 +88,30 @@ The main results use 4 threads, all of the Pi's cores. Compared with 2 threads, 
 
 Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during it, gemma4:e4b exhausted the Pi's memory (RAM and zram full) and the Pi hung and rebooted after 49 of its 65 cases.
 
-**Thinking off: scores by track** (averaged over 3 passes)
+#### Thinking off: scores by track
 
-| Model | Accuracy (all) | Accuracy (text) | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Time per case | Timed out | Peak memory (lowest free) | CPU °C mean / peak |
+| Model | Accuracy<br>(all) | Accuracy<br>(text) | Challenge | Arithmetic | Structured | Agent | Vision | Context | Time per<br>case | Timed<br>out | Peak memory<br>(lowest free) | CPU °C<br>mean / peak |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `gemma4:e4b` (2 threads only) | **67%** | 70% | 19.3 | 3 | 12 | 12 | 7 | 9.3 | 40.1 s | 0 | ❌ 9.9 GB≈ (10 MB free) | 62 / 67 |
 | `gemma4:e2b` | **60%** | 60% | 14 | 4 | 9 | 12 | 8 | 6 | 11.8 s | 0 | ✅ 5.7 GB (2.2 GB free) | 71 / 77 |
 | `qwen3.5:2b` | **49%** | 54% | 15 | 4 | 6 | 11 | 4 | 7 | 9.3 s | 0 | ✅ 4.2 GB (3.7 GB free) | 68 / 75 |
 | `qwen3.5:4b` | **49%** | 46% | 14 | 4 | 7.7 | 3 | 8 | 9 | 13.7 s | 0 | ✅ 5.4 GB (2.4 GB free) | 72 / 78 |
 
-**Thinking on: scores by track**
+Scores are averaged over 3 passes. Challenge counts are out of 36 cases and each track out of 13.
 
-| Model | Accuracy (all) | Accuracy (text) | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Time per case | Timed out | Peak memory (lowest free) | CPU °C mean / peak |
+#### Thinking on: scores by track
+
+| Model | Accuracy<br>(all) | Accuracy<br>(text) | Challenge | Arithmetic | Structured | Agent | Vision | Context | Time per<br>case | Timed<br>out | Peak memory<br>(lowest free) | CPU °C<br>mean / peak |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `gemma4:e2b` | **86%** | 90% | 28 | 13 | 13 | 12 | 9 | 9 | 46.9 s | 1 | ✅ 5.7 GB (2.2 GB free) | 71 / 77 |
 | `qwen3.5:2b` | **71%** | 71% | 23 | 11 | 9 | 9 | 9 | 8 | 2.7 min | 9 | ✅ 4.4 GB (3.6 GB free) | 65 / 72 |
 | `qwen3.5:4b` | **66%** | 63% | 22 | 13 | 10 | 1 | 10 | 9 | 5.1 min | 11 | ✅ 5.6 GB (2.3 GB free) | 66 / 77 |
 
+Challenge counts are out of 36 cases and each track out of 13.
+
 Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs recorded before zram's own RAM use was measured: they add the separate peaks of RAM and swap, and count zram's compressed pages twice, so they overstate memory in use when zram is busy. ✅ more than 0.5 GB stayed free and swap stayed under 1 GB; ⚠️ less free or more swap; ❌ ran out of memory or hung the Pi.
 
-**Speed** (thinking off)
+#### Speed (thinking off)
 
 | Model | First load from storage | Prompt processing | Generation (in cases) | Generation (sustained) | Sustained drift |
 |---|---:|---:|---:|---:|---:|
@@ -116,7 +122,7 @@ Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in 
 
 Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how fast it writes, and it is limited mostly by memory bandwidth. These runs use all 4 of the Pi's cores (`--threads 4`). "In cases" is generation during the 65 cases, whose answers are short JSON; "sustained" is 90 seconds of continuous free prose. The Gemma builds include a small draft model for speculative decoding, which likely explains why they generate faster on short, predictable JSON than on prose.
 
-**Where the time per case goes** (thinking off)
+#### Where the time per case goes (thinking off)
 
 | Model | Median time per case | Reading the prompt | Writing the answer | Share spent reading | Answer length (median) |
 |---|---:|---:|---:|---:|---:|
@@ -127,7 +133,9 @@ Prompt processing is how fast a model reads its input, and it is limited by comp
 
 Answers are short, so most of each case is spent reading the prompt, especially for vision and long-context cases. That is why a model can generate quickly and still take the longest per case. Times are medians over cases, from Ollama's own prompt and generation durations, so reading and writing don't add up exactly to the median time per case.
 
-**2 → 4 threads: speed** (tokens/s for processing and generation)
+#### 2 → 4 threads: speed
+
+Prompt processing and generation are in tokens/s.
 
 | Model | Thinking | Time per case | Prompt processing | Generation | Generation (sustained) |
 |---|---|---:|---:|---:|---:|
@@ -138,7 +146,7 @@ Answers are short, so most of each case is spent reading the prompt, especially 
 | `qwen3.5:2b` | on | 2.3 → 2.7 min 🔴 +17% | 39.6 → 35.7 🔴 -10% | 5.8 → 5.1 🔴 -12% | — |
 | `qwen3.5:4b` | on | 4.5 → 5.1 min 🔴 +13% | 13.4 → 21.4 🟢 +60% | 3.8 → 3.3 🔴 -14% | — |
 
-**2 → 4 threads: outcomes**
+#### 2 → 4 threads: outcomes
 
 | Model | Thinking | Accuracy | Timed out | Peak CPU |
 |---|---|---:|---:|---:|

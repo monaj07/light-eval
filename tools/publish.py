@@ -340,9 +340,10 @@ def memory(entry):
 
 
 def table(group, totals):
-    head = ["Model", "Accuracy (all)", "Accuracy (text)", f"Challenge /{totals['challenge']}",
-            *(f"{TRACK_NAMES[track]} /{totals[track]}" for track in TRACKS),
-            "Time per case", "Timed out", "Peak memory (lowest free)", "CPU °C mean / peak"]
+    # Short headers split over two lines (GitHub allows <br> in cells), so the columns stay narrow.
+    head = ["Model", "Accuracy<br>(all)", "Accuracy<br>(text)", "Challenge",
+            *(TRACK_NAMES[track] for track in TRACKS),
+            "Time per<br>case", "Timed<br>out", "Peak memory<br>(lowest free)", "CPU °C<br>mean / peak"]
     lines = ["| " + " | ".join(head) + " |", "|" + "|".join(["---"] + ["---:"] * (len(head) - 3) + ["---", "---"]) + "|"]
     for entry in sorted(group, key=lambda item: (-item["accuracy"], item["median_s"])):
         temperature = entry["temperature"]
@@ -724,7 +725,7 @@ def build():
                  and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
         total = totals["all"]
         if official:
-            parts += ["#### At a glance", "", glance_table(official, total), "",
+            parts += ["### At a glance", "", glance_table(official, total), "",
                       "Accuracy is the share of cases passed on the tracks the model supports; Tracks shows how many "
                       "of the 5 that is. A track a model can't attempt (no vision, for example) is not counted as "
                       "0%. Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's "
@@ -733,7 +734,7 @@ def build():
                 dumbbell_rows(official, total), theme, "What thinking buys"),
                 lambda theme: charts.dumbbell_mobile(dumbbell_rows(official, total), theme, "What thinking buys")),
                 "Accuracy and median time per case for each model with thinking off and on")
-            parts += ["#### Strengths and weaknesses by track", ""]
+            parts += ["### Strengths and weaknesses by track", ""]
             columns = [TRACK_NAMES[track] for track in TRACKS] + ["All"]
             parts += picture(write_chart(f"tracks-{slug_name}", lambda theme: charts.heatmap(
                 heatmap_rows(official, totals), columns, theme, "Where each model succeeds"),
@@ -742,7 +743,7 @@ def build():
                 "Share of each track's cases passed, per model and thinking mode")
         if pairs:
             low, high = pairs[0][0]["threads"], pairs[0][1]["threads"]
-            parts += [f"#### {low} vs {high} CPU threads", ""]
+            parts += [f"### {low} vs {high} CPU threads", ""]
             thread_rows = [{"label": f"{display_name(a['model'])} · thinking {a['thinking']}", "mode": a["thinking"],
                             "before": a["median_s"], "after": b["median_s"]}
                            for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["model"]))]
@@ -757,9 +758,10 @@ def build():
                       "the full results below.", ""]
 
         # Everything else stays available, one click away.
-        parts += ["#### Full results", "", "<details>",
+        parts += ["### Full results", "", "<details>",
                   "<summary>All tables: per-track scores, speed, where the time goes, memory, temperature, "
                   "threads, and the accuracy, speed and memory chart</summary>", ""]
+        parts += ["#### Accuracy, speed and memory", ""]
         base = f"score-vs-time-{slug_name}"
         for theme in THEMES:
             (ASSETS / f"{base}-{theme}.svg").write_text(svg_chart(group, theme, f"Accuracy and speed on {name}"))
@@ -775,24 +777,26 @@ def build():
             subset = [entry for entry in group if entry["thinking"] == mode]
             if subset:
                 rounds = sorted({entry["rounds"] for entry in subset})
-                label = f"**Thinking {mode}: scores by track**"
+                note = (f"Challenge counts are out of {totals['challenge']} cases and each track out of "
+                        f"{totals['arithmetic']}.")
                 if rounds != [1]:
-                    label += f" (averaged over {'/'.join(map(str, rounds))} passes)"
-                parts += [label, "", table(subset, totals), ""]
+                    note = f"Scores are averaged over {'/'.join(map(str, rounds))} passes. " + note
+                parts += [f"#### Thinking {mode}: scores by track", "", table(subset, totals), "", note, ""]
         if any(entry["peak_mem_gb"] is not None for entry in group):
             parts += [MEMORY_NOTE, ""]
         timed = [entry for entry in group if entry["first_load_s"] is not None or entry["sustained_tok_s"]]
         if timed:
-            parts += ["**Speed** (thinking off)", "", speed_table(timed), "", SPEED_NOTE, ""]
+            parts += ["#### Speed (thinking off)", "", speed_table(timed), "", SPEED_NOTE, ""]
         split = [entry for entry in group if entry["thinking"] == "off" and entry.get("read_s") is not None
                  and entry["setup"]]
         if split:
-            parts += ["**Where the time per case goes** (thinking off)", "", time_table(split), "", TIME_NOTE, ""]
+            parts += ["#### Where the time per case goes (thinking off)", "", time_table(split), "", TIME_NOTE, ""]
         if pairs:
             speed_rows, outcome_rows = threads_tables(pairs)
             low_t, high_t = pairs[0][0]["threads"], pairs[0][1]["threads"]
-            parts += [f"**{low_t} → {high_t} threads: speed** (tokens/s for processing and generation)", "", speed_rows, "",
-                      f"**{low_t} → {high_t} threads: outcomes**", "", outcome_rows, "", THREADS_NOTE, ""]
+            parts += [f"#### {low_t} → {high_t} threads: speed", "",
+                      "Prompt processing and generation are in tokens/s.", "", speed_rows, "",
+                      f"#### {low_t} → {high_t} threads: outcomes", "", outcome_rows, "", THREADS_NOTE, ""]
         parts += ["</details>", ""]
     parts.append(END)
     text = README.read_text()

@@ -127,18 +127,29 @@ Prompt processing is how fast a model reads its input, and it is limited by comp
 
 Answers are short, so most of each case is spent reading the prompt, especially for vision and long-context cases. That is why a model can generate quickly and still take the longest per case. Times are medians over cases, from Ollama's own prompt and generation durations, so reading and writing don't add up exactly to the median time per case.
 
-**2 vs 4 threads**
+**2 → 4 threads: speed** (tokens/s for processing and generation)
 
-| Model | Thinking | Accuracy | Time per case | Prompt processing | Generation | Generation (sustained) | Timed out | Peak CPU |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| `qwen3.5:2b` | off | 49% (=) | 9.3 s 🟢 -12% | 37.3 🔴 -8% | 5.5 🔴 -12% | 5.3 🔴 -14% | 0 (=) | 75 °C 🔴 +6 °C |
-| `gemma4:e2b` | off | 60% (=) | 11.8 s 🟢 -40% | 36.8 🟢 +67% | 14.3 🟢 +15% | 8.4 🟢 +12% | 0 (=) | 77 °C 🔴 +12 °C |
-| `qwen3.5:4b` | off | 49% (=) | 13.7 s 🟢 -32% | 22.3 🟢 +66% | 3.8 🔴 -11% | 3.5 🔴 -12% | 0 (=) | 78 °C 🔴 +10 °C |
-| `gemma4:e2b` | on | 86% (=) | 46.9 s 🟢 -31% | 36.9 🟢 +67% | 12.8 🟢 +13% | — | 1 (=) | 77 °C 🔴 +9 °C |
-| `qwen3.5:2b` | on | 71% 🟢 +5 pts | 2.7 min 🔴 +17% | 35.7 🔴 -10% | 5.1 🔴 -12% | — | 9 🟢 -2 | 72 °C 🔴 +3 °C |
-| `qwen3.5:4b` | on | 66% 🟢 +1 pt | 5.1 min 🔴 +13% | 21.4 🟢 +60% | 3.3 🔴 -14% | — | 11 🟢 -2 | 77 °C 🔴 +8 °C |
+| Model | Thinking | Time per case | Prompt processing | Generation | Generation (sustained) |
+|---|---|---:|---:|---:|---:|
+| `qwen3.5:2b` | off | 10.5 → 9.3 s 🟢 -12% | 40.3 → 37.3 🔴 -8% | 6.3 → 5.5 🔴 -12% | 6.1 → 5.3 🔴 -14% |
+| `gemma4:e2b` | off | 19.5 → 11.8 s 🟢 -40% | 22.0 → 36.8 🟢 +67% | 12.5 → 14.3 🟢 +15% | 7.5 → 8.4 🟢 +12% |
+| `qwen3.5:4b` | off | 20.0 → 13.7 s 🟢 -32% | 13.4 → 22.3 🟢 +66% | 4.2 → 3.8 🔴 -11% | 4.0 → 3.5 🔴 -12% |
+| `gemma4:e2b` | on | 1.1 min → 46.9 s 🟢 -31% | 22.0 → 36.9 🟢 +67% | 11.3 → 12.8 🟢 +13% | — |
+| `qwen3.5:2b` | on | 2.3 → 2.7 min 🔴 +17% | 39.6 → 35.7 🔴 -10% | 5.8 → 5.1 🔴 -12% | — |
+| `qwen3.5:4b` | on | 4.5 → 5.1 min 🔴 +13% | 13.4 → 21.4 🟢 +60% | 3.8 → 3.3 🔴 -14% | — |
 
-Each pair compares an official run at the main thread count with one at the other, for the same model and thinking mode; everything else is identical. Each cell shows the value with 4 threads and the change from 2 threads: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the worse; accuracy changes are in percentage points. Speeds are in tokens/s. Prompt processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking on, a change in speed also changes how many cases finish inside the 10-minute limit.
+**2 → 4 threads: outcomes**
+
+| Model | Thinking | Accuracy | Timed out | Peak CPU |
+|---|---|---:|---:|---:|
+| `qwen3.5:2b` | off | 49 → 49% | 0 → 0 | 69 → 75 °C 🔴 |
+| `gemma4:e2b` | off | 60 → 60% | 0 → 0 | 65 → 77 °C 🔴 |
+| `qwen3.5:4b` | off | 49 → 49% | 0 → 0 | 68 → 78 °C 🔴 |
+| `gemma4:e2b` | on | 86 → 86% | 1 → 1 | 68 → 77 °C 🔴 |
+| `qwen3.5:2b` | on | 66 → 71% 🟢 | 11 → 9 🟢 | 69 → 72 °C 🔴 |
+| `qwen3.5:4b` | on | 65 → 66% 🟢 | 13 → 11 🟢 | 69 → 77 °C 🔴 |
+
+Each pair compares an official run at the main thread count with one at the other, for the same model and thinking mode; everything else is identical. Each cell reads from 2 threads to 4 ("19.5 → 11.8 s"), with the relative change where it helps: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the worse. Prompt processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking on, a change in speed also changes how many cases finish inside the 10-minute limit.
 
 </details>
 

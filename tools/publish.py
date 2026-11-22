@@ -47,9 +47,9 @@ PRIMARY_THREADS = 4
 TEXT_TRACKS = ("arithmetic", "structured", "agent", "context")
 THREADS_NOTE = (
     "Each pair compares an official run at the main thread count with one at the other, for the same model and "
-    "thinking mode; everything else is identical. Each cell shows the value with 4 threads and the change from 2 "
-    "threads: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the "
-    "worse; accuracy changes are in percentage points. Speeds are in tokens/s. Prompt "
+    "thinking mode; everything else is identical. Each cell reads from 2 threads to 4 (\"19.5 → 11.8 s\"), with the "
+    "relative change where it helps: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 "
+    "a change for the worse. Prompt "
     "processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory "
     "bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking "
     "on, a change in speed also changes how many cases finish inside the 10-minute limit."
@@ -380,46 +380,51 @@ def speed_table(group):
     return "\n".join(lines)
 
 
-def threads_table(pairs):
-    """One row per model and mode: the value with more threads, and the change from fewer.
+def threads_tables(pairs):
+    """Two short tables, speed and outcomes, one row per model and mode.
 
-    Cells stay short ("11.8 s 🟢 −40%") so GitHub doesn't squeeze the columns into one word per line.
-    GitHub strips colour from Markdown, so a marker carries better/worse: 🟢 an improvement, 🔴 a
-    change for the worse. The sign alone can't, since for time a minus is good and for speed a plus is."""
-    def change(a, b, fmt, higher_is_better):
+    Each cell reads from fewer threads to more ("19.5 → 11.8 s 🟢 −40%"), so the order is
+    unambiguous. GitHub strips colour from Markdown, so a marker carries better/worse: 🟢 an
+    improvement, 🔴 a change for the worse. The sign alone can't, since for time a minus is good
+    and for speed a plus is. Splitting into two tables keeps each one narrow enough that GitHub
+    doesn't squeeze its columns into one word per line."""
+    def marker(a, b, higher_is_better):
+        return "🟢" if (b > a) == higher_is_better else "🔴"
+
+    def change(a, b, fmt, unit, higher_is_better):
         if a is None or b is None:
             return "—"
-        if not a or abs(b / a - 1) < 0.005:
-            return f"{fmt(b)} (=)"
-        better = (b > a) == higher_is_better
-        return f"{fmt(b)} {'🟢' if better else '🔴'} {(b / a - 1) * 100:+.0f}%"
+        text = f"{fmt(a)} → {fmt(b)}{unit}"
+        if a and abs(b / a - 1) >= 0.005:
+            text += f" {marker(a, b, higher_is_better)} {(b / a - 1) * 100:+.0f}%"
+        return text
 
-    def points(a, b, fmt, higher_is_better, unit=""):
+    def shift(a, b, fmt, unit, higher_is_better):
         if a is None or b is None:
             return "—"
-        diff = round(b) - round(a)  # from the rounded values readers see, so the numbers add up
-        if not diff:
-            return f"{fmt(b)} (=)"
-        better = (diff > 0) == higher_is_better
-        if unit == " pts" and abs(diff) == 1:
-            unit = " pt"
-        return f"{fmt(b)} {'🟢' if better else '🔴'} {diff:+d}{unit}"
+        text = f"{fmt(a)} → {fmt(b)}{unit}"
+        return text + (f" {marker(round(a), round(b), higher_is_better)}" if round(a) != round(b) else "")
     temp = lambda entry: entry["temperature"]["peak_cpu_c"] if entry["temperature"] else None
-    high = pairs[0][1]["threads"]
-    lines = [f"| Model | Thinking | Accuracy | Time per case | Prompt processing | Generation | "
-             f"Generation (sustained) | Timed out | Peak CPU |",
-             "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
-    for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["median_s"])):
-        lines.append(" | ".join([
-            f"| `{display_name(a['model'])}`", a["thinking"],
-            points(a["accuracy"], b["accuracy"], lambda v: f"{v:.0f}%", True, " pts"),
-            change(a["median_s"], b["median_s"], duration, higher_is_better=False),
-            change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
-            change(a.get("case_decode_tok_s"), b.get("case_decode_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
-            change(a.get("sustained_tok_s"), b.get("sustained_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
-            points(a["timeouts"], b["timeouts"], number, False),
-            points(temp(a), temp(b), lambda v: f"{v:.0f} °C", False, " °C") + " |"]))
-    return "\n".join(lines)
+    rows = sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["median_s"]))
+    speed = ["| Model | Thinking | Time per case | Prompt processing | Generation | Generation (sustained) |",
+             "|---|---|---:|---:|---:|---:|"]
+    outcome = ["| Model | Thinking | Accuracy | Timed out | Peak CPU |", "|---|---|---:|---:|---:|"]
+    tokens = lambda v: f"{v:.1f}"
+    for a, b in rows:
+        name = f"| `{display_name(a['model'])}` | {a['thinking']}"
+        speed.append(" | ".join([name,
+            change(a["median_s"], b["median_s"], lambda v: duration(v).replace(" min", "").replace(" s", ""),
+                   " min" if b["median_s"] >= 60 else " s", higher_is_better=False)
+            if (a["median_s"] >= 60) == (b["median_s"] >= 60)
+            else change(a["median_s"], b["median_s"], duration, "", higher_is_better=False),
+            change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), tokens, "", higher_is_better=True),
+            change(a.get("case_decode_tok_s"), b.get("case_decode_tok_s"), tokens, "", higher_is_better=True),
+            change(a.get("sustained_tok_s"), b.get("sustained_tok_s"), tokens, "", higher_is_better=True)]) + " |")
+        outcome.append(" | ".join([name,
+            shift(a["accuracy"], b["accuracy"], lambda v: f"{v:.0f}", "%", higher_is_better=True),
+            shift(a["timeouts"], b["timeouts"], number, "", higher_is_better=False),
+            shift(temp(a), temp(b), lambda v: f"{v:.0f}", " °C", higher_is_better=False)]) + " |")
+    return "\n".join(speed), "\n".join(outcome)
 
 
 def time_table(group):
@@ -784,8 +789,10 @@ def build():
         if split:
             parts += ["**Where the time per case goes** (thinking off)", "", time_table(split), "", TIME_NOTE, ""]
         if pairs:
-            parts += [f"**{pairs[0][0]['threads']} vs {pairs[0][1]['threads']} threads**", "",
-                      threads_table(pairs), "", THREADS_NOTE, ""]
+            speed_rows, outcome_rows = threads_tables(pairs)
+            low_t, high_t = pairs[0][0]["threads"], pairs[0][1]["threads"]
+            parts += [f"**{low_t} → {high_t} threads: speed** (tokens/s for processing and generation)", "", speed_rows, "",
+                      f"**{low_t} → {high_t} threads: outcomes**", "", outcome_rows, "", THREADS_NOTE, ""]
         parts += ["</details>", ""]
     parts.append(END)
     text = README.read_text()

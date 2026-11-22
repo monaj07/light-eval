@@ -42,7 +42,7 @@ HARDWARE_PHOTOS = (
     ("docs/assets/hardware/raspberry-pi-assembled.jpg", "The assembled Raspberry Pi 5 in its vented acrylic case"),
 )
 # Thread count used by the main results; runs with other thread counts feed the comparison table.
-PRIMARY_THREADS = 2
+PRIMARY_THREADS = 4
 # Tracks every model can attempt; vision needs the vision capability.
 TEXT_TRACKS = ("arithmetic", "structured", "agent", "context")
 THREADS_NOTE = (
@@ -54,8 +54,8 @@ THREADS_NOTE = (
 )
 SPEED_NOTE = (
     "Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how "
-    "fast it writes, and it is limited mostly by memory bandwidth. All published Pi runs use 2 of the Pi's 4 cores "
-    "(`--threads 2`), which mostly limits prompt processing. \"In cases\" is generation during the 65 cases, "
+    "fast it writes, and it is limited mostly by memory bandwidth. These runs use all 4 of the Pi's cores "
+    "(`--threads 4`). \"In cases\" is generation during the 65 cases, "
     "whose answers are short JSON; \"sustained\" is 90 seconds of continuous free prose. The Gemma builds include a "
     "small draft model for speculative decoding, which likely explains why they generate faster on short, "
     "predictable JSON than on prose."
@@ -188,6 +188,12 @@ def display_name(model):
     hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M -> LFM2.5-1.2B-Instruct-GGUF:Q4_K_M, lfm3:latest -> lfm3."""
     name = model.split("/")[-1] if model.startswith("hf.co/") else model
     return name[:-len(":latest")] if name.endswith(":latest") else name
+
+
+def row_name(entry):
+    """Display name, plus the thread note for a result from a different thread count than the rest."""
+    note = entry.get("threads_note")
+    return display_name(entry["model"]) + (f" ({note})" if note else "")
 
 
 def coverage(rows, rounds):
@@ -346,7 +352,8 @@ def table(group, totals):
             if temperature["throttled_cases"]:
                 peak += f" ⚠️ {temperature['throttled_cases']} throttled"
         lines.append("| " + " | ".join([
-            f"`{display_name(entry['model'])}`" + ("" if entry["setup"] else " †"),
+            f"`{display_name(entry['model'])}`" + (f" ({entry['threads_note']})" if entry.get("threads_note") else "")
+            + ("" if entry["setup"] else " †"),
             (f"**{entry['accuracy']:.0f}%**" if len(entry["supported_tracks"]) == len(TRACKS)
              else coverage_label(entry).split("(")[-1].rstrip(")")), f"{entry['text_accuracy']:.0f}%",
             number(entry["challenge"]),
@@ -366,7 +373,7 @@ def speed_table(group):
     for entry in sorted(group, key=lambda item: item["median_s"]):
         load = f"{entry['first_load_s']:.0f} s" if entry["first_load_s"] is not None else "—"
         change = f"{entry['sustained_change'] * 100:+.1f}%" if entry["sustained_change"] is not None else "—"
-        lines.append(f"| `{entry['model']}` | {load} | {rate(entry.get('prefill_tok_s'))} | "
+        lines.append(f"| `{row_name(entry)}` | {load} | {rate(entry.get('prefill_tok_s'))} | "
                      f"{rate(entry.get('case_decode_tok_s'))} | {rate(entry['sustained_tok_s'])} | {change} |")
     return "\n".join(lines)
 
@@ -386,7 +393,7 @@ def threads_table(pairs):
     for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["median_s"])):
         total = len(dataset())
         lines.append(" | ".join([
-            f"| `{a['model']}`", a["thinking"],
+            f"| `{display_name(a['model'])}`", a["thinking"],
             f"{a['accuracy']:.0f}% → {b['accuracy']:.0f}%",
             change(a["median_s"], b["median_s"], duration),
             change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), lambda v: f"{v:.1f}"),
@@ -401,7 +408,7 @@ def time_table(group):
     lines = ["| Model | Median time per case | Reading the prompt | Writing the answer | Share spent reading | "
              "Answer length (median) |", "|---|---:|---:|---:|---:|---:|"]
     for entry in sorted(group, key=lambda item: item["median_s"]):
-        lines.append(f"| `{entry['model']}` | {duration(entry['median_s'])} | {duration(entry['read_s'])} | "
+        lines.append(f"| `{row_name(entry)}` | {duration(entry['median_s'])} | {duration(entry['read_s'])} | "
                      f"{duration(entry['write_s'])} | {entry['read_share']:.0%} | {entry['answer_tokens']:.0f} tokens |")
     return "\n".join(lines)
 
@@ -603,7 +610,7 @@ def glance_table(entries, total):
             count = number(entry["timeouts"])
             notes.append(f"{count} case{'' if count == '1' else 's'} hit the 10-minute limit")
         note = "; ".join(notes)
-        lines.append(f"| `{display_name(entry['model'])}` | {entry['thinking']} | **{entry['accuracy']:.0f}%** | "
+        lines.append(f"| `{display_name(entry['model'])}`{' (' + entry['threads_note'] + ')' if entry.get('threads_note') else ''} | {entry['thinking']} | **{entry['accuracy']:.0f}%** | "
                      f"{coverage_label(entry)} | {duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
     return "\n".join(lines)
 
@@ -618,6 +625,7 @@ def dumbbell_rows(entries, total):
         # Short badges under the model name; a missing orange dot already shows "not run".
         any_entry = next(iter(modes.values()))
         badges = ["hung the Pi"] if flag else []
+        badges += sorted({entry["threads_note"] for entry in modes.values() if entry.get("threads_note")})
         if "on" not in modes:
             badges.append("thinking off only" if "thinking" in any_entry["capabilities"] else "no thinking mode")
         badges += [f"no {TRACK_NAMES[t].lower()}" for t in TRACKS if t not in any_entry["supported_tracks"]]
@@ -628,7 +636,7 @@ def dumbbell_rows(entries, total):
 
 
 def heatmap_rows(entries, totals):
-    return [{"label": display_name(entry["model"]), "mode": entry["thinking"],
+    return [{"label": row_name(entry), "mode": entry["thinking"],
              "values": [100 * entry["tracks"][track] / entry["track_cases"][track]
                         if track in entry["supported_tracks"] else None for track in TRACKS]
                        + [entry["accuracy"]]} for entry in entries]
@@ -659,7 +667,16 @@ def build():
         main = [entry for entry in by_device[name] if entry["threads"] == PRIMARY_THREADS]
         official = {(entry["model"], entry["thinking"]) for entry in main if entry["setup"]}
         group = [entry for entry in main if entry["setup"] or (entry["model"], entry["thinking"]) not in official]
-        others = [entry for entry in by_device[name] if entry["threads"] != PRIMARY_THREADS and entry["setup"]]
+        # A model and mode with official results only at another thread count (gemma4:e4b, which hung
+        # the Pi and wasn't rerun) still appears, clearly marked, rather than silently disappearing.
+        fallback = {}
+        for entry in by_device[name]:
+            key = (entry["model"], entry["thinking"])
+            if entry["setup"] and entry["threads"] != PRIMARY_THREADS and key not in official:
+                fallback.setdefault(key, entry)["threads_note"] = f"{entry['threads']} threads only"
+        group += list(fallback.values())
+        others = [entry for entry in by_device[name] if entry["threads"] != PRIMARY_THREADS and entry["setup"]
+                  and entry not in fallback.values()]
         parts += [f"### {name}", ""]
         setups = sorted({entry["setup"] for entry in group if entry["setup"]})
         for setup in setups:
@@ -673,8 +690,11 @@ def build():
                       "[Official runs](docs/OFFICIAL_RUNS.md) will replace these rows.", ""]
         slug_name = slug(name)
         official = sorted((entry for entry in group if entry["setup"]), key=lambda entry: -entry["accuracy"])
-        pairs = [(base_entry, other) for other in others for base_entry in group
-                 if base_entry["setup"] and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
+        # Each pair is (fewer threads, more threads), whichever count is the main one.
+        pairs = [tuple(sorted((base_entry, other), key=lambda entry: entry["threads"]))
+                 for other in others for base_entry in group
+                 if base_entry["setup"] and base_entry["threads"] == PRIMARY_THREADS
+                 and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
         total = totals["all"]
         if official:
             parts += ["#### At a glance", "", glance_table(official, total), "",
@@ -694,17 +714,20 @@ def build():
                                                     "Where each model succeeds")),
                 "Share of each track's cases passed, per model and thinking mode")
         if pairs:
-            high = pairs[0][1]["threads"]
-            parts += [f"#### {PRIMARY_THREADS} vs {high} CPU threads", ""]
+            low, high = pairs[0][0]["threads"], pairs[0][1]["threads"]
+            parts += [f"#### {low} vs {high} CPU threads", ""]
             thread_rows = [{"label": f"{display_name(a['model'])} · thinking {a['thinking']}", "mode": a["thinking"],
                             "before": a["median_s"], "after": b["median_s"]}
                            for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["model"]))]
             parts += picture(write_chart(f"threads-{slug_name}",
-                lambda theme: charts.threads(thread_rows, theme, "Does using all four cores help?", PRIMARY_THREADS, high),
-                lambda theme: charts.threads_mobile(thread_rows, theme, "Do all four cores help?", PRIMARY_THREADS, high)),
-                f"Median time per case with {PRIMARY_THREADS} and {high} threads per model and thinking mode")
-            parts += [f"The main results use {PRIMARY_THREADS} threads. More threads speed up prompt processing, "
-                      "but generation can get slower; details are in the full results below.", ""]
+                lambda theme: charts.threads(thread_rows, theme, "Does using all four cores help?", low, high,
+                                             PRIMARY_THREADS),
+                lambda theme: charts.threads_mobile(thread_rows, theme, "Do all four cores help?", low, high,
+                                                    PRIMARY_THREADS)),
+                f"Median time per case with {low} and {high} threads per model and thinking mode")
+            parts += [f"The main results use {PRIMARY_THREADS} threads, all of the Pi's cores. Compared with "
+                      f"{low} threads, prompt processing is faster, but generation can be slower; details are in "
+                      "the full results below.", ""]
 
         # Everything else stays available, one click away.
         parts += ["#### Full results", "", "<details>",
@@ -739,7 +762,7 @@ def build():
         if split:
             parts += ["**Where the time per case goes** (thinking off)", "", time_table(split), "", TIME_NOTE, ""]
         if pairs:
-            parts += [f"**{PRIMARY_THREADS} vs {pairs[0][1]['threads']} threads**", "",
+            parts += [f"**{pairs[0][0]['threads']} vs {pairs[0][1]['threads']} threads**", "",
                       threads_table(pairs), "", THREADS_NOTE, ""]
         parts += ["</details>", ""]
     parts.append(END)

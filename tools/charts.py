@@ -198,20 +198,22 @@ def heatmap(rows, columns, theme, title):
     return c.svg()
 
 
-def threads(rows, theme, title, low, high):
-    """Time per case at two thread counts: an outline dot (fewer threads) and a filled dot (more).
+def threads(rows, theme, title, low, high, primary):
+    """Time per case at two thread counts, with an arrow from fewer threads to more.
+
+    The main thread count (primary) is drawn filled, like every other chart; the other as an outline.
 
     rows: [{"label", "mode", "before", "after"}] with times in seconds.
     """
     label_w, plot_w, top, row_h = 280, 440, 116, 46
     height = top + row_h * len(rows) + 54
     c = Canvas(theme, label_w + plot_w + 200, height, title,
-               f"Median time per case. Each arrow goes from {low} threads (filled, as in the other charts) to "
-               f"{high} threads (outline); left is faster.")
+               f"Median time per case. Each arrow goes from {low} to {high} threads; filled is the {primary}-thread "
+               "standard used in the other charts. Left is faster.")
     values = [row[key] for row in rows for key in ("before", "after")]
     x, ticks = log_scale(values, label_w, plot_w)
-    legend_x = c.legend_dot(label_w, 90, c.t["ink2"], f"{low} threads")
-    c.legend_dot(legend_x, 90, c.t["ink2"], f"{high} threads", hollow=True)
+    legend_x = c.legend_dot(label_w, 90, c.t["ink2"], f"{low} threads", hollow=primary != low)
+    c.legend_dot(legend_x, 90, c.t["ink2"], f"{high} threads", hollow=primary != high)
     bottom = top + row_h * len(rows) - 6
     for tick in ticks:
         c.line(x(tick), top - 6, x(tick), bottom)
@@ -229,8 +231,8 @@ def threads(rows, theme, title, low, high):
             c.line(start_x, cy, tip - direction * 4, cy, stroke="ink", width=1.25)
             c.parts.append(f'<path d="M{tip:.1f},{cy:.1f} l{-direction * 6:.1f},-3.5 v7 z" fill="{c.t["ink"]}"/>')
         # Main thread count filled, like every other chart; the other count as an outline.
-        c.dot(before, cy, 8.5, c.t[row["mode"]])
-        c.dot(after, cy, 8.5, c.t[row["mode"]], hollow=True)
+        c.dot(before, cy, 8.5, c.t[row["mode"]], hollow=primary != low)
+        c.dot(after, cy, 8.5, c.t[row["mode"]], hollow=primary != high)
         change = (row["after"] / row["before"] - 1) * 100
         word = "faster" if change < 0 else "slower"
         c.text(max(before, after) + 18, y + 1, f"{high} threads: {abs(change):.0f}% {word}", size=14, fill="ink",
@@ -340,12 +342,13 @@ def heatmap_mobile(rows, columns, theme, title):
     return c.svg()
 
 
-def threads_mobile(rows, theme, title, low, high):
+def threads_mobile(rows, theme, title, low, high, primary):
     """Each model and mode on its own line, then the 2-thread and 4-thread dots with the change."""
     row_h, top = 62, 160
     height = top + row_h * len(rows) + 60
     c = _mobile_canvas(theme, height, title, ["Median time per case. Arrows go from", f"{low} threads to {high} threads."])
-    _mobile_legend(c, 118, [(c.t["ink2"], f"{low} threads", False), (c.t["ink2"], f"{high} threads", True)])
+    _mobile_legend(c, 118, [(c.t["ink2"], f"{low} threads", primary != low),
+                            (c.t["ink2"], f"{high} threads", primary != high)])
     left, right = 34, MOBILE_W - 150
     values = [row[key] for row in rows for key in ("before", "after")]
     x, ticks = log_scale(values, left, right - left)
@@ -365,8 +368,8 @@ def threads_mobile(rows, theme, title, low, high):
         if (tip - start_x) * direction > 6:
             c.line(start_x, cy, tip - direction * 4, cy, stroke="ink", width=1.25)
             c.parts.append(f'<path d="M{tip:.1f},{cy:.1f} l{-direction * 6:.1f},-3.5 v7 z" fill="{c.t["ink"]}"/>')
-        c.dot(before, cy, 8.5, c.t[row["mode"]])
-        c.dot(after, cy, 8.5, c.t[row["mode"]], hollow=True)
+        c.dot(before, cy, 8.5, c.t[row["mode"]], hollow=primary != low)
+        c.dot(after, cy, 8.5, c.t[row["mode"]], hollow=primary != high)
         change = (row["after"] / row["before"] - 1) * 100
         c.text(right + 24, cy + 5.5, f"{abs(change):.0f}% {'faster' if change < 0 else 'slower'}", size=15,
                fill="ink", weight="700")

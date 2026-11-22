@@ -64,7 +64,7 @@ SETUP="Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 
 ## Commands
 
-Run these from `~/light-eval` inside the tmux session, after setting `SETUP` in that same shell.
+Run these from `~/light-eval` inside the tmux session, after setting `SETUP` in that same shell. These are the commands of the first official runs, at 2 threads. The runner's default is now 4 threads, so `--threads 2` is written out below to reproduce them; leave it out for 4-thread runs.
 
 **Rehearsal first (about 10–15 minutes).** It runs every phase and the gates between two models on the arithmetic track only, to check the whole chain before committing a night to it:
 
@@ -79,14 +79,14 @@ Thinking off: all four models, all phases, 4 rounds.
 
 ```bash
 python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b gemma4:e4b \
-  --cycles 1 --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off
+  --cycles 1 --threads 2 --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off
 ```
 
 Thinking on: one model per run, warm phase only.
 
 ```bash
 for model in qwen3.5:2b gemma4:e2b qwen3.5:4b; do
-  python3 light_eval.py run --models "$model" --phases warm --thinking on \
+  python3 light_eval.py run --models "$model" --phases warm --thinking on --threads 2 \
     --temp-min 30 --temp-max 50 --setup "$SETUP" --out "results/official_v1_7_on_${model//[:.]/_}"
 done
 ```
@@ -95,7 +95,7 @@ A run that stops early leaves a partial folder, and `--out` must name a new fold
 
 ## Thread count
 
-The official runs use `--threads 2`: Ollama's runner is started with `-t 2`, which was confirmed on the Pi with `ps`. So the published runs use 2 of the Pi 5's 4 cores. Ollama on its own normally uses all physical cores, so these timings are probably slower than with Ollama's defaults. The thread count mainly affects prompt processing, which is limited by computation. Generation, which is limited mostly by memory bandwidth, should change less. Accuracy should stay within the normal variation between passes.
+The first official runs used `--threads 2`, and Ollama's runner was started with `-t 2`, confirmed on the Pi with `ps`. The runner now defaults to `--threads 4`, all of the Pi 5's cores. Ollama on its own normally uses all physical cores, so these timings are probably slower than with Ollama's defaults. The thread count mainly affects prompt processing, which is limited by computation. Generation, which is limited mostly by memory bandwidth, should change less. Accuracy should stay within the normal variation between passes.
 
 ### 4 threads: protocol and outcome
 
@@ -118,7 +118,11 @@ Once a model had loaded, `ps -ww -o args= -C llama-server | tr ' ' '\n' | grep -
 - **Accuracy is unchanged with thinking off.** With thinking on, Qwen timeouts fell from 11 to 9 and from 13 to 11. That is a single pass each, within the usual variation between passes.
 - **Temperature rose by 3–12 °C,** to peaks of 72–78 °C, close to the roughly 80 °C throttling point, though no case throttled.
 
-**Decision.** The main results stay at 2 threads. That's the only setting with results for all four models, and the 4-thread effect differs by model family, so no single setting is best. For a Pi 5 deployment: use 4 threads for the Gemma models. For the Qwen models, 4 threads helps short answers but slows long reasoning. Two possible explanations, both untested: generation is limited by memory bandwidth, which the cores share; and the Qwen3.5 architecture, which mixes attention with recurrent layers, may do too little work per token to split well across 4 cores.
+**Decision.** At first the main results stayed at 2 threads. Since 2026-11-22 they use 4 threads, the runner's default, because:
+- 4 threads matches how Ollama is normally run, using all cores, and the bottom-line recommendation;
+- with thinking off, accuracy is the same at 2 and 4 threads.
+
+The 2-thread runs stay published as the comparison. `gemma4:e4b` has only its 2-thread run, because rerunning it risks another hang, so it appears in the main results marked "2 threads only". For the Qwen models, 4 threads slows generation, so long reasoning gets slower. That is a property of the models on this hardware, and the comparison table shows it. Two possible explanations, both untested: generation is limited by memory bandwidth, which the cores share; and the Qwen3.5 architecture, which mixes attention with recurrent layers, may do too little work per token to split well across 4 cores.
 
 ## What happened in the official thinking-off run
 

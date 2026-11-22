@@ -532,7 +532,7 @@ def build_parser():
     run.add_argument("--cycles", type=int, default=1, help="each cycle gives every model every run position")
     run.add_argument("--seed", type=int, default=42)
     run.add_argument("--setup", help="cooler, power supply, storage and Ollama service settings for the manifest")
-    run.add_argument("--threads", type=int, default=2)
+    run.add_argument("--threads", type=int, default=4, help="CPU threads for inference (default: 4, all Pi 5 cores)")
     run.add_argument("--cpu-only", action="store_true", help="force CPU inference on Mac too")
     run.add_argument("--context", type=int, help="context window; default 4096, or 10240 with --thinking on")
     run.add_argument("--max-tokens", type=int, help="generation cap per turn; default 1024, or 6144 with --thinking on")

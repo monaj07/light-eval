@@ -236,3 +236,138 @@ def threads(rows, theme, title, low, high):
         c.text(max(before, after) + 18, y + 1, f"{high} threads: {abs(change):.0f}% {word}", size=14, fill="ink",
                weight="700")
     return c.svg()
+
+
+# Phone versions. GitHub serves them to screens narrower than 600 px (see publish.picture), where
+# the desktop charts would be scaled to under half size. They are drawn about 440 px wide, one
+# column, with larger type, so they appear at roughly their drawn size on a phone.
+MOBILE_W = 440
+
+
+def _mobile_canvas(theme, height, title, subtitle_lines):
+    c = Canvas(theme, MOBILE_W, height, title)
+    c.parts[-1] = c.parts[-1].replace('font-size="19"', 'font-size="20"')
+    for index, line in enumerate(subtitle_lines):
+        c.text(24, 62 + 19 * index, line, size=14.5)
+    return c
+
+
+def _mobile_legend(c, y, items):
+    x = 24
+    for colour, label, hollow in items:
+        c.dot(x + 7, y - 5, 7.5, colour, hollow)
+        c.text(x + 21, y, label, size=15, fill="ink")
+        x += 40 + 8.2 * len(label)
+
+
+def dumbbell_mobile(rows, theme, title):
+    """Accuracy and time stacked; each model's name on its own line above its dots."""
+    row_h, panel_gap = 58, 70
+    top = 172
+    panel_h = row_h * len(rows)
+    height = top + 2 * panel_h + panel_gap + 70
+    c = _mobile_canvas(theme, height, title, ["Accuracy thinking adds, and the time", "per case it costs, per model."])
+    _mobile_legend(c, 118, [(c.t["off"], "thinking off", False), (c.t["on"], "thinking on", False)])
+    left, right = 34, MOBILE_W - 34
+    times = [mode["median_s"] for row in rows for mode in (row["off"], row["on"]) if mode]
+    time_x, ticks = log_scale(times, left, right - left)
+    acc_x = lambda percent: left + (right - left) * percent / 100
+    panels = ((top, "Accuracy (cases passed)", acc_x, "accuracy", lambda v: f"{v:.0f}%",
+               [(acc_x(p), f"{p}%") for p in (0, 50, 100)]),
+              (top + panel_h + panel_gap, "Median time per case (log scale)", time_x, "median_s", duration,
+               [(time_x(t), time_label(t)) for t in ticks if t in (1, 10, 60, 600) or len(ticks) <= 4]))
+    for y0, heading, scale, key, fmt, tick_marks in panels:
+        c.text(24, y0 - 6, heading, size=16, fill="ink", weight="700")
+        bottom = y0 + panel_h
+        for x, label in tick_marks:
+            c.line(x, y0 + 8, x, bottom)
+            c.text(x, bottom + 20, label, size=14, anchor="middle")
+        for index, row in enumerate(rows):
+            y = y0 + row_h * index
+            label = row["model"] + ("  · " + ", ".join(row["badges"]) if row["badges"] else "")
+            c.text(24, y + 24, label if len(label) <= 44 else row["model"], size=15, fill="ink", weight="700")
+            dots_y = y + 44
+            points = [(mode, row[mode][key]) for mode in ("off", "on") if row[mode]]
+            if len(points) == 2:
+                c.line(scale(points[0][1]), dots_y, scale(points[1][1]), dots_y, stroke="ink2", width=2.5,
+                       extra=' stroke-opacity="0.45"')
+            for mode, value in points:
+                c.dot(scale(value), dots_y, 8.5, c.t[mode])
+            ordered = sorted(points, key=lambda item: item[1])
+            for position, (mode, value) in enumerate(ordered):
+                outer_right = position == len(ordered) - 1
+                x = scale(value) + (13 if outer_right else -13)
+                anchor = "start" if outer_right else "end"
+                if outer_right and x > MOBILE_W - 70:  # keep the label inside the frame
+                    x, anchor = scale(value) - 13, "end"
+                    if len(ordered) == 2:
+                        x = scale(value) + 13 if scale(value) + 70 < MOBILE_W else scale(value) - 13
+                c.text(x, dots_y + 5.5, fmt(value), size=15, fill="ink", weight="700", anchor=anchor, halo=True)
+    return c.svg()
+
+
+def heatmap_mobile(rows, columns, theme, title):
+    """One block per model: its name, then a row of cells, one per track."""
+    short = {"Arithmetic": "Arith", "Structured": "Struct", "Context": "Ctx"}
+    cell_w = (MOBILE_W - 48) / len(columns)
+    block_h, top = 70, 150
+    height = top + block_h * len(rows) + 70
+    better = "Darker" if theme == "light" else "Brighter"
+    c = _mobile_canvas(theme, height, title, ["Share of each track's cases passed.", f"{better} cells are better."])
+    _mobile_legend(c, 112, [(c.t["off"], "thinking off", False), (c.t["on"], "thinking on", False)])
+    for index, name in enumerate(columns):
+        c.text(24 + cell_w * index + cell_w / 2, top - 6, short.get(name, name), size=14, fill="ink",
+               anchor="middle", weight="700")
+    ramp = BLUES if c.t is THEMES["light"] else BLUES[::-1][2:]
+    for r, row in enumerate(rows):
+        y = top + block_h * r
+        c.dot(24 + 7, y + 20, 7, c.t[row["mode"]])
+        c.text(44, y + 25, row["label"], size=15, fill="ink", weight="700")
+        for col, value in enumerate(row["values"]):
+            x = 24 + cell_w * col
+            cy = y + 34
+            if value is None:
+                c.parts.append(f'<rect x="{x + 2:.1f}" y="{cy}" width="{cell_w - 4:.1f}" height="30" rx="5" fill="none" '
+                               f'stroke="{c.t["ink2"]}" stroke-opacity="0.6" stroke-dasharray="4 3"/>')
+                c.text(x + cell_w / 2, cy + 20, "n/a", size=14, anchor="middle")
+                continue
+            fill = ramp[min(len(ramp) - 1, round(value / 100 * (len(ramp) - 1)))]
+            c.parts.append(f'<rect x="{x + 2:.1f}" y="{cy}" width="{cell_w - 4:.1f}" height="30" rx="5" fill="{fill}"/>')
+            c.text(x + cell_w / 2, cy + 20.5, f"{value:.0f}%", size=14.5, anchor="middle",
+                   weight="700", color="#ffffff" if luminance(fill) < 0.3 else "#0b0b0b")
+    c.text(24, height - 40, "n/a: the model can't attempt that track.", size=13.5)
+    c.text(24, height - 20, "All: the tracks each model supports.", size=13.5)
+    return c.svg()
+
+
+def threads_mobile(rows, theme, title, low, high):
+    """Each model and mode on its own line, then the 2-thread and 4-thread dots with the change."""
+    row_h, top = 62, 160
+    height = top + row_h * len(rows) + 60
+    c = _mobile_canvas(theme, height, title, ["Median time per case. Arrows go from", f"{low} threads to {high} threads."])
+    _mobile_legend(c, 118, [(c.t["ink2"], f"{low} threads", False), (c.t["ink2"], f"{high} threads", True)])
+    left, right = 34, MOBILE_W - 150
+    values = [row[key] for row in rows for key in ("before", "after")]
+    x, ticks = log_scale(values, left, right - left)
+    bottom = top + row_h * len(rows)
+    for tick in ticks:
+        if tick in (3, 10, 60, 600) or len(ticks) <= 4:
+            c.line(x(tick), top + 4, x(tick), bottom)
+            c.text(x(tick), bottom + 20, time_label(tick), size=14, anchor="middle")
+    for index, row in enumerate(rows):
+        y = top + row_h * index
+        c.dot(24 + 7, y + 19, 7, c.t[row["mode"]])
+        c.text(44, y + 24, row["label"], size=15, fill="ink", weight="700")
+        cy = y + 46
+        before, after = x(row["before"]), x(row["after"])
+        direction = 1 if after > before else -1
+        start_x, tip = before + direction * 8, after - direction * 9
+        if (tip - start_x) * direction > 6:
+            c.line(start_x, cy, tip - direction * 4, cy, stroke="ink", width=1.25)
+            c.parts.append(f'<path d="M{tip:.1f},{cy:.1f} l{-direction * 6:.1f},-3.5 v7 z" fill="{c.t["ink"]}"/>')
+        c.dot(before, cy, 8.5, c.t[row["mode"]])
+        c.dot(after, cy, 8.5, c.t[row["mode"]], hollow=True)
+        change = (row["after"] / row["before"] - 1) * 100
+        c.text(right + 24, cy + 5.5, f"{abs(change):.0f}% {'faster' if change < 0 else 'slower'}", size=15,
+               fill="ink", weight="700")
+    return c.svg()

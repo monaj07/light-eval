@@ -564,16 +564,27 @@ def svg_chart(points, theme, title):
 
 
 def picture(base, alt, width=920):
-    """README markup for a chart with light and dark versions."""
-    return ["<picture>",
+    """README markup for a chart: light and dark versions, plus phone versions if they exist.
+
+    The browser takes the first <source> whose media query matches, so the narrow-screen
+    sources come first. Screens under 600 px get the one-column phone chart, which would
+    otherwise be shrunk to under half size."""
+    sources = []
+    if (ASSETS / f"{base}-mobile-light.svg").exists():
+        sources += [f'  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" '
+                    f'srcset="docs/assets/{base}-mobile-dark.svg">',
+                    f'  <source media="(max-width: 600px)" srcset="docs/assets/{base}-mobile-light.svg">']
+    return ["<picture>", *sources,
             f'  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/{base}-dark.svg">',
             f'  <img alt="{alt}" src="docs/assets/{base}-light.svg" width="{width}">',
             "</picture>", ""]
 
 
-def write_chart(base, render):
+def write_chart(base, render, render_mobile=None):
     for theme in THEMES:
         (ASSETS / f"{base}-{theme}.svg").write_text(render(theme))
+        if render_mobile:
+            (ASSETS / f"{base}-mobile-{theme}.svg").write_text(render_mobile(theme))
     return base
 
 
@@ -672,20 +683,25 @@ def build():
                       "0%. Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's "
                       "7.9 GB of usable RAM.", ""]
             parts += picture(write_chart(f"thinking-{slug_name}", lambda theme: charts.dumbbell(
-                dumbbell_rows(official, total), theme, "What thinking buys")),
+                dumbbell_rows(official, total), theme, "What thinking buys"),
+                lambda theme: charts.dumbbell_mobile(dumbbell_rows(official, total), theme, "What thinking buys")),
                 "Accuracy and median time per case for each model with thinking off and on")
             parts += ["#### Strengths and weaknesses by track", ""]
+            columns = [TRACK_NAMES[track] for track in TRACKS] + ["All"]
             parts += picture(write_chart(f"tracks-{slug_name}", lambda theme: charts.heatmap(
-                heatmap_rows(official, totals), [TRACK_NAMES[track] for track in TRACKS] + ["All"], theme,
-                "Where each model succeeds")), "Share of each track's cases passed, per model and thinking mode")
+                heatmap_rows(official, totals), columns, theme, "Where each model succeeds"),
+                lambda theme: charts.heatmap_mobile(heatmap_rows(official, totals), columns, theme,
+                                                    "Where each model succeeds")),
+                "Share of each track's cases passed, per model and thinking mode")
         if pairs:
             high = pairs[0][1]["threads"]
             parts += [f"#### {PRIMARY_THREADS} vs {high} CPU threads", ""]
-            parts += picture(write_chart(f"threads-{slug_name}", lambda theme: charts.threads(
-                [{"label": f"{display_name(a['model'])} · thinking {a['thinking']}", "mode": a["thinking"],
-                  "before": a["median_s"], "after": b["median_s"]}
-                 for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["model"]))],
-                theme, "Does using all four cores help?", PRIMARY_THREADS, high)),
+            thread_rows = [{"label": f"{display_name(a['model'])} · thinking {a['thinking']}", "mode": a["thinking"],
+                            "before": a["median_s"], "after": b["median_s"]}
+                           for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["model"]))]
+            parts += picture(write_chart(f"threads-{slug_name}",
+                lambda theme: charts.threads(thread_rows, theme, "Does using all four cores help?", PRIMARY_THREADS, high),
+                lambda theme: charts.threads_mobile(thread_rows, theme, "Do all four cores help?", PRIMARY_THREADS, high)),
                 f"Median time per case with {PRIMARY_THREADS} and {high} threads per model and thinking mode")
             parts += [f"The main results use {PRIMARY_THREADS} threads. More threads speed up prompt processing, "
                       "but generation can get slower; details are in the full results below.", ""]

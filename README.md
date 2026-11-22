@@ -48,6 +48,8 @@ Setup: Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 Accuracy is the share of cases passed on the tracks the model supports; Tracks shows how many of the 5 that is. A track a model can't attempt (no vision, for example) is not counted as 0%. Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's 7.9 GB of usable RAM.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/assets/thinking-raspberry-pi-5-8-gb-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="docs/assets/thinking-raspberry-pi-5-8-gb-mobile-light.svg">
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/thinking-raspberry-pi-5-8-gb-dark.svg">
   <img alt="Accuracy and median time per case for each model with thinking off and on" src="docs/assets/thinking-raspberry-pi-5-8-gb-light.svg" width="920">
 </picture>
@@ -55,6 +57,8 @@ Accuracy is the share of cases passed on the tracks the model supports; Tracks s
 #### Strengths and weaknesses by track
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/assets/tracks-raspberry-pi-5-8-gb-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="docs/assets/tracks-raspberry-pi-5-8-gb-mobile-light.svg">
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/tracks-raspberry-pi-5-8-gb-dark.svg">
   <img alt="Share of each track's cases passed, per model and thinking mode" src="docs/assets/tracks-raspberry-pi-5-8-gb-light.svg" width="920">
 </picture>
@@ -62,6 +66,8 @@ Accuracy is the share of cases passed on the tracks the model supports; Tracks s
 #### 2 vs 4 CPU threads
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/assets/threads-raspberry-pi-5-8-gb-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="docs/assets/threads-raspberry-pi-5-8-gb-mobile-light.svg">
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/threads-raspberry-pi-5-8-gb-dark.svg">
   <img alt="Median time per case with 2 and 4 threads per model and thinking mode" src="docs/assets/threads-raspberry-pi-5-8-gb-light.svg" width="920">
 </picture>

@@ -67,6 +67,12 @@ class Canvas:
         return "\n".join(self.parts + ["</svg>"]) + "\n"
 
 
+def label_column(labels, minimum):
+    """Width of a column of 14 px semibold labels after a mode dot (text starts at x = 44), wide
+    enough for the longest label, so a long model name never runs into the plot."""
+    return max(minimum, round(44 + 8.3 * max((len(label) for label in labels), default=0) + 18))
+
+
 def luminance(hex_colour):
     """Relative luminance (WCAG) of a #rrggbb colour."""
     def channel(value):
@@ -157,7 +163,8 @@ def heatmap(rows, columns, theme, title):
 
     rows: [{"label", "mode", "values": [percent per column]}]
     """
-    label_w, cell_w, cell_h, top = 270, 104, 44, 112
+    cell_w, cell_h, top = 104, 44, 112
+    label_w = label_column([row["label"] for row in rows], 270)
     width = label_w + cell_w * len(columns) + 30
     height = top + cell_h * len(rows) + 46
     better = "Darker" if theme == "light" else "Brighter"
@@ -205,7 +212,10 @@ def threads(rows, theme, title, low, high, primary):
 
     rows: [{"label", "mode", "before", "after"}] with times in seconds.
     """
-    label_w, plot_w, top, row_h = 280, 440, 116, 46
+    # Names only: the dot before each name gives the thinking mode, as in the heatmap.
+    top, row_h = 116, 46
+    label_w = label_column([row["name"] for row in rows], 200)
+    plot_w = max(380, 720 - label_w)
     height = top + row_h * len(rows) + 54
     c = Canvas(theme, label_w + plot_w + 200, height, title,
                f"Median time per case. Each arrow goes from {low} to {high} threads; filled is the {primary}-thread "
@@ -214,6 +224,10 @@ def threads(rows, theme, title, low, high, primary):
     x, ticks = log_scale(values, label_w, plot_w)
     legend_x = c.legend_dot(label_w, 90, c.t["ink2"], f"{low} threads", hollow=primary != low)
     c.legend_dot(legend_x, 90, c.t["ink2"], f"{high} threads", hollow=primary != high)
+    modes = [mode for mode in ("off", "on") if any(row["mode"] == mode for row in rows)]
+    legend_x = c.width - 24 - c.legend_width(*(f"thinking {mode}" for mode in modes))
+    for mode in modes:
+        legend_x = c.legend_dot(legend_x, 36, c.t[mode], f"thinking {mode}")
     bottom = top + row_h * len(rows) - 6
     for tick in ticks:
         c.line(x(tick), top - 6, x(tick), bottom)
@@ -221,7 +235,7 @@ def threads(rows, theme, title, low, high, primary):
     for index, row in enumerate(rows):
         y = top + row_h * index + row_h / 2 - 6
         c.dot(24 + 7, y - 4, 7, c.t[row["mode"]])
-        c.text(44, y + 1, row["label"], size=14, fill="ink", weight="600")
+        c.text(44, y + 1, row["name"], size=14, fill="ink", weight="600")
         before, after = x(row["before"]), x(row["after"])
         cy = y - 4
         # A thin arrow joins the two dots, edge to edge, pointing at the higher thread count.

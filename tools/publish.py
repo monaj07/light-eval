@@ -569,8 +569,8 @@ def svg_chart(points, theme, title):
     """Accuracy against speed. Bubble area shows peak memory in use, colour shows the thinking
     mode, and a thin connector joins each model's thinking-off and thinking-on points."""
     t = THEMES[theme]
-    width, height = 920, 540
-    left, top, plot_w, plot_h = 68, 104, 560, 350
+    width, height = 920, 620
+    left, top, plot_w, plot_h = 68, 104, 580, 430
     legend_x = left + plot_w + 36
     total = len(dataset())
     font = 'font-family="system-ui, -apple-system, Segoe UI, sans-serif"'
@@ -663,24 +663,38 @@ def svg_chart(points, theme, title):
         # Width estimates for 14 px semibold labels and 12.5 px notes, on the generous side.
         w = max(8.2 * len(label), 7.2 * len(note or ""))
         extra = 15 if note else 0  # height of the second line
-        candidates = [(px + r + 8, py + 4, "start"), (px - r - 8, py + 4, "end"),
-                      (px, py - r - 8, "middle"), (px, py + r + 18, "middle"),
-                      (px + r * 0.7 + 6, py - r * 0.7 - 6, "start"), (px - r * 0.7 - 6, py - r * 0.7 - 6, "end"),
-                      (px + r * 0.7 + 6, py + r * 0.7 + 16, "start"), (px - r * 0.7 - 6, py + r * 0.7 + 16, "end"),
-                      (px, py - r - 26, "middle"), (px, py + r + 36, "middle")]
+        # Spots in eight directions, first beside the bubble, then further out (with a leader line)
+        # for crowded clusters. Text baselines sit 4 px below the anchor point's centre line.
+        candidates = []
+        for distance in (8, 28, 52, 80, 110):
+            reach = r + distance
+            diagonal = r * 0.7 + distance * 0.8
+            candidates += [(px + reach, py + 4, "start", distance), (px - reach, py + 4, "end", distance),
+                           (px, py - reach, "middle", distance), (px, py + reach + 10, "middle", distance),
+                           (px + diagonal, py - diagonal, "start", distance), (px - diagonal, py - diagonal, "end", distance),
+                           (px + diagonal, py + diagonal + 10, "start", distance),
+                           (px - diagonal, py + diagonal + 10, "end", distance)]
 
         def box(cand):
-            lx, ly, anchor = cand
+            lx, ly, anchor, _ = cand
             x0 = lx if anchor == "start" else lx - w if anchor == "end" else lx - w / 2
             return (x0, ly - 12, x0 + w, ly + 4 + extra)
 
         def overlaps(cand):
-            """How badly a spot collides: leaving the plot counts most, then bubbles, then labels."""
+            """How badly a spot collides: leaving the plot counts most, then bubbles and other labels;
+            among clear spots, the nearest wins."""
             x0, y0, x1, y1 = box(cand)
             outside = not (left <= x0 and x1 <= left + plot_w + 30 and top <= y0 and y1 <= top + plot_h)
-            circles = sum(hits_circle((x0, y0, x1, y1), cx, cy, cr) for other, cx, cy, cr in bubbles if other is not point)
-            labels = sum(x0 < b[2] and b[0] < x1 and y0 < b[3] and b[1] < y1 for b in placed)
-            return 100 * outside + 10 * circles + labels
+            circles = sum(hits_circle((x0 - 2, y0 - 2, x1 + 2, y1 + 2), cx, cy, cr)
+                          for other, cx, cy, cr in bubbles if other is not point)
+            labels = sum(x0 < b[2] + 4 and b[0] - 4 < x1 and y0 < b[3] + 2 and b[1] - 2 < y1 for b in placed)
+            # A label nearer another bubble than its own reads as that bubble's label, leader or not.
+            def edge_gap(cx, cy, cr):
+                nx, ny = min(max(cx, x0), x1), min(max(cy, y0), y1)
+                return math.hypot(nx - cx, ny - cy) - cr
+            own = edge_gap(px, py, r)
+            misleading = sum(edge_gap(cx, cy, cr) < own for other, cx, cy, cr in bubbles if other is not point)
+            return 1000 * outside + 100 * circles + 100 * labels + 150 * misleading + cand[3]
         # The first clear spot wins; if none is clear, take the least crowded one.
         choice = min(candidates, key=overlaps)
         placed.append(box(choice))
@@ -887,7 +901,8 @@ def build():
         if pairs:
             low, high = pairs[0][0]["threads"], pairs[0][1]["threads"]
             parts += [f"### {low} vs {high} CPU threads", ""]
-            thread_rows = [{"label": f"{display_name(a['model'])} · thinking {a['thinking']}", "mode": a["thinking"],
+            thread_rows = [{"label": f"{display_name(a['model'])} · thinking {a['thinking']}",
+                            "name": display_name(a["model"]), "mode": a["thinking"],
                             "before": a["median_s"], "after": b["median_s"]}
                            for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["model"]))]
             parts += picture(write_chart(f"threads-{slug_name}",

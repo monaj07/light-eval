@@ -92,7 +92,7 @@ The main results use 4 threads, all of the Pi's cores. Compared with 2 threads, 
 
 Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during it, gemma4:e4b exhausted the Pi's memory (RAM and zram full) and the Pi hung and rebooted after 49 of its 65 cases.
 
-Ollama names, for `ollama pull`: `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` is `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M`
+Note: Official filename for pulling `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` through Ollama is `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M`.
 
 #### Thinking off: scores by track
 

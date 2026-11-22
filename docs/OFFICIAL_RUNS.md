@@ -7,7 +7,8 @@ This is the protocol behind the published Raspberry Pi 5 results. It uses suite 
 | | Thinking off | Thinking on |
 |---|---|---|
 | Invocation | one run with all four models, `--cycles 1` | one run per model |
-| What runs | 4 rounds; each model takes every position once and answers the 65 cases 4 times | one pass of the 65 cases |
+| What runs | one round per model in the run, each model taking every position once | one pass of the 65 cases |
+| Published | the first 3 rounds, so every thinking-off result averages 3 passes | the single pass |
 | Phases | cold, warm, sustained | warm only |
 | Expected time on the Pi | about 10 hours | from about 4.5 hours (`qwen3.5:2b`) upwards per model |
 
@@ -137,6 +138,6 @@ python3 tools/publish.py add results/official_v1_7_off --name pi5-off-official
 python3 tools/publish.py build
 ```
 
-If a run stops partway, publish only its complete rounds with `--rounds 1-3 --note "why"`. `--flag "MODEL=text"` shows a warning in that model's memory column.
+Publish thinking-off runs with `--rounds 1-3`, whatever the number of models. If a run stops partway, publish only its complete rounds the same way, and add `--note "why"` when readers need to know. `--flag "MODEL=text"` shows a warning in that model's memory column.
 
 A run counts as official when it records a `--setup`. In the README, its rows replace the exploratory rows (marked †) for the same model and thinking mode.

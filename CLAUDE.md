@@ -31,7 +31,7 @@ python3 fixtures/make_fixtures.py
 python3 tools/show_case.py docs/results/pi5-off-official json-24h-times
 
 # Publish a run (copies it into docs/results/, which is committed) and rebuild the README results
-python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>   # --rounds 1-3 --note "why" for a partial run
+python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>   # thinking off: --rounds 1-3 (3 passes, whatever the model count)
 python3 tools/publish.py build
 ```
 

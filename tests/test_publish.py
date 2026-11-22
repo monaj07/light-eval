@@ -100,6 +100,15 @@ class AddTest(unittest.TestCase):
         self.assertEqual(len(read_rows(self.tmp / "published" / "x" / "cases.jsonl")),
                          len(read_rows(SOURCE / "cases.jsonl")))
 
+    def test_rounds_without_a_note(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            publish.add(self.run, "x", rounds="1")
+        manifest = json.loads((self.tmp / "published" / "x" / "manifest.json").read_text())
+        self.assertEqual(manifest["published"]["rounds"], [1])
+        self.assertEqual(manifest["published"]["original_rounds"], [1])
+        self.assertNotIn("note", manifest["published"])
+        self.assertIsNone(publish.entries()[0]["note"])
+
     def test_entries_and_duplicates(self):
         with contextlib.redirect_stdout(io.StringIO()):
             publish.add(self.run, "a", flags=["gemma4:e2b=hung once"])

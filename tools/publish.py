@@ -174,8 +174,8 @@ def add(run, name, rounds=None, note=None, flags=(), allow_errors=False):
     if manifest.get("status") not in ("complete", "complete_with_errors") and not rounds:
         sys.exit(f"{run} is not a complete run (status {manifest.get('status')!r}). To publish only its "
                  "complete rounds, pass --rounds and a --note saying why the rest are left out.")
-    if (rounds or allow_errors) and not note:
-        sys.exit("--rounds and --allow-errors need a --note saying why")
+    if allow_errors and not note:
+        sys.exit("--allow-errors needs a --note saying why the errors are acceptable")
     target = PUBLISHED / (name or run.name)
     if target.exists():
         sys.exit(f"{target} already exists")
@@ -200,8 +200,10 @@ def add(run, name, rounds=None, note=None, flags=(), allow_errors=False):
     published = {}
     if keep is not None:
         # The run's own status stays as recorded; this records what was published and why.
-        published.update({"rounds": sorted(keep), "note": note, "original_status": manifest.get("status")})
-    elif note:
+        # Recorded in the manifest only; the README shows a note just when one is given.
+        published.update({"rounds": sorted(keep), "original_status": manifest.get("status"),
+                          "original_rounds": sorted({row["round"] for row in read_rows(run / "cases.jsonl")})})
+    if note:
         published["note"] = note
     if allow_errors:
         published["errors_accepted"] = True
@@ -960,9 +962,10 @@ def main():
     add_command = commands.add_parser("add", help="copy a finished run into docs/results/")
     add_command.add_argument("run", type=Path)
     add_command.add_argument("--name", help="published directory name (default: the run's name)")
-    add_command.add_argument("--rounds", help="publish only these complete rounds, e.g. 1-3 (needs --note)")
-    add_command.add_argument("--note", help="why some rounds are left out, or why errors are accepted; "
-                                            "shown with the results")
+    add_command.add_argument("--rounds", help="publish only these complete rounds, e.g. 1-3; the manifest "
+                                              "records which rounds the run had")
+    add_command.add_argument("--note", help="a note shown with the results, e.g. why a run was cut short; "
+                                            "needed with --allow-errors")
     add_command.add_argument("--allow-errors", action="store_true",
                              help="publish although some cases failed with server or connection errors "
                                   "(needs --note)")

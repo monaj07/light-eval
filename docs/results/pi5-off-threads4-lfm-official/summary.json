@@ -1,0 +1,3887 @@
+{
+  "groups": [
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 3,
+          "outcomes": {
+            "complete": 3
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 3
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 32.027671908528966,
+        "median": 31.846626646072515,
+        "min": 31.807627469067082,
+        "n": 3,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 2,
+        "median": 2,
+        "min": 2,
+        "n": 3,
+        "p95": null
+      },
+      "load_s": {
+        "max": 4.584812162,
+        "median": 3.321440702,
+        "min": 3.061480744,
+        "n": 3,
+        "p95": null
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 3,
+      "outcomes": {
+        "complete": 3
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 1676352,
+      "phase": "cold",
+      "prefill_s": {
+        "max": 0.266527,
+        "median": 0.246162,
+        "min": 0.243869,
+        "n": 3,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 18.0,
+        "median": 18.0,
+        "min": 18.0,
+        "n": 3,
+        "p95": null
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 4.859142804998555,
+        "median": 3.568391328000871,
+        "min": 3.3143734330005827,
+        "n": 3,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 4.9178957600015565,
+        "median": 3.63425486900087,
+        "min": 3.3743494949994783,
+        "n": 3,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 33,
+          "outcomes": {
+            "complete": 33
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 33
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 35.0,
+        "median": 35.0,
+        "min": 0.0,
+        "n": 33,
+        "p95": 35.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 15.985541078094863,
+        "median": 15.518097134015754,
+        "min": 15.080642559679951,
+        "n": 33,
+        "p95": 15.973567738784247
+      },
+      "generated_tokens": {
+        "max": 128,
+        "median": 128,
+        "min": 128,
+        "n": 33,
+        "p95": 128
+      },
+      "load_s": {
+        "max": 0.00384972,
+        "median": 0.001728519,
+        "min": 0.001453686,
+        "n": 33,
+        "p95": 0.003383199
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 33,
+      "outcomes": {
+        "complete": 33
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 1618992,
+      "phase": "sustained",
+      "prefill_s": {
+        "max": 0.483142,
+        "median": 0.073964,
+        "min": 0.071533,
+        "n": 33,
+        "p95": 0.482219
+      },
+      "prompt_tokens": {
+        "max": 39.0,
+        "median": 39.0,
+        "min": 39.0,
+        "n": 33,
+        "p95": 39.0
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 0.4917983369996364,
+        "median": 0.08285235299990745,
+        "min": 0.0770962039969163,
+        "n": 33,
+        "p95": 0.48884629100211896
+      },
+      "wall_s": {
+        "max": 8.621060330999171,
+        "median": 8.359377364002285,
+        "min": 8.085201546000462,
+        "n": 33,
+        "p95": 8.593028246999893
+      }
+    },
+    {
+      "agent_metrics": {
+        "final_answer_pass_rate": 0.6153846153846154,
+        "final_answer_passed": 24,
+        "n": 39,
+        "tool_use_pass_rate": 0.46153846153846156,
+        "tool_use_passed": 18
+      },
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 6,
+            "wrong_answer": 9,
+            "wrong_tool_trace": 6
+          },
+          "pass_rate": 0.2857142857142857,
+          "passed": 6,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 12,
+            "wrong_answer": 6
+          },
+          "pass_rate": 0.6666666666666666,
+          "passed": 12,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 458.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 123,
+        "p95": 437.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 18.49317601804934,
+        "median": 16.876402850986988,
+        "min": 12.347803037724185,
+        "n": 123,
+        "p95": 17.611796381216138
+      },
+      "generated_tokens": {
+        "max": 108,
+        "median": 31,
+        "min": 16,
+        "n": 39,
+        "p95": 85
+      },
+      "load_s": {
+        "max": 0.008463667,
+        "median": 0.001788316,
+        "min": 0.00150793,
+        "n": 123,
+        "p95": 0.004605773
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 39,
+      "outcomes": {
+        "pass": 18,
+        "wrong_answer": 15,
+        "wrong_tool_trace": 6
+      },
+      "pass_rate": 0.46153846153846156,
+      "peak_system_used_estimate_kib": 1604896,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 4.874422,
+        "median": 1.874806,
+        "min": 0.224168,
+        "n": 123,
+        "p95": 4.70413
+      },
+      "prompt_tokens": {
+        "max": 483.0,
+        "median": 376.0,
+        "min": 120.0,
+        "n": 123,
+        "p95": 462.0
+      },
+      "track": "agent",
+      "ttft_s": {
+        "max": 5.8316472100013925,
+        "median": 4.984412865997001,
+        "min": 3.505105858999741,
+        "n": 39,
+        "p95": 5.820524900002056
+      },
+      "wall_s": {
+        "max": 15.303739048998978,
+        "median": 8.277321295998263,
+        "min": 5.657358768999984,
+        "n": 39,
+        "p95": 13.423596854001516
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "wrong_answer": 21
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 12,
+            "wrong_answer": 6
+          },
+          "pass_rate": 0.6666666666666666,
+          "passed": 12,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 18.611922797744235,
+        "median": 17.599514253406607,
+        "min": 16.563092130543666,
+        "n": 39,
+        "p95": 18.47857936681828
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 9,
+        "min": 7,
+        "n": 39,
+        "p95": 13
+      },
+      "load_s": {
+        "max": 0.005540185,
+        "median": 0.001710478,
+        "min": 0.001466462,
+        "n": 39,
+        "p95": 0.003618075
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 39,
+      "outcomes": {
+        "pass": 12,
+        "wrong_answer": 27
+      },
+      "pass_rate": 0.3076923076923077,
+      "peak_system_used_estimate_kib": 1715632,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 0.838769,
+        "median": 0.539964,
+        "min": 0.364962,
+        "n": 39,
+        "p95": 0.830259
+      },
+      "prompt_tokens": {
+        "max": 72.0,
+        "median": 50.0,
+        "min": 33.0,
+        "n": 39,
+        "p95": 72.0
+      },
+      "track": "arithmetic",
+      "ttft_s": {
+        "max": 0.8460227010000381,
+        "median": 0.5489170450018719,
+        "min": 0.375668330998451,
+        "n": 39,
+        "p95": 0.8403993549945881
+      },
+      "wall_s": {
+        "max": 1.6174403400000301,
+        "median": 1.0102021250022517,
+        "min": 0.8094954419939313,
+        "n": 39,
+        "p95": 1.6159868360045948
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 12
+        },
+        "control": {
+          "n": 9,
+          "outcomes": {
+            "pass": 3,
+            "wrong_answer": 6
+          },
+          "pass_rate": 0.3333333333333333,
+          "passed": 3,
+          "supported": 9
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 21,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 15.97696476724225,
+        "median": 14.7523740257901,
+        "min": 14.226002027851925,
+        "n": 21,
+        "p95": 15.563367982001829
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 11,
+        "min": 9,
+        "n": 21,
+        "p95": 13
+      },
+      "load_s": {
+        "max": 0.004372753,
+        "median": 0.001782921,
+        "min": 0.001610386,
+        "n": 21,
+        "p95": 0.001971572
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 21,
+      "outcomes": {
+        "pass": 3,
+        "wrong_answer": 18
+      },
+      "pass_rate": 0.14285714285714285,
+      "peak_system_used_estimate_kib": 1696560,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 22.438265,
+        "median": 18.345473,
+        "min": 15.098251,
+        "n": 21,
+        "p95": 22.418425
+      },
+      "prompt_tokens": {
+        "max": 1899.0,
+        "median": 1570.0,
+        "min": 1331.0,
+        "n": 21,
+        "p95": 1899.0
+      },
+      "track": "context-long",
+      "ttft_s": {
+        "max": 22.4451895240054,
+        "median": 18.35126104899973,
+        "min": 15.104676869996183,
+        "n": 21,
+        "p95": 22.424984075001703
+      },
+      "wall_s": {
+        "max": 23.21027252800559,
+        "median": 19.03601240500575,
+        "min": 15.668791075004265,
+        "n": 21,
+        "p95": 23.198784246000287
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 12
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 6
+          },
+          "pass_rate": 1.0,
+          "passed": 6,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 18,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 17.0542127185071,
+        "median": 16.52596776197069,
+        "min": 16.325052574089767,
+        "n": 18,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 11.0,
+        "min": 10,
+        "n": 18,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.003439687,
+        "median": 0.001640835,
+        "min": 0.001466412,
+        "n": 18,
+        "p95": null
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 18,
+      "outcomes": {
+        "pass": 6,
+        "wrong_answer": 12
+      },
+      "pass_rate": 0.3333333333333333,
+      "peak_system_used_estimate_kib": 1681632,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 3.994415,
+        "median": 3.183207,
+        "min": 1.808026,
+        "n": 18,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 379.0,
+        "median": 305.0,
+        "min": 176.0,
+        "n": 18,
+        "p95": null
+      },
+      "track": "context-short",
+      "ttft_s": {
+        "max": 4.005345812001906,
+        "median": 3.1885028010001406,
+        "min": 1.8209649179989356,
+        "n": 18,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 4.679523410999536,
+        "median": 3.84904065649971,
+        "min": 2.5867627340012405,
+        "n": 18,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "invalid_json": 3,
+            "pass": 6,
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.2857142857142857,
+          "passed": 6,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 6,
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.3333333333333333,
+          "passed": 6,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 19.214363194558352,
+        "median": 16.449051803547146,
+        "min": 13.693851604775261,
+        "n": 39,
+        "p95": 19.21163149016941
+      },
+      "generated_tokens": {
+        "max": 69,
+        "median": 19,
+        "min": 5,
+        "n": 39,
+        "p95": 69
+      },
+      "load_s": {
+        "max": 0.003412843,
+        "median": 0.001701052,
+        "min": 0.001449282,
+        "n": 39,
+        "p95": 0.003337115
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 39,
+      "outcomes": {
+        "invalid_json": 3,
+        "pass": 12,
+        "wrong_answer": 24
+      },
+      "pass_rate": 0.3076923076923077,
+      "peak_system_used_estimate_kib": 1753664,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 0.959442,
+        "median": 0.492208,
+        "min": 0.403584,
+        "n": 39,
+        "p95": 0.958744
+      },
+      "prompt_tokens": {
+        "max": 90.0,
+        "median": 45.0,
+        "min": 36.0,
+        "n": 39,
+        "p95": 90.0
+      },
+      "track": "structured",
+      "ttft_s": {
+        "max": 0.9695483200048329,
+        "median": 0.49783472000126494,
+        "min": 0.412597486996674,
+        "n": 39,
+        "p95": 0.9641145649984537
+      },
+      "wall_s": {
+        "max": 5.395633107997128,
+        "median": 1.6314339950004069,
+        "min": 0.7481077370030107,
+        "n": 39,
+        "p95": 5.389662253001006
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "unsupported": 21
+          },
+          "pass_rate": null,
+          "passed": 0,
+          "supported": 0
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "unsupported": 18
+          },
+          "pass_rate": null,
+          "passed": 0,
+          "supported": 0
+        }
+      },
+      "cached_prompt_tokens": null,
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": null,
+      "generated_tokens": null,
+      "load_s": null,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "n": 39,
+      "outcomes": {
+        "unsupported": 39
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 1670496,
+      "phase": "warm",
+      "prefill_s": null,
+      "prompt_tokens": null,
+      "track": "vision",
+      "ttft_s": null,
+      "wall_s": null
+    },
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 3,
+          "outcomes": {
+            "complete": 3
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 3
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 20.810355232763822,
+        "median": 20.601777933435656,
+        "min": 18.40248065439221,
+        "n": 3,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 2,
+        "median": 2,
+        "min": 2,
+        "n": 3,
+        "p95": null
+      },
+      "load_s": {
+        "max": 10.679612179,
+        "median": 9.958554,
+        "min": 9.681614447,
+        "n": 3,
+        "p95": null
+      },
+      "model": "lfm3-omni:2b",
+      "n": 3,
+      "outcomes": {
+        "complete": 3
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 3162400,
+      "phase": "cold",
+      "prefill_s": {
+        "max": 0.381947,
+        "median": 0.369348,
+        "min": 0.363776,
+        "n": 3,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 20.0,
+        "median": 20.0,
+        "min": 20.0,
+        "n": 3,
+        "p95": null
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 11.051905370000895,
+        "median": 10.343974983999942,
+        "min": 10.052462021001702,
+        "n": 3,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 11.164062826002919,
+        "median": 10.44565459399746,
+        "min": 10.147248699002375,
+        "n": 3,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 21,
+          "outcomes": {
+            "complete": 21
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 21
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 21,
+        "p95": 0.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.423004613482417,
+        "median": 10.134709289031141,
+        "min": 9.952551212096331,
+        "n": 21,
+        "p95": 10.372841243583728
+      },
+      "generated_tokens": {
+        "max": 128,
+        "median": 128,
+        "min": 128,
+        "n": 21,
+        "p95": 128
+      },
+      "load_s": {
+        "max": 0.002875673,
+        "median": 0.000792822,
+        "min": 0.000696156,
+        "n": 21,
+        "p95": 0.000975003
+      },
+      "model": "lfm3-omni:2b",
+      "n": 21,
+      "outcomes": {
+        "complete": 21
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 3087808,
+      "phase": "sustained",
+      "prefill_s": {
+        "max": 0.715612,
+        "median": 0.685148,
+        "min": 0.664712,
+        "n": 21,
+        "p95": 0.703227
+      },
+      "prompt_tokens": {
+        "max": 41.0,
+        "median": 41.0,
+        "min": 41.0,
+        "n": 21,
+        "p95": 41.0
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 0.7214737519971095,
+        "median": 0.6908983389985224,
+        "min": 0.6687423149996903,
+        "n": 21,
+        "p95": 0.710037149998243
+      },
+      "wall_s": {
+        "max": 13.554368124001485,
+        "median": 13.316956061997189,
+        "min": 12.988061721000122,
+        "n": 21,
+        "p95": 13.543595658000413
+      }
+    },
+    {
+      "agent_metrics": {
+        "final_answer_pass_rate": 0.9230769230769231,
+        "final_answer_passed": 36,
+        "n": 39,
+        "tool_use_pass_rate": 0.7692307692307693,
+        "tool_use_passed": 30
+      },
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 12,
+            "wrong_answer": 3,
+            "wrong_tool_trace": 6
+          },
+          "pass_rate": 0.5714285714285714,
+          "passed": 12,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 18
+          },
+          "pass_rate": 1.0,
+          "passed": 18,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 168,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 11.960887896578189,
+        "median": 10.738362010139191,
+        "min": 8.936796739260764,
+        "n": 168,
+        "p95": 11.650491900411595
+      },
+      "generated_tokens": {
+        "max": 201,
+        "median": 52,
+        "min": 13,
+        "n": 39,
+        "p95": 201
+      },
+      "load_s": {
+        "max": 0.005350774,
+        "median": 0.000956416,
+        "min": 0.000738195,
+        "n": 168,
+        "p95": 0.003871717
+      },
+      "model": "lfm3-omni:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 30,
+        "wrong_answer": 3,
+        "wrong_tool_trace": 6
+      },
+      "pass_rate": 0.7692307692307693,
+      "peak_system_used_estimate_kib": 3162432,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 9.815125,
+        "median": 5.606409,
+        "min": 1.818094,
+        "n": 168,
+        "p95": 9.094877
+      },
+      "prompt_tokens": {
+        "max": 633.0,
+        "median": 364.5,
+        "min": 119.0,
+        "n": 168,
+        "p95": 600.0
+      },
+      "track": "agent",
+      "ttft_s": {
+        "max": 7.810609484997258,
+        "median": 6.516046158998506,
+        "min": 4.2526010449983005,
+        "n": 39,
+        "p95": 7.754367425997771
+      },
+      "wall_s": {
+        "max": 75.39596914999856,
+        "median": 25.18706085500162,
+        "min": 7.176972622000903,
+        "n": 39,
+        "p95": 75.35727643200153
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 3,
+            "wrong_answer": 18
+          },
+          "pass_rate": 0.14285714285714285,
+          "passed": 3,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 9,
+            "wrong_answer": 9
+          },
+          "pass_rate": 0.5,
+          "passed": 9,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.213143785341785,
+        "median": 11.742011238782185,
+        "min": 8.554936748464083,
+        "n": 39,
+        "p95": 12.186714392161505
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 7,
+        "min": 7,
+        "n": 39,
+        "p95": 13
+      },
+      "load_s": {
+        "max": 0.001037067,
+        "median": 0.000822437,
+        "min": 0.000688041,
+        "n": 39,
+        "p95": 0.001034026
+      },
+      "model": "lfm3-omni:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 12,
+        "wrong_answer": 27
+      },
+      "pass_rate": 0.3076923076923077,
+      "peak_system_used_estimate_kib": 3161840,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.169863,
+        "median": 0.816279,
+        "min": 0.587381,
+        "n": 39,
+        "p95": 1.167932
+      },
+      "prompt_tokens": {
+        "max": 74.0,
+        "median": 52.0,
+        "min": 35.0,
+        "n": 39,
+        "p95": 74.0
+      },
+      "track": "arithmetic",
+      "ttft_s": {
+        "max": 1.1771640079969075,
+        "median": 0.8204437080021307,
+        "min": 0.5913868799980264,
+        "n": 39,
+        "p95": 1.1771228060024441
+      },
+      "wall_s": {
+        "max": 2.3709664779999002,
+        "median": 1.4619656750001013,
+        "min": 1.224317110998527,
+        "n": 39,
+        "p95": 2.364094042000943
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "pass": 6,
+            "wrong_answer": 6
+          },
+          "pass_rate": 0.5,
+          "passed": 6,
+          "supported": 12
+        },
+        "control": {
+          "n": 9,
+          "outcomes": {
+            "pass": 9
+          },
+          "pass_rate": 1.0,
+          "passed": 9,
+          "supported": 9
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 21,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 11.135531951321022,
+        "median": 10.286774705232471,
+        "min": 10.121293582290166,
+        "n": 21,
+        "p95": 10.838257966796997
+      },
+      "generated_tokens": {
+        "max": 10,
+        "median": 10,
+        "min": 8,
+        "n": 21,
+        "p95": 10
+      },
+      "load_s": {
+        "max": 0.003076781,
+        "median": 0.001000862,
+        "min": 0.00084612,
+        "n": 21,
+        "p95": 0.001176897
+      },
+      "model": "lfm3-omni:2b",
+      "n": 21,
+      "outcomes": {
+        "pass": 15,
+        "wrong_answer": 6
+      },
+      "pass_rate": 0.7142857142857143,
+      "peak_system_used_estimate_kib": 3161472,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 27.540115,
+        "median": 25.139585,
+        "min": 17.486323,
+        "n": 21,
+        "p95": 27.49921
+      },
+      "prompt_tokens": {
+        "max": 1707.0,
+        "median": 1570.0,
+        "min": 1136.0,
+        "n": 21,
+        "p95": 1707.0
+      },
+      "track": "context-long",
+      "ttft_s": {
+        "max": 27.54492717299945,
+        "median": 25.143598480997753,
+        "min": 17.490566569002112,
+        "n": 21,
+        "p95": 27.503755149002245
+      },
+      "wall_s": {
+        "max": 28.317530857999373,
+        "median": 26.126302019998548,
+        "min": 18.210233157999028,
+        "n": 21,
+        "p95": 28.274154595001164
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "pass": 9,
+            "wrong_answer": 3
+          },
+          "pass_rate": 0.75,
+          "passed": 9,
+          "supported": 12
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 6
+          },
+          "pass_rate": 1.0,
+          "passed": 6,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 18,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 11.721646070757716,
+        "median": 11.275127138912467,
+        "min": 11.018992335188932,
+        "n": 18,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 10,
+        "median": 9.0,
+        "min": 8,
+        "n": 18,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.003896086,
+        "median": 0.000905034,
+        "min": 0.000709973,
+        "n": 18,
+        "p95": null
+      },
+      "model": "lfm3-omni:2b",
+      "n": 18,
+      "outcomes": {
+        "pass": 15,
+        "wrong_answer": 3
+      },
+      "pass_rate": 0.8333333333333334,
+      "peak_system_used_estimate_kib": 3160816,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 5.31784,
+        "median": 4.166817999999999,
+        "min": 2.629113,
+        "n": 18,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 347.0,
+        "median": 270.0,
+        "min": 176.0,
+        "n": 18,
+        "p95": null
+      },
+      "track": "context-short",
+      "ttft_s": {
+        "max": 5.320770491998701,
+        "median": 4.171885868998288,
+        "min": 2.641458004996821,
+        "n": 18,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 6.22052611899926,
+        "median": 4.862962911498471,
+        "min": 3.515615345000697,
+        "n": 18,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 6,
+            "wrong_answer": 15
+          },
+          "pass_rate": 0.2857142857142857,
+          "passed": 6,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 12,
+            "wrong_answer": 6
+          },
+          "pass_rate": 0.6666666666666666,
+          "passed": 12,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.643375882507637,
+        "median": 10.706147767441058,
+        "min": 9.844729315306797,
+        "n": 39,
+        "p95": 12.642193066515635
+      },
+      "generated_tokens": {
+        "max": 81,
+        "median": 18,
+        "min": 5,
+        "n": 39,
+        "p95": 81
+      },
+      "load_s": {
+        "max": 0.002534009,
+        "median": 0.000859956,
+        "min": 0.000700421,
+        "n": 39,
+        "p95": 0.001128524
+      },
+      "model": "lfm3-omni:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 18,
+        "wrong_answer": 21
+      },
+      "pass_rate": 0.46153846153846156,
+      "peak_system_used_estimate_kib": 3161360,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.429462,
+        "median": 0.736736,
+        "min": 0.588481,
+        "n": 39,
+        "p95": 1.418832
+      },
+      "prompt_tokens": {
+        "max": 91.0,
+        "median": 46.0,
+        "min": 37.0,
+        "n": 39,
+        "p95": 91.0
+      },
+      "track": "structured",
+      "ttft_s": {
+        "max": 1.4328463399979228,
+        "median": 0.7441504429989436,
+        "min": 0.5963852550012234,
+        "n": 39,
+        "p95": 1.4225523799977964
+      },
+      "wall_s": {
+        "max": 9.631783615004679,
+        "median": 2.3516176930024812,
+        "min": 1.105992005999724,
+        "n": 39,
+        "p95": 9.600929825999629
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 12,
+            "wrong_answer": 9
+          },
+          "pass_rate": 0.5714285714285714,
+          "passed": 12,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 18
+          },
+          "pass_rate": 1.0,
+          "passed": 18,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.062604919532372,
+        "median": 11.610414209820089,
+        "min": 8.498105529474465,
+        "n": 39,
+        "p95": 12.046668794911486
+      },
+      "generated_tokens": {
+        "max": 11,
+        "median": 7,
+        "min": 6,
+        "n": 39,
+        "p95": 11
+      },
+      "load_s": {
+        "max": 0.003098002,
+        "median": 0.001056766,
+        "min": 0.000836474,
+        "n": 39,
+        "p95": 0.002632165
+      },
+      "model": "lfm3-omni:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 30,
+        "wrong_answer": 9
+      },
+      "pass_rate": 0.7692307692307693,
+      "peak_system_used_estimate_kib": 3178464,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 25.141268,
+        "median": 24.803229,
+        "min": 24.708976,
+        "n": 39,
+        "p95": 25.050393
+      },
+      "prompt_tokens": {
+        "max": 207.0,
+        "median": 189.0,
+        "min": 186.0,
+        "n": 39,
+        "p95": 207.0
+      },
+      "track": "vision",
+      "ttft_s": {
+        "max": 25.149616921000415,
+        "median": 24.81279112899938,
+        "min": 24.71927161000349,
+        "n": 39,
+        "p95": 25.056071515999065
+      },
+      "wall_s": {
+        "max": 25.85814227100127,
+        "median": 25.58040532099767,
+        "min": 25.23408158899838,
+        "n": 39,
+        "p95": 25.824244331000955
+      }
+    },
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 3,
+          "outcomes": {
+            "complete": 3
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 3
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.60130927603378,
+        "median": 12.467351124243388,
+        "min": 12.417449828328756,
+        "n": 3,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 6,
+        "median": 6,
+        "min": 6,
+        "n": 3,
+        "p95": null
+      },
+      "load_s": {
+        "max": 13.954308675,
+        "median": 12.471012281,
+        "min": 12.193750172,
+        "n": 3,
+        "p95": null
+      },
+      "model": "lfm3-vl:2b",
+      "n": 3,
+      "outcomes": {
+        "complete": 3
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 2677872,
+      "phase": "cold",
+      "prefill_s": {
+        "max": 0.365196,
+        "median": 0.364646,
+        "min": 0.361967,
+        "n": 3,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 20.0,
+        "median": 20.0,
+        "min": 20.0,
+        "n": 3,
+        "p95": null
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 14.321467582001787,
+        "median": 12.844484013003239,
+        "min": 12.563431038001,
+        "n": 3,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 14.801085545001115,
+        "median": 13.322464124001272,
+        "min": 13.039186902999063,
+        "n": 3,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 21,
+          "outcomes": {
+            "complete": 21
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 21
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 21,
+        "p95": 0.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.3968333195115,
+        "median": 10.10897394941106,
+        "min": 9.935318746370795,
+        "n": 21,
+        "p95": 10.375255987150894
+      },
+      "generated_tokens": {
+        "max": 128,
+        "median": 128,
+        "min": 128,
+        "n": 21,
+        "p95": 128
+      },
+      "load_s": {
+        "max": 0.003806176,
+        "median": 0.000913177,
+        "min": 0.000673158,
+        "n": 21,
+        "p95": 0.002528524
+      },
+      "model": "lfm3-vl:2b",
+      "n": 21,
+      "outcomes": {
+        "complete": 21
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 2529504,
+      "phase": "sustained",
+      "prefill_s": {
+        "max": 0.702919,
+        "median": 0.675975,
+        "min": 0.663261,
+        "n": 21,
+        "p95": 0.687837
+      },
+      "prompt_tokens": {
+        "max": 41.0,
+        "median": 41.0,
+        "min": 41.0,
+        "n": 21,
+        "p95": 41.0
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 0.7066679769995972,
+        "median": 0.6817936049992568,
+        "min": 0.6684710499976063,
+        "n": 21,
+        "p95": 0.6919233100015845
+      },
+      "wall_s": {
+        "max": 13.560536932000105,
+        "median": 13.339949201999843,
+        "min": 12.985256099000253,
+        "n": 21,
+        "p95": 13.555841488003352
+      }
+    },
+    {
+      "agent_metrics": {
+        "final_answer_pass_rate": 1.0,
+        "final_answer_passed": 39,
+        "n": 39,
+        "tool_use_pass_rate": 1.0,
+        "tool_use_passed": 39
+      },
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 21
+          },
+          "pass_rate": 1.0,
+          "passed": 21,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 18
+          },
+          "pass_rate": 1.0,
+          "passed": 18,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 316.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 162,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.058095906075472,
+        "median": 10.156281021686883,
+        "min": 8.620466712067792,
+        "n": 162,
+        "p95": 11.866126362379633
+      },
+      "generated_tokens": {
+        "max": 363,
+        "median": 148,
+        "min": 12,
+        "n": 39,
+        "p95": 363
+      },
+      "load_s": {
+        "max": 0.00801846,
+        "median": 0.000963897,
+        "min": 0.000701946,
+        "n": 162,
+        "p95": 0.003840741
+      },
+      "model": "lfm3-vl:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 39
+      },
+      "pass_rate": 1.0,
+      "peak_system_used_estimate_kib": 2566224,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 13.380828,
+        "median": 6.3938705,
+        "min": 1.818248,
+        "n": 162,
+        "p95": 10.579479
+      },
+      "prompt_tokens": {
+        "max": 872.0,
+        "median": 449.0,
+        "min": 119.0,
+        "n": 162,
+        "p95": 706.0
+      },
+      "track": "agent",
+      "ttft_s": {
+        "max": 6.435105765998742,
+        "median": 4.854593656000361,
+        "min": 4.227049563000037,
+        "n": 39,
+        "p95": 6.421284889001981
+      },
+      "wall_s": {
+        "max": 116.80561472000045,
+        "median": 37.017189133999636,
+        "min": 7.062232329000835,
+        "n": 39,
+        "p95": 116.7480800020021
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "wrong_answer": 21
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 3,
+            "wrong_answer": 15
+          },
+          "pass_rate": 0.16666666666666666,
+          "passed": 3,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.090248523694296,
+        "median": 11.645723773414144,
+        "min": 10.926871909744039,
+        "n": 39,
+        "p95": 11.998587594831694
+      },
+      "generated_tokens": {
+        "max": 10,
+        "median": 7,
+        "min": 7,
+        "n": 39,
+        "p95": 10
+      },
+      "load_s": {
+        "max": 0.002980951,
+        "median": 0.000881103,
+        "min": 0.000682308,
+        "n": 39,
+        "p95": 0.002644695
+      },
+      "model": "lfm3-vl:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 3,
+        "wrong_answer": 36
+      },
+      "pass_rate": 0.07692307692307693,
+      "peak_system_used_estimate_kib": 2556272,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.168556,
+        "median": 0.816514,
+        "min": 0.589329,
+        "n": 39,
+        "p95": 1.162606
+      },
+      "prompt_tokens": {
+        "max": 74.0,
+        "median": 52.0,
+        "min": 35.0,
+        "n": 39,
+        "p95": 74.0
+      },
+      "track": "arithmetic",
+      "ttft_s": {
+        "max": 1.1722068449998915,
+        "median": 0.8199067729983653,
+        "min": 0.5929091110010631,
+        "n": 39,
+        "p95": 1.1686497930022597
+      },
+      "wall_s": {
+        "max": 2.088701339002,
+        "median": 1.4389351239988173,
+        "min": 1.2440489929977048,
+        "n": 39,
+        "p95": 2.064334938000684
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "pass": 3,
+            "wrong_answer": 9
+          },
+          "pass_rate": 0.25,
+          "passed": 3,
+          "supported": 12
+        },
+        "control": {
+          "n": 9,
+          "outcomes": {
+            "pass": 9
+          },
+          "pass_rate": 1.0,
+          "passed": 9,
+          "supported": 9
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 21,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.639187166100509,
+        "median": 10.213200561726032,
+        "min": 8.320450502472006,
+        "n": 21,
+        "p95": 10.540343163458136
+      },
+      "generated_tokens": {
+        "max": 11,
+        "median": 10,
+        "min": 7,
+        "n": 21,
+        "p95": 11
+      },
+      "load_s": {
+        "max": 0.001183836,
+        "median": 0.001022686,
+        "min": 0.000766974,
+        "n": 21,
+        "p95": 0.00116517
+      },
+      "model": "lfm3-vl:2b",
+      "n": 21,
+      "outcomes": {
+        "pass": 12,
+        "wrong_answer": 9
+      },
+      "pass_rate": 0.5714285714285714,
+      "peak_system_used_estimate_kib": 2635888,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 27.45863,
+        "median": 25.034158,
+        "min": 17.370252,
+        "n": 21,
+        "p95": 27.329294
+      },
+      "prompt_tokens": {
+        "max": 1707.0,
+        "median": 1570.0,
+        "min": 1136.0,
+        "n": 21,
+        "p95": 1707.0
+      },
+      "track": "context-long",
+      "ttft_s": {
+        "max": 27.46316058699813,
+        "median": 25.038606740999967,
+        "min": 17.3738235919991,
+        "n": 21,
+        "p95": 27.333836686000723
+      },
+      "wall_s": {
+        "max": 28.127847706000466,
+        "median": 26.036736526999448,
+        "min": 18.43825947499863,
+        "n": 21,
+        "p95": 27.99236190800002
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "pass": 9,
+            "wrong_answer": 3
+          },
+          "pass_rate": 0.75,
+          "passed": 9,
+          "supported": 12
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 6
+          },
+          "pass_rate": 1.0,
+          "passed": 6,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 18,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 11.454585024930086,
+        "median": 10.982753336843096,
+        "min": 10.756665202105328,
+        "n": 18,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 10.5,
+        "min": 7,
+        "n": 18,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.000966094,
+        "median": 0.0008205195,
+        "min": 0.000683955,
+        "n": 18,
+        "p95": null
+      },
+      "model": "lfm3-vl:2b",
+      "n": 18,
+      "outcomes": {
+        "pass": 15,
+        "wrong_answer": 3
+      },
+      "pass_rate": 0.8333333333333334,
+      "peak_system_used_estimate_kib": 2655200,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 5.373235,
+        "median": 4.1900195,
+        "min": 2.603202,
+        "n": 18,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 347.0,
+        "median": 270.0,
+        "min": 176.0,
+        "n": 18,
+        "p95": null
+      },
+      "track": "context-short",
+      "ttft_s": {
+        "max": 5.380583602000115,
+        "median": 4.196582724000109,
+        "min": 2.6103530079999473,
+        "n": 18,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 6.288690737001161,
+        "median": 5.0061970469996595,
+        "min": 3.5024946780031314,
+        "n": 18,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 9,
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.42857142857142855,
+          "passed": 9,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 9,
+            "wrong_answer": 9
+          },
+          "pass_rate": 0.5,
+          "passed": 9,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.977557250849895,
+        "median": 10.59116717839656,
+        "min": 9.741430712601515,
+        "n": 39,
+        "p95": 10.9472755749861
+      },
+      "generated_tokens": {
+        "max": 71,
+        "median": 20,
+        "min": 13,
+        "n": 39,
+        "p95": 71
+      },
+      "load_s": {
+        "max": 0.002606255,
+        "median": 0.000857183,
+        "min": 0.000701993,
+        "n": 39,
+        "p95": 0.002015831
+      },
+      "model": "lfm3-vl:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 18,
+        "wrong_answer": 21
+      },
+      "pass_rate": 0.46153846153846156,
+      "peak_system_used_estimate_kib": 2557840,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.417164,
+        "median": 0.73343,
+        "min": 0.58666,
+        "n": 39,
+        "p95": 1.412272
+      },
+      "prompt_tokens": {
+        "max": 91.0,
+        "median": 46.0,
+        "min": 37.0,
+        "n": 39,
+        "p95": 91.0
+      },
+      "track": "structured",
+      "ttft_s": {
+        "max": 1.420433581002726,
+        "median": 0.7411745339995832,
+        "min": 0.594203461001598,
+        "n": 39,
+        "p95": 1.415893467998103
+      },
+      "wall_s": {
+        "max": 7.988854554998397,
+        "median": 2.826953956999205,
+        "min": 1.8841022659980808,
+        "n": 39,
+        "p95": 7.977038601002278
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 15,
+            "wrong_answer": 6
+          },
+          "pass_rate": 0.7142857142857143,
+          "passed": 15,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 15,
+            "wrong_answer": 3
+          },
+          "pass_rate": 0.8333333333333334,
+          "passed": 15,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.052217091421232,
+        "median": 11.605544134226408,
+        "min": 10.927246393511997,
+        "n": 39,
+        "p95": 12.036518798033233
+      },
+      "generated_tokens": {
+        "max": 11,
+        "median": 7,
+        "min": 6,
+        "n": 39,
+        "p95": 11
+      },
+      "load_s": {
+        "max": 0.003947683,
+        "median": 0.001009376,
+        "min": 0.000750956,
+        "n": 39,
+        "p95": 0.002949193
+      },
+      "model": "lfm3-vl:2b",
+      "n": 39,
+      "outcomes": {
+        "pass": 30,
+        "wrong_answer": 9
+      },
+      "pass_rate": 0.7692307692307693,
+      "peak_system_used_estimate_kib": 2619680,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 25.011997,
+        "median": 24.776501,
+        "min": 24.656803,
+        "n": 39,
+        "p95": 25.006815
+      },
+      "prompt_tokens": {
+        "max": 207.0,
+        "median": 189.0,
+        "min": 186.0,
+        "n": 39,
+        "p95": 207.0
+      },
+      "track": "vision",
+      "ttft_s": {
+        "max": 25.01766803999999,
+        "median": 24.782423366999865,
+        "min": 24.66307618800056,
+        "n": 39,
+        "p95": 25.012087834998965
+      },
+      "wall_s": {
+        "max": 25.82499846399878,
+        "median": 25.51570627900219,
+        "min": 25.19268989400007,
+        "n": 39,
+        "p95": 25.819825558999582
+      }
+    },
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 3,
+          "outcomes": {
+            "complete": 3
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 3
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 3,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 12.149634903471151,
+        "median": 12.140805594483218,
+        "min": 11.93349972041515,
+        "n": 3,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 7,
+        "median": 7,
+        "min": 7,
+        "n": 3,
+        "p95": null
+      },
+      "load_s": {
+        "max": 7.921671064,
+        "median": 3.424222562,
+        "min": 3.414135243,
+        "n": 3,
+        "p95": null
+      },
+      "model": "lfm3:latest",
+      "n": 3,
+      "outcomes": {
+        "complete": 3
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 2153984,
+      "phase": "cold",
+      "prefill_s": {
+        "max": 0.363564,
+        "median": 0.360787,
+        "min": 0.359067,
+        "n": 3,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 20.0,
+        "median": 20.0,
+        "min": 20.0,
+        "n": 3,
+        "p95": null
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 8.285580905998359,
+        "median": 3.7903216339982464,
+        "min": 3.7834708419977687,
+        "n": 3,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 8.85960183700081,
+        "median": 4.368634481004847,
+        "min": 4.365881446003186,
+        "n": 3,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "control": {
+          "n": 21,
+          "outcomes": {
+            "complete": 21
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 21
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 21,
+        "p95": 0.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.410901189567463,
+        "median": 10.094058487340671,
+        "min": 9.876265820929104,
+        "n": 21,
+        "p95": 10.403251146023772
+      },
+      "generated_tokens": {
+        "max": 128,
+        "median": 128,
+        "min": 128,
+        "n": 21,
+        "p95": 128
+      },
+      "load_s": {
+        "max": 0.00238427,
+        "median": 0.000833955,
+        "min": 0.000693194,
+        "n": 21,
+        "p95": 0.000972302
+      },
+      "model": "lfm3:latest",
+      "n": 21,
+      "outcomes": {
+        "complete": 21
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 2083680,
+      "phase": "sustained",
+      "prefill_s": {
+        "max": 0.70743,
+        "median": 0.678769,
+        "min": 0.665853,
+        "n": 21,
+        "p95": 0.696551
+      },
+      "prompt_tokens": {
+        "max": 41.0,
+        "median": 41.0,
+        "min": 41.0,
+        "n": 21,
+        "p95": 41.0
+      },
+      "track": "performance",
+      "ttft_s": {
+        "max": 0.7111850459987181,
+        "median": 0.683787111996935,
+        "min": 0.6690937980019953,
+        "n": 21,
+        "p95": 0.7015693089997512
+      },
+      "wall_s": {
+        "max": 13.647067462999985,
+        "median": 13.358938630997727,
+        "min": 12.97758529800194,
+        "n": 21,
+        "p95": 13.602366367998911
+      }
+    },
+    {
+      "agent_metrics": {
+        "final_answer_pass_rate": 0.48717948717948717,
+        "final_answer_passed": 19,
+        "n": 39,
+        "tool_use_pass_rate": 0.2564102564102564,
+        "tool_use_passed": 10
+      },
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "generation_limit": 3,
+            "pass": 3,
+            "tool_limit": 9,
+            "wrong_tool_trace": 6
+          },
+          "pass_rate": 0.14285714285714285,
+          "passed": 3,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 7,
+            "tool_limit": 8,
+            "wrong_tool_trace": 3
+          },
+          "pass_rate": 0.3888888888888889,
+          "passed": 7,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 220,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 11.389936763071091,
+        "median": 10.40146549328865,
+        "min": 8.902843271379437,
+        "n": 220,
+        "p95": 10.848768171686688
+      },
+      "generated_tokens": {
+        "max": 1100,
+        "median": 130,
+        "min": 20,
+        "n": 39,
+        "p95": 1100
+      },
+      "load_s": {
+        "max": 0.006198029,
+        "median": 0.0009539065,
+        "min": 0.000749787,
+        "n": 220,
+        "p95": 0.003875774
+      },
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "generation_limit": 3,
+        "pass": 10,
+        "tool_limit": 17,
+        "wrong_tool_trace": 9
+      },
+      "pass_rate": 0.2564102564102564,
+      "peak_system_used_estimate_kib": 2081392,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 12.867642,
+        "median": 6.286198499999999,
+        "min": 1.889464,
+        "n": 220,
+        "p95": 9.092576
+      },
+      "prompt_tokens": {
+        "max": 843.0,
+        "median": 412.0,
+        "min": 123.0,
+        "n": 220,
+        "p95": 601.0
+      },
+      "track": "agent",
+      "ttft_s": {
+        "max": 7.898168744999566,
+        "median": 6.61874397900101,
+        "min": 4.197935559001053,
+        "n": 39,
+        "p95": 7.778690351999103
+      },
+      "wall_s": {
+        "max": 147.55764916299813,
+        "median": 59.47170151300088,
+        "min": 7.875119904998428,
+        "n": 39,
+        "p95": 147.35616542199932
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 3,
+            "wrong_answer": 18
+          },
+          "pass_rate": 0.14285714285714285,
+          "passed": 3,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 6,
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.3333333333333333,
+          "passed": 6,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 11.882005741979274,
+        "median": 11.207854464408658,
+        "min": 10.679700647990837,
+        "n": 39,
+        "p95": 11.779672996277624
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 10,
+        "min": 7,
+        "n": 39,
+        "p95": 13
+      },
+      "load_s": {
+        "max": 0.001733902,
+        "median": 0.000923064,
+        "min": 0.000679585,
+        "n": 39,
+        "p95": 0.001534687
+      },
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "pass": 9,
+        "wrong_answer": 30
+      },
+      "pass_rate": 0.23076923076923078,
+      "peak_system_used_estimate_kib": 2077344,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.198484,
+        "median": 0.811264,
+        "min": 0.587176,
+        "n": 39,
+        "p95": 1.188286
+      },
+      "prompt_tokens": {
+        "max": 74.0,
+        "median": 52.0,
+        "min": 35.0,
+        "n": 39,
+        "p95": 74.0
+      },
+      "track": "arithmetic",
+      "ttft_s": {
+        "max": 1.2025579379987903,
+        "median": 0.8149439400003757,
+        "min": 0.5909193989973573,
+        "n": 39,
+        "p95": 1.1916671779981698
+      },
+      "wall_s": {
+        "max": 2.4023300709995965,
+        "median": 1.5742767010015086,
+        "min": 1.2876573399989866,
+        "n": 39,
+        "p95": 2.3917820010028663
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 12
+        },
+        "control": {
+          "n": 9,
+          "outcomes": {
+            "pass": 9
+          },
+          "pass_rate": 1.0,
+          "passed": 9,
+          "supported": 9
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 21,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.741956726263652,
+        "median": 10.040775589669648,
+        "min": 9.8496339724483,
+        "n": 21,
+        "p95": 10.405541812215484
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 11,
+        "min": 10,
+        "n": 21,
+        "p95": 13
+      },
+      "load_s": {
+        "max": 0.001181762,
+        "median": 0.00095606,
+        "min": 0.000793065,
+        "n": 21,
+        "p95": 0.001155024
+      },
+      "model": "lfm3:latest",
+      "n": 21,
+      "outcomes": {
+        "pass": 9,
+        "wrong_answer": 12
+      },
+      "pass_rate": 0.42857142857142855,
+      "peak_system_used_estimate_kib": 2091216,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 27.341456,
+        "median": 24.960923,
+        "min": 17.352925,
+        "n": 21,
+        "p95": 27.298318
+      },
+      "prompt_tokens": {
+        "max": 1707.0,
+        "median": 1570.0,
+        "min": 1136.0,
+        "n": 21,
+        "p95": 1707.0
+      },
+      "track": "context-long",
+      "ttft_s": {
+        "max": 27.346315515998867,
+        "median": 24.96470436800155,
+        "min": 17.356805183000688,
+        "n": 21,
+        "p95": 27.30327434100036
+      },
+      "wall_s": {
+        "max": 28.44609174299694,
+        "median": 26.27685624700098,
+        "min": 18.381506894002086,
+        "n": 21,
+        "p95": 28.40714804900199
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "wrong_answer": 12
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 12
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 6
+          },
+          "pass_rate": 1.0,
+          "passed": 6,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 18,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 11.167857188878532,
+        "median": 10.850726948069308,
+        "min": 10.657582541191637,
+        "n": 18,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 13,
+        "median": 11.0,
+        "min": 10,
+        "n": 18,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.003849477,
+        "median": 0.000988424,
+        "min": 0.000681268,
+        "n": 18,
+        "p95": null
+      },
+      "model": "lfm3:latest",
+      "n": 18,
+      "outcomes": {
+        "pass": 6,
+        "wrong_answer": 12
+      },
+      "pass_rate": 0.3333333333333333,
+      "peak_system_used_estimate_kib": 2103808,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 5.436771,
+        "median": 4.072844,
+        "min": 2.620963,
+        "n": 18,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 347.0,
+        "median": 270.0,
+        "min": 176.0,
+        "n": 18,
+        "p95": null
+      },
+      "track": "context-short",
+      "ttft_s": {
+        "max": 5.4402816650035675,
+        "median": 4.076385200000004,
+        "min": 2.6277559619993553,
+        "n": 18,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 6.4537444449961185,
+        "median": 5.088641060499867,
+        "min": 3.7956293979987095,
+        "n": 18,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "invalid_json": 6,
+            "pass": 9,
+            "wrong_answer": 6
+          },
+          "pass_rate": 0.42857142857142855,
+          "passed": 9,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "invalid_json": 3,
+            "pass": 15
+          },
+          "pass_rate": 0.8333333333333334,
+          "passed": 15,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 1.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.94647426694409,
+        "median": 10.45798215171046,
+        "min": 9.835394444180414,
+        "n": 39,
+        "p95": 10.817827780181739
+      },
+      "generated_tokens": {
+        "max": 399,
+        "median": 27,
+        "min": 13,
+        "n": 39,
+        "p95": 399
+      },
+      "load_s": {
+        "max": 0.001709107,
+        "median": 0.000881173,
+        "min": 0.000654845,
+        "n": 39,
+        "p95": 0.001349869
+      },
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "invalid_json": 9,
+        "pass": 24,
+        "wrong_answer": 6
+      },
+      "pass_rate": 0.6153846153846154,
+      "peak_system_used_estimate_kib": 2112624,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.646011,
+        "median": 0.736105,
+        "min": 0.588767,
+        "n": 39,
+        "p95": 1.598771
+      },
+      "prompt_tokens": {
+        "max": 91.0,
+        "median": 46.0,
+        "min": 37.0,
+        "n": 39,
+        "p95": 91.0
+      },
+      "track": "structured",
+      "ttft_s": {
+        "max": 1.649835501997586,
+        "median": 0.7393243430014991,
+        "min": 0.5958214310012409,
+        "n": 39,
+        "p95": 1.6046500689990353
+      },
+      "wall_s": {
+        "max": 41.52986073400098,
+        "median": 3.325400162000733,
+        "min": 1.972262987997965,
+        "n": 39,
+        "p95": 41.43714496999746
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "unsupported": 21
+          },
+          "pass_rate": null,
+          "passed": 0,
+          "supported": 0
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "unsupported": 18
+          },
+          "pass_rate": null,
+          "passed": 0,
+          "supported": 0
+        }
+      },
+      "cached_prompt_tokens": null,
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": null,
+      "generated_tokens": null,
+      "load_s": null,
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "unsupported": 39
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 2103808,
+      "phase": "warm",
+      "prefill_s": null,
+      "prompt_tokens": null,
+      "track": "vision",
+      "ttft_s": null,
+      "wall_s": null
+    }
+  ],
+  "repeatability": {
+    "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M": {
+      "cases_with_complete_outputs": 52,
+      "raw_output_stable": 36,
+      "repeated_cases": 52,
+      "status_stable": 52
+    },
+    "lfm3-omni:2b": {
+      "cases_with_complete_outputs": 65,
+      "raw_output_stable": 51,
+      "repeated_cases": 65,
+      "status_stable": 65
+    },
+    "lfm3-vl:2b": {
+      "cases_with_complete_outputs": 65,
+      "raw_output_stable": 52,
+      "repeated_cases": 65,
+      "status_stable": 65
+    },
+    "lfm3:latest": {
+      "cases_with_complete_outputs": 52,
+      "raw_output_stable": 38,
+      "repeated_cases": 52,
+      "status_stable": 51
+    }
+  },
+  "sustained": [
+    {
+      "completed_requests": 11,
+      "elapsed_s": 92.00616378999985,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 66.1,
+        "mean_cpu_c": 63.536521739130436,
+        "min_free_memory_kib": 1769696,
+        "min_mem_available_kib": 6636816,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.2,
+        "peak_memory_in_use_kib": 1679024,
+        "peak_swap_used_kib": 76576,
+        "peak_system_used_estimate_kib": 1618992,
+        "samples": 115,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 15.879687547297898,
+        "median": 15.779098537635061,
+        "min": 15.71661952704026,
+        "n": 3,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 15.485856029690257,
+        "median": 15.456363004277428,
+        "min": 15.440526049072163,
+        "n": 3,
+        "p95": null
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "round": 1,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 92.86184592299833,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 67.2,
+        "mean_cpu_c": 63.745794392523365,
+        "min_free_memory_kib": 391104,
+        "min_mem_available_kib": 5719264,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.75,
+        "peak_memory_in_use_kib": 2596528,
+        "peak_swap_used_kib": 76528,
+        "peak_system_used_estimate_kib": 2536544,
+        "samples": 107,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.3968333195115,
+        "median": 10.378049566222586,
+        "min": 10.359265812933673,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.089107311055848,
+        "median": 10.079273555966338,
+        "min": 10.069439800876827,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3-vl:2b",
+      "round": 1,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 92.95713088800039,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 66.1,
+        "mean_cpu_c": 64.04906542056075,
+        "min_free_memory_kib": 421232,
+        "min_mem_available_kib": 5193200,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.75,
+        "peak_memory_in_use_kib": 3122576,
+        "peak_swap_used_kib": 76512,
+        "peak_system_used_estimate_kib": 3062608,
+        "samples": 107,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.357570020207781,
+        "median": 10.301181472064656,
+        "min": 10.244792923921528,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.134709289031141,
+        "median": 10.112199372865659,
+        "min": 10.089689456700176,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3-omni:2b",
+      "round": 1,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 93.37267633399824,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 66.1,
+        "mean_cpu_c": 63.966203703703705,
+        "min_free_memory_kib": 1215088,
+        "min_mem_available_kib": 6214752,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.75,
+        "peak_memory_in_use_kib": 2100496,
+        "peak_swap_used_kib": 75984,
+        "peak_system_used_estimate_kib": 2041056,
+        "samples": 108,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.403251146023772,
+        "median": 10.383646906260147,
+        "min": 10.364042666496523,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.080635634479933,
+        "median": 9.97845072770452,
+        "min": 9.876265820929104,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3:latest",
+      "round": 1,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 93.09668524500012,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 66.1,
+        "mean_cpu_c": 63.670833333333334,
+        "min_free_memory_kib": 1215904,
+        "min_mem_available_kib": 6222336,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.2,
+        "peak_memory_in_use_kib": 2092896,
+        "peak_swap_used_kib": 75968,
+        "peak_system_used_estimate_kib": 2033472,
+        "samples": 108,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.410901189567463,
+        "median": 10.313507548980263,
+        "min": 10.216113908393064,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.073282342063328,
+        "median": 9.989793252535781,
+        "min": 9.906304163008235,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3:latest",
+      "round": 2,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 11,
+      "elapsed_s": 91.75263114699919,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 68.3,
+        "mean_cpu_c": 63.5140350877193,
+        "min_free_memory_kib": 1656528,
+        "min_mem_available_kib": 6712000,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 68.3,
+        "peak_memory_in_use_kib": 1603216,
+        "peak_swap_used_kib": 75968,
+        "peak_system_used_estimate_kib": 1543808,
+        "samples": 114,
+        "start_cpu_c": 49.05,
+        "swap_in_mib": 0.015625,
+        "swap_in_pages": 1,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 15.985541078094863,
+        "median": 15.725443583435457,
+        "min": 15.41629290185699,
+        "n": 3,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 15.54539814922319,
+        "median": 15.518097134015754,
+        "min": 15.111648519111572,
+        "n": 3,
+        "p95": null
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "round": 2,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 93.01917288299956,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 65.55,
+        "mean_cpu_c": 63.64299065420561,
+        "min_free_memory_kib": 443408,
+        "min_mem_available_kib": 5821328,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.75,
+        "peak_memory_in_use_kib": 2493888,
+        "peak_swap_used_kib": 75952,
+        "peak_system_used_estimate_kib": 2434480,
+        "samples": 107,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.375255987150894,
+        "median": 10.293308398085742,
+        "min": 10.211360809020588,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.103071854783497,
+        "median": 10.021685133600677,
+        "min": 9.940298412417855,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3-vl:2b",
+      "round": 2,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 92.95310175299892,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 65.55,
+        "mean_cpu_c": 63.771495327102805,
+        "min_free_memory_kib": 359008,
+        "min_mem_available_kib": 5197040,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.2,
+        "peak_memory_in_use_kib": 3120160,
+        "peak_swap_used_kib": 77296,
+        "peak_system_used_estimate_kib": 3058768,
+        "samples": 107,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.140625,
+        "swap_in_pages": 9,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.372841243583728,
+        "median": 10.320034555254292,
+        "min": 10.267227866924856,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.0958928409314,
+        "median": 10.024222026513865,
+        "min": 9.952551212096331,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3-omni:2b",
+      "round": 2,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 93.26707987799819,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 66.1,
+        "mean_cpu_c": 64.03750000000001,
+        "min_free_memory_kib": 600848,
+        "min_mem_available_kib": 5820384,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.2,
+        "peak_memory_in_use_kib": 2496432,
+        "peak_swap_used_kib": 76816,
+        "peak_system_used_estimate_kib": 2435424,
+        "samples": 108,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.355460903766378,
+        "median": 10.290390308380413,
+        "min": 10.225319712994448,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.07175020422834,
+        "median": 10.011452790006755,
+        "min": 9.95115537578517,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3-vl:2b",
+      "round": 3,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 92.96761902100116,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 64.45,
+        "mean_cpu_c": 63.42196261682243,
+        "min_free_memory_kib": 436496,
+        "min_mem_available_kib": 5168000,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.75,
+        "peak_memory_in_use_kib": 3149808,
+        "peak_swap_used_kib": 78128,
+        "peak_system_used_estimate_kib": 3087808,
+        "samples": 107,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.423004613482417,
+        "median": 10.392778566805333,
+        "min": 10.362552520128247,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.127684785938722,
+        "median": 10.044179012365111,
+        "min": 9.9606732387915,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3-omni:2b",
+      "round": 3,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 7,
+      "elapsed_s": 92.99645703900023,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 67.2,
+        "mean_cpu_c": 63.70467289719626,
+        "min_free_memory_kib": 1417344,
+        "min_mem_available_kib": 6172128,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 68.3,
+        "peak_memory_in_use_kib": 2145376,
+        "peak_swap_used_kib": 77776,
+        "peak_system_used_estimate_kib": 2083680,
+        "samples": 107,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 10.400271512088162,
+        "median": 10.398748766093,
+        "min": 10.397226020097838,
+        "n": 2,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 10.078356068949812,
+        "median": 10.068971307613666,
+        "min": 10.059586546277517,
+        "n": 2,
+        "p95": null
+      },
+      "model": "lfm3:latest",
+      "round": 3,
+      "target_duration_s": 90
+    },
+    {
+      "completed_requests": 11,
+      "elapsed_s": 92.36791108099715,
+      "environment": {
+        "active_throttling_bits_or": 0,
+        "end_cpu_c": 66.1,
+        "mean_cpu_c": 63.15869565217391,
+        "min_free_memory_kib": 1819936,
+        "min_mem_available_kib": 6677504,
+        "new_throttling_history_bits": 0,
+        "peak_compressed_memory_kib": null,
+        "peak_cpu_c": 67.75,
+        "peak_memory_in_use_kib": 1639936,
+        "peak_swap_used_kib": 77712,
+        "peak_system_used_estimate_kib": 1578304,
+        "samples": 115,
+        "start_cpu_c": 49.6,
+        "swap_in_mib": 0.0,
+        "swap_in_pages": 0,
+        "swap_out_mib": 0.0,
+        "swap_out_pages": 0,
+        "system_oom_kills": 0
+      },
+      "failure": null,
+      "first_third_decode_tok_s": {
+        "max": 15.79599472808676,
+        "median": 15.79552690422481,
+        "min": 15.378741149113957,
+        "n": 3,
+        "p95": null
+      },
+      "last_third_decode_tok_s": {
+        "max": 15.529581790788871,
+        "median": 15.488275133719476,
+        "min": 15.140921166546466,
+        "n": 3,
+        "p95": null
+      },
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "round": 3,
+      "target_duration_s": 90
+    }
+  ],
+  "temperature": [
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 52.074999999999996,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 56.75,
+      "phase": "cold",
+      "round": 1,
+      "samples": 6,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 66.1,
+        "median": 63.35,
+        "min": 50.7,
+        "n": 11,
+        "p95": null
+      },
+      "cases": 11,
+      "mean_cpu_c": 63.63716814159292,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 67.2,
+      "phase": "sustained",
+      "round": 1,
+      "samples": 113,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 71.6,
+        "median": 69.4,
+        "min": 55.65,
+        "n": 65,
+        "p95": 71.05
+      },
+      "cases": 65,
+      "mean_cpu_c": 69.9925,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 76.0,
+      "phase": "warm",
+      "round": 1,
+      "samples": 440,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 53.26666666666667,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 57.3,
+      "phase": "cold",
+      "round": 2,
+      "samples": 6,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 65.55,
+        "median": 64.45,
+        "min": 49.6,
+        "n": 11,
+        "p95": null
+      },
+      "cases": 11,
+      "mean_cpu_c": 63.60044642857143,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 68.3,
+      "phase": "sustained",
+      "round": 2,
+      "samples": 112,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 72.7,
+        "median": 69.95,
+        "min": 57.85,
+        "n": 65,
+        "p95": 71.6
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.80694760820046,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 76.0,
+      "phase": "warm",
+      "round": 2,
+      "samples": 439,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 51.56428571428571,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 55.65,
+      "phase": "cold",
+      "round": 3,
+      "samples": 7,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 66.65,
+        "median": 63.35,
+        "min": 50.7,
+        "n": 11,
+        "p95": null
+      },
+      "cases": 11,
+      "mean_cpu_c": 63.232142857142854,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 67.75,
+      "phase": "sustained",
+      "round": 3,
+      "samples": 112,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 72.15,
+        "median": 69.4,
+        "min": 57.3,
+        "n": 65,
+        "p95": 71.6
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.07152619589978,
+      "model": "hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M",
+      "peak_cpu_c": 75.45,
+      "phase": "warm",
+      "round": 3,
+      "samples": 439,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 51.9375,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 56.75,
+      "phase": "cold",
+      "round": 1,
+      "samples": 12,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 66.65,
+        "median": 63.35,
+        "min": 49.6,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 64.16714285714285,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 67.75,
+      "phase": "sustained",
+      "round": 1,
+      "samples": 105,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 73.25,
+        "median": 69.95,
+        "min": 57.3,
+        "n": 65,
+        "p95": 72.7
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.72167863554758,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 76.55,
+      "phase": "warm",
+      "round": 1,
+      "samples": 1114,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 53.534615384615385,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 57.85,
+      "phase": "cold",
+      "round": 2,
+      "samples": 13,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 65.55,
+        "median": 63.9,
+        "min": 49.6,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 63.88952380952381,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 67.2,
+      "phase": "sustained",
+      "round": 2,
+      "samples": 105,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 72.7,
+        "median": 70.5,
+        "min": 60.6,
+        "n": 65,
+        "p95": 72.15
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.74609164420485,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 76.0,
+      "phase": "warm",
+      "round": 2,
+      "samples": 1113,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 51.98333333333333,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 55.65,
+      "phase": "cold",
+      "round": 3,
+      "samples": 12,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 65.55,
+        "median": 62.8,
+        "min": 49.6,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 63.54380952380953,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 67.75,
+      "phase": "sustained",
+      "round": 3,
+      "samples": 105,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 72.15,
+        "median": 69.95,
+        "min": 57.3,
+        "n": 65,
+        "p95": 71.6
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.42712623097583,
+      "model": "lfm3-omni:2b",
+      "peak_cpu_c": 76.55,
+      "phase": "warm",
+      "round": 3,
+      "samples": 1117,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 51.60588235294117,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 56.2,
+      "phase": "cold",
+      "round": 1,
+      "samples": 17,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 66.1,
+        "median": 64.45,
+        "min": 50.15,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 63.84761904761905,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 67.75,
+      "phase": "sustained",
+      "round": 1,
+      "samples": 105,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 73.8,
+        "median": 69.95,
+        "min": 58.95,
+        "n": 65,
+        "p95": 72.7
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.55128885519332,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 76.0,
+      "phase": "warm",
+      "round": 1,
+      "samples": 1319,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 51.72666666666667,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 56.2,
+      "phase": "cold",
+      "round": 2,
+      "samples": 15,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 65.55,
+        "median": 63.9,
+        "min": 50.7,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 63.75857142857142,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 67.75,
+      "phase": "sustained",
+      "round": 2,
+      "samples": 105,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 73.25,
+        "median": 70.5,
+        "min": 57.85,
+        "n": 65,
+        "p95": 72.15
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.72273755656109,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 77.65,
+      "phase": "warm",
+      "round": 2,
+      "samples": 1326,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 52.57,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 57.3,
+      "phase": "cold",
+      "round": 3,
+      "samples": 15,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 67.2,
+        "median": 63.35,
+        "min": 49.6,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 64.15424528301887,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 67.2,
+      "phase": "sustained",
+      "round": 3,
+      "samples": 106,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 73.25,
+        "median": 69.95,
+        "min": 58.4,
+        "n": 65,
+        "p95": 72.7
+      },
+      "cases": 65,
+      "mean_cpu_c": 70.68528072837633,
+      "model": "lfm3-vl:2b",
+      "peak_cpu_c": 76.55,
+      "phase": "warm",
+      "round": 3,
+      "samples": 1318,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 52.55,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 57.85,
+      "phase": "cold",
+      "round": 1,
+      "samples": 11,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 66.65,
+        "median": 65.0,
+        "min": 49.6,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 64.0816037735849,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 67.75,
+      "phase": "sustained",
+      "round": 1,
+      "samples": 106,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 72.15,
+        "median": 69.95,
+        "min": 56.2,
+        "n": 65,
+        "p95": 72.15
+      },
+      "cases": 65,
+      "mean_cpu_c": 71.368853820598,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 76.0,
+      "phase": "warm",
+      "round": 1,
+      "samples": 1204,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 53.90833333333333,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 58.4,
+      "phase": "cold",
+      "round": 2,
+      "samples": 6,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 66.65,
+        "median": 63.9,
+        "min": 49.6,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 63.780660377358494,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 67.2,
+      "phase": "sustained",
+      "round": 2,
+      "samples": 106,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 72.7,
+        "median": 70.5,
+        "min": 58.4,
+        "n": 65,
+        "p95": 72.15
+      },
+      "cases": 65,
+      "mean_cpu_c": 71.32698476343224,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 76.55,
+      "phase": "warm",
+      "round": 2,
+      "samples": 1247,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 49.6,
+        "median": 49.6,
+        "min": 49.6,
+        "n": 1,
+        "p95": null
+      },
+      "cases": 1,
+      "mean_cpu_c": 54.0,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 58.95,
+      "phase": "cold",
+      "round": 3,
+      "samples": 6,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 66.65,
+        "median": 63.9,
+        "min": 49.6,
+        "n": 7,
+        "p95": null
+      },
+      "cases": 7,
+      "mean_cpu_c": 63.80571428571429,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 68.3,
+      "phase": "sustained",
+      "round": 3,
+      "samples": 105,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 72.15,
+        "median": 69.95,
+        "min": 57.85,
+        "n": 65,
+        "p95": 71.6
+      },
+      "cases": 65,
+      "mean_cpu_c": 71.38326645264847,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 77.65,
+      "phase": "warm",
+      "round": 3,
+      "samples": 1246,
+      "throttled_cases": 0
+    }
+  ]
+}

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="440" height="592" viewBox="0 0 440 592" role="img" aria-label="Do all four cores help?">
-<rect width="440" height="592" rx="8" fill="#fcfcfb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="840" viewBox="0 0 440 840" role="img" aria-label="Do all four cores help?">
+<rect width="440" height="840" rx="8" fill="#fcfcfb"/>
 <text x="24.0" y="36.0" font-size="20" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Do all four cores help?</text>
 <text x="24.0" y="62.0" font-size="14.5" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Median time per case. Arrows go from</text>
 <text x="24.0" y="81.0" font-size="14.5" font-weight="normal" text-anchor="start" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">2 threads to 4 threads.</text>
@@ -7,14 +7,14 @@
 <text x="45.0" y="118.0" font-size="15" font-weight="normal" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">2 threads</text>
 <circle cx="144.8" cy="113.0" r="7.5" fill="#52514e" stroke="#fcfcfb" stroke-width="2"/>
 <text x="158.8" y="118.0" font-size="15" font-weight="normal" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">4 threads</text>
-<line x1="34.0" y1="164.0" x2="34.0" y2="532.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="34.0" y="552.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">3 s</text>
-<line x1="92.2" y1="164.0" x2="92.2" y2="532.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="92.2" y="552.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10 s</text>
-<line x1="178.7" y1="164.0" x2="178.7" y2="532.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="178.7" y="552.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">1 min</text>
-<line x1="290.0" y1="164.0" x2="290.0" y2="532.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="290.0" y="552.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10 min</text>
+<line x1="34.0" y1="164.0" x2="34.0" y2="780.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="34.0" y="800.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">3 s</text>
+<line x1="92.2" y1="164.0" x2="92.2" y2="780.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="92.2" y="800.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10 s</text>
+<line x1="178.7" y1="164.0" x2="178.7" y2="780.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="178.7" y="800.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">1 min</text>
+<line x1="290.0" y1="164.0" x2="290.0" y2="780.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="290.0" y="800.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#52514e" font-family="system-ui, -apple-system, Segoe UI, sans-serif">10 min</text>
 <circle cx="31.0" cy="179.0" r="7" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <text x="44.0" y="184.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b · thinking off</text>
 <line x1="116.5" y1="206.0" x2="113.2" y2="206.0" stroke="#0b0b0b" stroke-width="1.25"/>
@@ -23,28 +23,48 @@
 <circle cx="100.2" cy="206.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <text x="314.0" y="211.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">40% faster</text>
 <circle cx="31.0" cy="241.0" r="7" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="44.0" y="246.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · thinking off</text>
-<circle cx="94.7" cy="268.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
-<circle cx="88.5" cy="268.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="314.0" y="273.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">12% faster</text>
+<text x="44.0" y="246.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">LFM2.5-1.2B-Instruct-GGUF:Q4_K_M · thinking off</text>
+<circle cx="55.2" cy="268.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="46.0" cy="268.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="273.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">17% faster</text>
 <circle cx="31.0" cy="303.0" r="7" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="44.0" y="308.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · thinking off</text>
-<circle cx="125.7" cy="330.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
-<circle cx="107.3" cy="330.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="314.0" y="335.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">32% faster</text>
-<circle cx="31.0" cy="365.0" r="7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<text x="44.0" y="370.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b · thinking on</text>
-<circle cx="184.4" cy="392.0" r="8.5" fill="#fcfcfb" stroke="#eb6834" stroke-width="2.5"/>
-<circle cx="166.8" cy="392.0" r="8.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="308.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-omni:2b · thinking off</text>
+<circle cx="99.5" cy="330.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="90.2" cy="330.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="335.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">17% faster</text>
+<circle cx="31.0" cy="365.0" r="7" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="370.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-vl:2b · thinking off</text>
+<circle cx="99.1" cy="392.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="81.3" cy="392.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <text x="314.0" y="397.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31% faster</text>
-<circle cx="31.0" cy="427.0" r="7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<text x="44.0" y="432.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · thinking on</text>
-<circle cx="219.0" cy="454.0" r="8.5" fill="#fcfcfb" stroke="#eb6834" stroke-width="2.5"/>
-<circle cx="226.7" cy="454.0" r="8.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<text x="314.0" y="459.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">17% slower</text>
-<circle cx="31.0" cy="489.0" r="7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<text x="44.0" y="494.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · thinking on</text>
-<circle cx="251.0" cy="516.0" r="8.5" fill="#fcfcfb" stroke="#eb6834" stroke-width="2.5"/>
-<circle cx="257.1" cy="516.0" r="8.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<text x="314.0" y="521.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">13% slower</text>
+<circle cx="31.0" cy="427.0" r="7" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="432.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3 · thinking off</text>
+<circle cx="81.6" cy="454.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="67.7" cy="454.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="459.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">25% faster</text>
+<circle cx="31.0" cy="489.0" r="7" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="494.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · thinking off</text>
+<circle cx="94.7" cy="516.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="88.5" cy="516.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="521.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">12% faster</text>
+<circle cx="31.0" cy="551.0" r="7" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="556.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · thinking off</text>
+<circle cx="125.7" cy="578.0" r="8.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="107.3" cy="578.0" r="8.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="583.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">32% faster</text>
+<circle cx="31.0" cy="613.0" r="7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="618.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b · thinking on</text>
+<circle cx="184.4" cy="640.0" r="8.5" fill="#fcfcfb" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="166.8" cy="640.0" r="8.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="645.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31% faster</text>
+<circle cx="31.0" cy="675.0" r="7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="680.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · thinking on</text>
+<circle cx="219.0" cy="702.0" r="8.5" fill="#fcfcfb" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="226.7" cy="702.0" r="8.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="707.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">17% slower</text>
+<circle cx="31.0" cy="737.0" r="7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="44.0" y="742.0" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · thinking on</text>
+<circle cx="251.0" cy="764.0" r="8.5" fill="#fcfcfb" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="257.1" cy="764.0" r="8.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="314.0" y="769.5" font-size="15" font-weight="700" text-anchor="start" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">13% slower</text>
 </svg>

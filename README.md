@@ -21,7 +21,7 @@
 
 ## Results
 
-**Bottom line:** on an 8 GB Raspberry Pi 5, run **`gemma4:e2b`**. With thinking on it is the most accurate model tested (86% of cases) and the fastest of the accurate options, at a median of 47 seconds per case in under 6 GB of memory. With thinking off it scores 60% at about 12 seconds per case. All results use the Pi's 4 CPU cores, Ollama's usual setting. With 2 threads, `gemma4:e2b` is 31–40% slower at the same accuracy. CPU temperature peaks at about 78 °C with the official Active Cooler, without throttling.
+**Bottom line:** on an 8 GB Raspberry Pi 5, run **`gemma4:e2b`**. With thinking on it is the most accurate model tested (86% of cases) and the fastest of the accurate options, at a median of 47 seconds per case in under 6 GB of memory. With thinking off it scores 60% at about 12 seconds per case. All results use the Pi's 4 CPU cores, Ollama's usual setting. With 2 threads, `gemma4:e2b` is 31–40% slower at the same accuracy. For a smaller footprint with thinking off, `lfm3-vl:2b` and `lfm3-omni:2b` match or beat `gemma4:e2b` (60–62%) at 8–10 seconds per case in about 3 GB. CPU temperature peaks at about 78 °C with the official Active Cooler, without throttling.
 
 <!-- results:start -->
 
@@ -41,9 +41,13 @@ Setup: Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 | `qwen3.5:2b` | on | **71%** | 5/5 | 2.7 min | ✅ 4.4 GB | 9 cases hit the 10-minute limit |
 | `gemma4:e4b` (2 threads only) | off | **67%** | 5/5 | 40.1 s | ❌ 9.9 GB≈ | hung the Pi in 1 of 4 passes |
 | `qwen3.5:4b` | on | **66%** | 5/5 | 5.1 min | ✅ 5.6 GB | 11 cases hit the 10-minute limit |
+| `lfm3-omni:2b` | off | **62%** | 5/5 | 9.6 s | ✅ 3.1 GB |  |
+| `lfm3-vl:2b` | off | **60%** | 5/5 | 8.0 s | ✅ 2.6 GB |  |
 | `gemma4:e2b` | off | **60%** | 5/5 | 11.8 s | ✅ 5.7 GB |  |
 | `qwen3.5:2b` | off | **49%** | 5/5 | 9.3 s | ✅ 4.2 GB |  |
 | `qwen3.5:4b` | off | **49%** | 5/5 | 13.7 s | ✅ 5.4 GB |  |
+| `lfm3` | off | **37%** | 4/5 (no vision) | 6.0 s | ✅ 2.1 GB |  |
+| `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | off | **33%** | 4/5 (no vision) | 3.8 s | ✅ 1.7 GB |  |
 
 Accuracy is the share of cases passed on the tracks the model supports; Tracks shows how many of the 5 that is. A track a model can't attempt (no vision, for example) is not counted as 0%. Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's 7.9 GB of usable RAM.
 
@@ -88,16 +92,22 @@ The main results use 4 threads, all of the Pi's cores. Compared with 2 threads, 
 
 Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during it, gemma4:e4b exhausted the Pi's memory (RAM and zram full) and the Pi hung and rebooted after 49 of its 65 cases.
 
+Ollama names, for `ollama pull`: `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` is `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M`
+
 #### Thinking off: scores by track
 
 | Model | Accuracy<br>(all) | Accuracy<br>(text) | Challenge | Arithmetic | Structured | Agent | Vision | Context | Time per<br>case | Timed<br>out | Peak memory<br>(lowest free) | CPU °C<br>mean / peak |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `gemma4:e4b` (2 threads only) | **67%** | 70% | 19.3 | 3 | 12 | 12 | 7 | 9.3 | 40.1 s | 0 | ❌ 9.9 GB≈ (10 MB free) | 62 / 67 |
+| `lfm3-omni:2b` | **62%** | 58% | 16 | 4 | 6 | 10 | 10 | 10 | 9.6 s | 0 | ✅ 3.1 GB (4.8 GB free) | 71 / 77 |
+| `lfm3-vl:2b` | **60%** | 56% | 19 | 1 | 6 | 13 | 10 | 9 | 8.0 s | 0 | ✅ 2.6 GB (5.3 GB free) | 71 / 78 |
 | `gemma4:e2b` | **60%** | 60% | 14 | 4 | 9 | 12 | 8 | 6 | 11.8 s | 0 | ✅ 5.7 GB (2.2 GB free) | 71 / 77 |
 | `qwen3.5:2b` | **49%** | 54% | 15 | 4 | 6 | 11 | 4 | 7 | 9.3 s | 0 | ✅ 4.2 GB (3.7 GB free) | 68 / 75 |
 | `qwen3.5:4b` | **49%** | 46% | 14 | 4 | 7.7 | 3 | 8 | 9 | 13.7 s | 0 | ✅ 5.4 GB (2.4 GB free) | 72 / 78 |
+| `lfm3` | no vision | 37% | 5 | 3 | 8 | 3.3 | n/a | 5 | 6.0 s | 0 | ✅ 2.1 GB (5.9 GB free) | 71 / 78 |
+| `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | no vision | 33% | 4 | 4 | 4 | 6 | n/a | 3 | 3.8 s | 0 | ✅ 1.7 GB (6.2 GB free) | 70 / 76 |
 
-Scores are averaged over 3 passes. Challenge counts are out of 36 cases and each track out of 13.
+Scores are averaged over 3 passes. Challenge counts are out of 36 cases and each track out of 13. A model without vision or tools has fewer challenge cases, and its unsupported tracks show n/a.
 
 #### Thinking on: scores by track
 
@@ -115,7 +125,11 @@ Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in 
 
 | Model | First load from storage | Prompt processing | Generation (in cases) | Generation (sustained) | Sustained drift |
 |---|---:|---:|---:|---:|---:|
+| `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | 3 s | 90.0 tokens/s | 16.6 tokens/s | 15.5 tokens/s | -1.9% |
+| `lfm3` | 8 s | 63.0 tokens/s | 10.6 tokens/s | 10.1 tokens/s | -3.4% |
+| `lfm3-vl:2b` | 14 s | 62.2 tokens/s | 10.9 tokens/s | 10.1 tokens/s | -2.7% |
 | `qwen3.5:2b` | 34 s | 37.3 tokens/s | 5.5 tokens/s | 5.3 tokens/s | -2.5% |
+| `lfm3-omni:2b` | 10 s | 62.1 tokens/s | 11.1 tokens/s | 10.1 tokens/s | -2.7% |
 | `gemma4:e2b` | 55 s | 36.8 tokens/s | 14.3 tokens/s | 8.4 tokens/s | -2.6% |
 | `qwen3.5:4b` | 42 s | 22.3 tokens/s | 3.8 tokens/s | 3.5 tokens/s | -3.0% |
 | `gemma4:e4b (2 threads only)` | 88 s | 10.7 tokens/s | 6.7 tokens/s | 4.5 tokens/s | +0.8% |
@@ -126,7 +140,11 @@ Prompt processing is how fast a model reads its input, and it is limited by comp
 
 | Model | Median time per case | Reading the prompt | Writing the answer | Share spent reading | Answer length (median) |
 |---|---:|---:|---:|---:|---:|
+| `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | 3.8 s | 1.4 s | 0.8 s | 79% | 13 tokens |
+| `lfm3` | 6.0 s | 2.1 s | 1.3 s | 62% | 13 tokens |
+| `lfm3-vl:2b` | 8.0 s | 6.1 s | 1.0 s | 75% | 10 tokens |
 | `qwen3.5:2b` | 9.3 s | 7.9 s | 2.8 s | 71% | 15 tokens |
+| `lfm3-omni:2b` | 9.6 s | 6.1 s | 0.9 s | 86% | 10 tokens |
 | `gemma4:e2b` | 11.8 s | 10.8 s | 1.1 s | 90% | 14 tokens |
 | `qwen3.5:4b` | 13.7 s | 11.2 s | 3.6 s | 66% | 13 tokens |
 | `gemma4:e4b (2 threads only)` | 40.1 s | 37.4 s | 2.0 s | 93% | 13 tokens |
@@ -139,7 +157,11 @@ Prompt processing and generation are in tokens/s.
 
 | Model | Thinking | Time per case | Prompt processing | Generation | Generation (sustained) |
 |---|---|---:|---:|---:|---:|
+| `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | off | 4.7 → 3.8 s 🟢 -17% | 53.6 → 90.0 🟢 +68% | 18.1 → 16.6 🔴 -8% | 17.3 → 15.5 🔴 -10% |
+| `lfm3` | off | 8.0 → 6.0 s 🟢 -25% | 37.1 → 63.0 🟢 +70% | 11.8 → 10.6 🔴 -10% | 11.3 → 10.1 🔴 -11% |
 | `qwen3.5:2b` | off | 10.5 → 9.3 s 🟢 -12% | 40.3 → 37.3 🔴 -8% | 6.3 → 5.5 🔴 -12% | 6.1 → 5.3 🔴 -14% |
+| `lfm3-vl:2b` | off | 11.5 → 8.0 s 🟢 -31% | 36.8 → 62.2 🟢 +69% | 12.2 → 10.9 🔴 -11% | 11.3 → 10.1 🔴 -11% |
+| `lfm3-omni:2b` | off | 11.6 → 9.6 s 🟢 -17% | 37.0 → 62.1 🟢 +68% | 12.5 → 11.1 🔴 -11% | 11.4 → 10.1 🔴 -11% |
 | `gemma4:e2b` | off | 19.5 → 11.8 s 🟢 -40% | 22.0 → 36.8 🟢 +67% | 12.5 → 14.3 🟢 +15% | 7.5 → 8.4 🟢 +12% |
 | `qwen3.5:4b` | off | 20.0 → 13.7 s 🟢 -32% | 13.4 → 22.3 🟢 +66% | 4.2 → 3.8 🔴 -11% | 4.0 → 3.5 🔴 -12% |
 | `gemma4:e2b` | on | 1.1 min → 46.9 s 🟢 -31% | 22.0 → 36.9 🟢 +67% | 11.3 → 12.8 🟢 +13% | — |
@@ -150,7 +172,11 @@ Prompt processing and generation are in tokens/s.
 
 | Model | Thinking | Accuracy | Timed out | Peak CPU |
 |---|---|---:|---:|---:|
+| `LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | off | 33 → 33% | 0 → 0 | 66 → 76 °C 🔴 |
+| `lfm3` | off | 37 → 37% | 0 → 0 | 68 → 78 °C 🔴 |
 | `qwen3.5:2b` | off | 49 → 49% | 0 → 0 | 69 → 75 °C 🔴 |
+| `lfm3-vl:2b` | off | 58 → 60% 🟢 | 0 → 0 | 67 → 78 °C 🔴 |
+| `lfm3-omni:2b` | off | 62 → 62% | 0 → 0 | 66 → 77 °C 🔴 |
 | `gemma4:e2b` | off | 60 → 60% | 0 → 0 | 65 → 77 °C 🔴 |
 | `qwen3.5:4b` | off | 49 → 49% | 0 → 0 | 68 → 78 °C 🔴 |
 | `gemma4:e2b` | on | 86 → 86% | 1 → 1 | 68 → 77 °C 🔴 |
@@ -170,15 +196,16 @@ For what the models actually answered in each track, and why it was scored as it
 - **With thinking on, `gemma4:e2b` is the clear winner.** It passes 56 of 65 cases (86%), up from 39 (60%) with thinking off, at a median of 47 seconds per case, and runs out of time on only 1 case. `qwen3.5:2b` and `qwen3.5:4b` reach 71% and 66%, but they think for much longer: medians of 2.7 and 5.1 minutes, with 9 and 11 cases hitting the 10-minute limit before answering. `gemma4:e4b` wasn't run with thinking on, because it didn't reliably fit even with thinking off.
 - **Thinking fixes reasoning, at a cost in time.** It turns nearly every arithmetic and structured-output failure into a pass: the thinking-off failures in the [failure analysis](docs/ANALYSIS.md) mostly pass with thinking on. The median time per case grows about 4× for `gemma4:e2b` (12 s to 47 s) and 17–22× for the Qwen models.
 - **Bigger isn't better at tool use, and thinking doesn't help it.** With thinking off, `qwen3.5:4b` passes 3 of 13 agent cases against 11 for `qwen3.5:2b`, mostly by adding tool calls the task didn't ask for. With thinking on, the Qwen models do worse still (1 and 9), while `gemma4:e2b` stays at 12.
+- **The LFM models are the leanest and fastest.** With thinking off, `lfm3-omni:2b` scores 62%, the best thinking-off result at 4 threads, and `lfm3-vl:2b` matches `gemma4:e2b` at 60%. Both are faster than `gemma4:e2b` (8.0–9.6 s against 11.8 s per case) in about half the memory (2.6–3.1 GB against 5.7 GB). Their strengths are uneven: `lfm3-vl:2b` is the only model to pass all 13 agent cases, but it passes only 1 of 13 arithmetic cases. The text-only `lfm3` (37%) and `LFM2.5-1.2B` (33%) are the fastest, at 4–6 s per case in under 2.2 GB, but the least accurate. Their thinking-on runs are still to come.
 - **`gemma4:e4b` doesn't reliably fit in 8 GB.** It scores 67% with thinking off, more than any other model in that mode, but it filled the RAM and zram in every pass, and once the Pi ran out of memory and hung. So it was run only with thinking off and 2 threads, and is marked that way.
 
 ### Practical notes for running models on a Pi
 
 - **Ollama's prompt cache can use up to 8 GiB.** By default each runner keeps earlier prompts in RAM, which swamps an 8 GB Pi. Set `LLAMA_ARG_CACHE_RAM=0` on the Ollama server (see [Quick start](#quick-start)).
-- **On the Pi, reading the prompt takes longer than writing the answer.** With thinking off, answers are short, so 66–93% of each case is spent processing the prompt. `gemma4:e4b`, measured at 2 threads, writes at a reasonable 6.7 tokens/s but reads prompts at only 10.7 tokens/s, so it takes the longest per case (40 s) of the thinking-off runs. At 4 threads, `gemma4:e2b` reads at 37 tokens/s.
+- **On the Pi, reading the prompt takes longer than writing the answer.** With thinking off, answers are short, so 62–93% of each case is spent processing the prompt. `gemma4:e4b`, measured at 2 threads, writes at a reasonable 6.7 tokens/s but reads prompts at only 10.7 tokens/s, so it takes the longest per case (40 s) of the thinking-off runs. At 4 threads, `gemma4:e2b` reads at 37 tokens/s.
 - **On the Pi, the time limit, not the token budget, is what stops thinking.** No case used up the 6,144-token budget. All 21 thinking-on timeouts reached the 10-minute limit while the model was still reasoning. Part of those 10 minutes goes to reading the prompt, and generation with thinking on runs at only 3.3–12.8 tokens/s.
-- **More threads help Gemma and slow down Qwen's writing.** Compared with 2 threads, 4 threads speeds up `gemma4:e2b` at both reading and writing, cutting its time per case by 31–40%. Prompt processing is also about 66% faster for `qwen3.5:4b`, but generation is 11–14% *slower* for both Qwen models. So with thinking on, where long reasoning is mostly generation, the Qwen models get 13–17% slower overall. Scores are unchanged with thinking off. The results use 4 threads, all of the Pi's cores; the 2-thread comparison is under the results.
-- **The Pi stays cool enough with the official Active Cooler.** At 4 threads, CPU temperature averaged 65–72 °C and peaked at 78 °C, below the roughly 80 °C at which the Pi 5 starts throttling. No case recorded a throttling flag. Sustained generation speed slipped by 2.5–3% over each 90-second phase, against under 2% at 2 threads, where the Pi ran about 8–12 °C cooler.
+- **More threads speed up reading, but can slow down writing.** Compared with 2 threads, 4 threads speeds up `gemma4:e2b` at both reading and writing, cutting its time per case by 31–40%. For the LFM models and `qwen3.5:4b`, prompt processing is 66–70% faster, but generation is 8–14% *slower*, as it is for `qwen3.5:2b`. With thinking off, where reading dominates, every model is faster overall (12–40%). With thinking on, where long reasoning is mostly generation, the Qwen models get 13–17% slower. With thinking off, scores are unchanged or within about one case. The results use 4 threads, all of the Pi's cores; the 2-thread comparison is under the results.
+- **The Pi stays cool enough with the official Active Cooler.** At 4 threads, CPU temperature averaged 65–72 °C and peaked at 78 °C, below the roughly 80 °C at which the Pi 5 starts throttling. No case recorded a throttling flag. Sustained generation speed slipped by 2–3.5% over each 90-second phase, against under 2% at 2 threads, where the Pi ran about 8–12 °C cooler.
 - **Repeat runs are close, but not identical.** Across three passes on the Pi, 74–82% of cases produced word-for-word the same output, and the pass or fail result differed between passes for only 2 of 260 model–case pairs. Scores are therefore averaged over the passes.
 
 ## What it measures

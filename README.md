@@ -88,16 +88,16 @@ Note: Official thinking-off run, rounds 1–3 of 4. Round 4 is left out: during 
 
 **Thinking off: scores by track** (averaged over 3 passes)
 
-| Model | Accuracy (all 5 tracks) | Accuracy (text tracks) | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Median time per case | Timed out | Peak memory in use (lowest free) | CPU °C (mean / peak) |
+| Model | Accuracy (all) | Accuracy (text) | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Time per case | Timed out | Peak memory (lowest free) | CPU °C mean / peak |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| `gemma4:e4b` (2 threads only) | **67%** | 70% | 19.3 | 3 | 12 | 12 | 7 | 9.3 | 40.1 s | 0 | ❌ 9.9 GB≈ (10 MB free): hung the Pi in 1 of 4 passes | 62 / 67 |
+| `gemma4:e4b` (2 threads only) | **67%** | 70% | 19.3 | 3 | 12 | 12 | 7 | 9.3 | 40.1 s | 0 | ❌ 9.9 GB≈ (10 MB free) | 62 / 67 |
 | `gemma4:e2b` | **60%** | 60% | 14 | 4 | 9 | 12 | 8 | 6 | 11.8 s | 0 | ✅ 5.7 GB (2.2 GB free) | 71 / 77 |
 | `qwen3.5:2b` | **49%** | 54% | 15 | 4 | 6 | 11 | 4 | 7 | 9.3 s | 0 | ✅ 4.2 GB (3.7 GB free) | 68 / 75 |
 | `qwen3.5:4b` | **49%** | 46% | 14 | 4 | 7.7 | 3 | 8 | 9 | 13.7 s | 0 | ✅ 5.4 GB (2.4 GB free) | 72 / 78 |
 
 **Thinking on: scores by track**
 
-| Model | Accuracy (all 5 tracks) | Accuracy (text tracks) | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Median time per case | Timed out | Peak memory in use (lowest free) | CPU °C (mean / peak) |
+| Model | Accuracy (all) | Accuracy (text) | Challenge /36 | Arithmetic /13 | Structured /13 | Agent /13 | Vision /13 | Context /13 | Time per case | Timed out | Peak memory (lowest free) | CPU °C mean / peak |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
 | `gemma4:e2b` | **86%** | 90% | 28 | 13 | 13 | 12 | 9 | 9 | 46.9 s | 1 | ✅ 5.7 GB (2.2 GB free) | 71 / 77 |
 | `qwen3.5:2b` | **71%** | 71% | 23 | 11 | 9 | 9 | 9 | 8 | 2.7 min | 9 | ✅ 4.4 GB (3.6 GB free) | 65 / 72 |
@@ -107,7 +107,7 @@ Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in 
 
 **Speed** (thinking off)
 
-| Model | First load from storage | Prompt processing | Generation (in cases) | Generation (sustained) | Speed change during the sustained phase |
+| Model | First load from storage | Prompt processing | Generation (in cases) | Generation (sustained) | Sustained drift |
 |---|---:|---:|---:|---:|---:|
 | `qwen3.5:2b` | 34 s | 37.3 tokens/s | 5.5 tokens/s | 5.3 tokens/s | -2.5% |
 | `gemma4:e2b` | 55 s | 36.8 tokens/s | 14.3 tokens/s | 8.4 tokens/s | -2.6% |
@@ -129,16 +129,16 @@ Answers are short, so most of each case is spent reading the prompt, especially 
 
 **2 vs 4 threads**
 
-| Model | Thinking | Accuracy | Median time per case | Prompt processing (tokens/s) | Generation in cases (tokens/s) | Generation sustained (tokens/s) | Timed out | Peak CPU °C |
+| Model | Thinking | Accuracy | Time per case | Prompt processing | Generation | Generation (sustained) | Timed out | Peak CPU |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| `qwen3.5:2b` | off | 49% → 49% | 10.5 s → 9.3 s (🟢 -12%) | 40.3 → 37.3 (🔴 -8%) | 6.3 → 5.5 (🔴 -12%) | 6.1 → 5.3 (🔴 -14%) | 0 → 0 | 69 → 75 (🔴 +6 °C) |
-| `gemma4:e2b` | off | 60% → 60% | 19.5 s → 11.8 s (🟢 -40%) | 22.0 → 36.8 (🟢 +67%) | 12.5 → 14.3 (🟢 +15%) | 7.5 → 8.4 (🟢 +12%) | 0 → 0 | 65 → 77 (🔴 +12 °C) |
-| `qwen3.5:4b` | off | 49% → 49% | 20.0 s → 13.7 s (🟢 -32%) | 13.4 → 22.3 (🟢 +66%) | 4.2 → 3.8 (🔴 -11%) | 4.0 → 3.5 (🔴 -12%) | 0 → 0 | 68 → 78 (🔴 +9 °C) |
-| `gemma4:e2b` | on | 86% → 86% | 1.1 min → 46.9 s (🟢 -31%) | 22.0 → 36.9 (🟢 +67%) | 11.3 → 12.8 (🟢 +13%) | — | 1 → 1 | 68 → 77 (🔴 +9 °C) |
-| `qwen3.5:2b` | on | 66% → 71% (🟢) | 2.3 min → 2.7 min (🔴 +17%) | 39.6 → 35.7 (🔴 -10%) | 5.8 → 5.1 (🔴 -12%) | — | 11 → 9 (🟢) | 69 → 72 (🔴 +3 °C) |
-| `qwen3.5:4b` | on | 65% → 66% (🟢) | 4.5 min → 5.1 min (🔴 +13%) | 13.4 → 21.4 (🟢 +60%) | 3.8 → 3.3 (🔴 -14%) | — | 13 → 11 (🟢) | 69 → 77 (🔴 +8 °C) |
+| `qwen3.5:2b` | off | 49% (=) | 9.3 s 🟢 -12% | 37.3 🔴 -8% | 5.5 🔴 -12% | 5.3 🔴 -14% | 0 (=) | 75 °C 🔴 +6 °C |
+| `gemma4:e2b` | off | 60% (=) | 11.8 s 🟢 -40% | 36.8 🟢 +67% | 14.3 🟢 +15% | 8.4 🟢 +12% | 0 (=) | 77 °C 🔴 +12 °C |
+| `qwen3.5:4b` | off | 49% (=) | 13.7 s 🟢 -32% | 22.3 🟢 +66% | 3.8 🔴 -11% | 3.5 🔴 -12% | 0 (=) | 78 °C 🔴 +10 °C |
+| `gemma4:e2b` | on | 86% (=) | 46.9 s 🟢 -31% | 36.9 🟢 +67% | 12.8 🟢 +13% | — | 1 (=) | 77 °C 🔴 +9 °C |
+| `qwen3.5:2b` | on | 71% 🟢 +5 pts | 2.7 min 🔴 +17% | 35.7 🔴 -10% | 5.1 🔴 -12% | — | 9 🟢 -2 | 72 °C 🔴 +3 °C |
+| `qwen3.5:4b` | on | 66% 🟢 +1 pt | 5.1 min 🔴 +13% | 21.4 🟢 +60% | 3.3 🔴 -14% | — | 11 🟢 -2 | 77 °C 🔴 +8 °C |
 
-Each pair compares an official run at the main thread count with one at the other, for the same model and thinking mode; everything else is identical. Each change reads from fewer threads to more: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the worse. Prompt processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking on, a change in speed also changes how many cases finish inside the 10-minute limit.
+Each pair compares an official run at the main thread count with one at the other, for the same model and thinking mode; everything else is identical. Each cell shows the value with 4 threads and the change from 2 threads: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the worse; accuracy changes are in percentage points. Speeds are in tokens/s. Prompt processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking on, a change in speed also changes how many cases finish inside the 10-minute limit.
 
 </details>
 

@@ -47,8 +47,9 @@ PRIMARY_THREADS = 4
 TEXT_TRACKS = ("arithmetic", "structured", "agent", "context")
 THREADS_NOTE = (
     "Each pair compares an official run at the main thread count with one at the other, for the same model and "
-    "thinking mode; everything else is identical. Each change reads from fewer threads to more: 🟢 marks an "
-    "improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the worse. Prompt "
+    "thinking mode; everything else is identical. Each cell shows the value with 4 threads and the change from 2 "
+    "threads: 🟢 marks an improvement (faster, more accurate, fewer timeouts, cooler) and 🔴 a change for the "
+    "worse; accuracy changes are in percentage points. Speeds are in tokens/s. Prompt "
     "processing is limited by computation, so more cores can speed it up. Generation is limited mostly by memory "
     "bandwidth, which the cores share, so more threads may not help it and can even slow it down. With thinking "
     "on, a change in speed also changes how many cases finish inside the 10-minute limit."
@@ -329,7 +330,7 @@ def memory(entry):
     free = f"{available / 2**20:.1f} GB" if available >= 2**20 else f"{available / 1024:.0f} MB"
     figure = f"{entry['peak_mem_gb']:.1f} GB{'' if entry['mem_exact'] else '≈'} ({free} free)"
     if entry["flag"]:
-        return f"❌ {figure}: {entry['flag']}"
+        return f"❌ {figure}"  # the incident itself is noted in the glance table and charts
     if entry["oom"]:
         return f"❌ {figure}: out of memory"
     swap = entry["peak_swap_kib"] or 0
@@ -339,9 +340,9 @@ def memory(entry):
 
 
 def table(group, totals):
-    head = ["Model", f"Accuracy (all {len(TRACKS)} tracks)", "Accuracy (text tracks)", f"Challenge /{totals['challenge']}",
+    head = ["Model", "Accuracy (all)", "Accuracy (text)", f"Challenge /{totals['challenge']}",
             *(f"{TRACK_NAMES[track]} /{totals[track]}" for track in TRACKS),
-            "Median time per case", "Timed out", "Peak memory in use (lowest free)", "CPU °C (mean / peak)"]
+            "Time per case", "Timed out", "Peak memory (lowest free)", "CPU °C mean / peak"]
     lines = ["| " + " | ".join(head) + " |", "|" + "|".join(["---"] + ["---:"] * (len(head) - 3) + ["---", "---"]) + "|"]
     for entry in sorted(group, key=lambda item: (-item["accuracy"], item["median_s"])):
         temperature = entry["temperature"]
@@ -369,7 +370,7 @@ def rate(value):
 
 def speed_table(group):
     lines = ["| Model | First load from storage | Prompt processing | Generation (in cases) | "
-             "Generation (sustained) | Speed change during the sustained phase |",
+             "Generation (sustained) | Sustained drift |",
              "|---|---:|---:|---:|---:|---:|"]
     for entry in sorted(group, key=lambda item: item["median_s"]):
         load = f"{entry['first_load_s']:.0f} s" if entry["first_load_s"] is not None else "—"
@@ -380,39 +381,44 @@ def speed_table(group):
 
 
 def threads_table(pairs):
-    def change(a, b, fmt, higher_is_better):
-        """'a → b (+x%)' with 🟢 when the change is an improvement and 🔴 when it is worse.
+    """One row per model and mode: the value with more threads, and the change from fewer.
 
-        GitHub strips colour from Markdown, so a coloured marker carries better/worse; the sign
-        alone can't, since for time a minus is good and for speed a plus is."""
+    Cells stay short ("11.8 s 🟢 −40%") so GitHub doesn't squeeze the columns into one word per line.
+    GitHub strips colour from Markdown, so a marker carries better/worse: 🟢 an improvement, 🔴 a
+    change for the worse. The sign alone can't, since for time a minus is good and for speed a plus is."""
+    def change(a, b, fmt, higher_is_better):
         if a is None or b is None:
             return "—"
-        text = f"{fmt(a)} → {fmt(b)}"
-        if a and abs(b / a - 1) >= 0.005:
-            better = (b > a) == higher_is_better
-            text += f" ({'🟢' if better else '🔴'} {(b / a - 1) * 100:+.0f}%)"
-        return text
+        if not a or abs(b / a - 1) < 0.005:
+            return f"{fmt(b)} (=)"
+        better = (b > a) == higher_is_better
+        return f"{fmt(b)} {'🟢' if better else '🔴'} {(b / a - 1) * 100:+.0f}%"
 
-    def count_change(a, b):
-        text = f"{number(a)} → {number(b)}"
-        return text + (" (🟢)" if b < a else " (🔴)" if b > a else "")
+    def points(a, b, fmt, higher_is_better, unit=""):
+        if a is None or b is None:
+            return "—"
+        diff = round(b) - round(a)  # from the rounded values readers see, so the numbers add up
+        if not diff:
+            return f"{fmt(b)} (=)"
+        better = (diff > 0) == higher_is_better
+        if unit == " pts" and abs(diff) == 1:
+            unit = " pt"
+        return f"{fmt(b)} {'🟢' if better else '🔴'} {diff:+d}{unit}"
     temp = lambda entry: entry["temperature"]["peak_cpu_c"] if entry["temperature"] else None
-    lines = ["| Model | Thinking | Accuracy | Median time per case | Prompt processing (tokens/s) | "
-             "Generation in cases (tokens/s) | Generation sustained (tokens/s) | Timed out | Peak CPU °C |",
+    high = pairs[0][1]["threads"]
+    lines = [f"| Model | Thinking | Accuracy | Time per case | Prompt processing | Generation | "
+             f"Generation (sustained) | Timed out | Peak CPU |",
              "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
     for a, b in sorted(pairs, key=lambda pair: (pair[0]["thinking"], pair[0]["median_s"])):
-        total = len(dataset())
         lines.append(" | ".join([
             f"| `{display_name(a['model'])}`", a["thinking"],
-            f"{a['accuracy']:.0f}% → {b['accuracy']:.0f}%" + (" (🟢)" if round(b["accuracy"]) > round(a["accuracy"])
-                                                              else " (🔴)" if round(b["accuracy"]) < round(a["accuracy"]) else ""),
+            points(a["accuracy"], b["accuracy"], lambda v: f"{v:.0f}%", True, " pts"),
             change(a["median_s"], b["median_s"], duration, higher_is_better=False),
             change(a.get("prefill_tok_s"), b.get("prefill_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
             change(a.get("case_decode_tok_s"), b.get("case_decode_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
             change(a.get("sustained_tok_s"), b.get("sustained_tok_s"), lambda v: f"{v:.1f}", higher_is_better=True),
-            count_change(a["timeouts"], b["timeouts"]),
-            (f"{temp(a):.0f} → {temp(b):.0f} ({'🔴' if temp(b) > temp(a) else '🟢'} {temp(b) - temp(a):+.0f} °C)"
-             if temp(a) and temp(b) else "—") + " |"]))
+            points(a["timeouts"], b["timeouts"], number, False),
+            points(temp(a), temp(b), lambda v: f"{v:.0f} °C", False, " °C") + " |"]))
     return "\n".join(lines)
 
 

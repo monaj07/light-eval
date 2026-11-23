@@ -133,7 +133,12 @@ def api_error(detail, code=None):
            "failed to reserve memory", "not enough memory", "available memory")
     # Ollama reports a model's malformed tool call as a server error; it is the model's failure.
     tool_parse = ("xml syntax error", "error parsing tool call", "failed to parse tool call", "invalid tool call")
+    # With truncation off, an input longer than the context is refused (Ollama 0.40: "request (612
+    # tokens) exceeds the available context size (256 tokens)"). Like out of memory, not fitting is
+    # a real result, not a server fault.
+    overflow = ("exceeds the available context size", "exceeds the context", "context length exceeded")
     status = ("out_of_memory" if any(phrase in lower for phrase in oom)
+              else "context_overflow" if any(phrase in lower for phrase in overflow)
               else "invalid_tool_call" if any(phrase in lower for phrase in tool_parse) else "api_error")
     return BenchError(f"HTTP {code}: {detail}" if code is not None else detail, status)
 
@@ -172,18 +177,35 @@ def _server_environment_sources():
     return sources
 
 
+# Server settings that change memory, speed or scheduling. Manifests are published, so only these
+# are recorded: an allowlist, never every variable, which could include keys, hosts or paths.
+SERVER_SETTINGS = ("OLLAMA_FLASH_ATTENTION", "OLLAMA_KV_CACHE_TYPE", "OLLAMA_NUM_PARALLEL",
+                   "OLLAMA_MAX_LOADED_MODELS", "OLLAMA_CONTEXT_LENGTH", "OLLAMA_KEEP_ALIVE",
+                   "OLLAMA_MAX_QUEUE", "OLLAMA_SCHED_SPREAD", "OLLAMA_GPU_OVERHEAD", "OLLAMA_LLM_LIBRARY",
+                   "OLLAMA_NEW_ENGINE", "OLLAMA_LOAD_TIMEOUT", "OLLAMA_MULTIUSER_CACHE")
+SECRET_NAME = re.compile(r"KEY|TOKEN|SECRET|PASS|AUTH|CRED", re.I)
+
+
+def recordable_setting(key):
+    """Whether a server variable may go into a (published) manifest."""
+    return not SECRET_NAME.search(key) and (key in SERVER_SETTINGS or key.startswith("LLAMA_ARG_"))
+
+
 def server_environment(prefixes=("OLLAMA_", "LLAMA_ARG_")):
-    """Every OLLAMA_* and LLAMA_ARG_* variable of the running Ollama server, as recorded settings.
+    """The running Ollama server's performance settings: SERVER_SETTINGS and LLAMA_ARG_* variables.
 
     Flash attention, the KV-cache type, parallelism and similar settings change memory and
-    speed, so the manifest records them all. Returns None when the environment can't be read."""
+    speed, so the manifest records them. Anything named like a credential is left out, even with
+    an allowed prefix (llama.cpp has LLAMA_ARG_API_KEY). Returns None when the environment can't
+    be read."""
     sources = _server_environment_sources()
     if not any(text.strip() for text in sources):
         return None
     found = {}
     for text in sources:
         for key, value in re.findall(r"(?:^|\s)((?:%s)[A-Z0-9_]+)=(\S*)" % "|".join(prefixes), text):
-            found.setdefault(key, value)
+            if recordable_setting(key):
+                found.setdefault(key, value)
     return dict(sorted(found.items()))
 
 
@@ -252,11 +274,12 @@ def sample():
         mem["memory_page_bytes"] = os.sysconf("SC_PAGE_SIZE")
         # zram keeps swapped pages compressed in RAM. mm_stat's third field is the RAM it uses,
         # which lets memory in use count those pages once rather than twice.
-        zram = [read_text(path) for path in sorted(Path("/sys/block").glob("zram*/mm_stat"))]
-        zram = [int(text.split()[2]) for text in zram if text and len(text.split()) > 2]
-        # Always recorded on Linux, as 0 without zram: swap on disk then counts in full, and no
-        # sample falls back to the old, approximate calculation.
-        mem["zram_ram_kib"] = sum(zram) // 1024
+        stats = [read_text(path) for path in sorted(Path("/sys/block").glob("zram*/mm_stat"))]
+        zram = [int(text.split()[2]) for text in stats if text and len(text.split()) > 2]
+        # Recorded on Linux as 0 without zram: swap on disk then counts in full. A zram device whose
+        # stats can't be read leaves it out, so peak memory is reported as unknown, not overstated.
+        if len(zram) == len(stats):
+            mem["zram_ram_kib"] = sum(zram) // 1024
         vm = linux_fields("/proc/vmstat", {"pswpin", "pswpout", "oom_kill"})
     return {"t": time.monotonic(), "cpu_c": float(temperature) / 1000 if temperature else None,
             "throttled_bits": throttled, **mem, **vm}

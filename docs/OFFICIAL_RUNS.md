@@ -6,13 +6,13 @@ This is the protocol behind the published Raspberry Pi 5 results. It uses suite 
 
 | | Thinking off | Thinking on |
 |---|---|---|
-| Invocation | one run with all four models, `--cycles 1` | one run per model |
-| What runs | one round per model in the run, each model taking every position once | at 4 threads, three passes of the 65 cases (`--cycles 3`); at 2 threads, one pass |
-| Published | the first 3 rounds, so every thinking-off result averages 3 passes | every pass |
+| Invocation | one run with all the models | one run per model |
+| What runs | three passes (`--passes 3`, the default), the model order rotating between passes | at 4 threads, three passes of the 65 cases (the default); at 2 threads, one pass (`--passes 1`) |
+| Published | every pass | every pass |
 | Phases | cold, warm, sustained | warm only |
 | Expected time on the Pi | about 10 hours | from about 4.5 hours (`qwen3.5:2b`) upwards per model |
 
-**Why not `--cycles 2`.** With four models, `--cycles 2` would mean 8 rounds. With thinking off, 4 rounds already give a balanced order, a timing spread and a repeatability check. Outputs are close but not identical between passes: in the official run, 74–82% of cases repeated word for word, and the pass or fail result differed between passes for 2 of 260 model–case pairs. So the scores are averaged over the passes.
+**Why three passes.** Three passes give a timing spread and a repeatability check at a cost that stays fixed as models are added. Before protocol 3, `--cycles 1` gave one pass per model in the run (4 with four models), and only the first 3 rounds were published, which is the same schedule as `--passes 3`. Outputs are close but not identical between passes: in the official run, 74–82% of cases repeated word for word, and the pass or fail result differed between passes for 2 of 260 model–case pairs. So the scores are averaged over the passes.
 
 **Why three thinking-on passes at 4 threads, and one at 2.** A thinking-on pass takes 1–6 hours per model, so passes are spent where the main results are: the 4-thread runs, which the README's tables and charts use. The 2-thread runs only feed the thread comparison. The `lfm3` and `lfm3-vl:2b` runs follow this plan. The earlier 4-thread runs of `gemma4:e2b` and the Qwen models were single passes and are being re-run with three. In the three-pass runs so far, 69–77% of cases repeated word for word, and no case's pass or fail result changed between passes.
 
@@ -67,7 +67,7 @@ SETUP="Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 
 ## Commands
 
-Run these from `~/light-eval` inside the tmux session, after setting `SETUP` in that same shell. These are the commands of the first official runs, at 2 threads. The runner's default is now 4 threads, so `--threads 2` is written out below to reproduce them; leave it out for 4-thread runs.
+Run these from `~/light-eval` inside the tmux session, after setting `SETUP` in that same shell. These are the commands of the first official runs, at 2 threads, written for protocol 3: the original runs used `--cycles 1`, which `--passes` replaced (thinking off: `--cycles 1` with four models gave 4 rounds, of which the first 3 are published; thinking on: one pass). The runner's default is now 4 threads, so `--threads 2` is written out below to reproduce them; leave it out for 4-thread runs.
 
 **Rehearsal first (about 10–15 minutes).** It runs every phase and the gates between two models on the arithmetic track only, to check the whole chain before committing a night to it:
 
@@ -78,18 +78,18 @@ python3 light_eval.py run --models qwen3.5:2b gemma4:e2b --tracks arithmetic --s
 
 It should end with a summary for both models, `manifest.json` should show `"status": "complete"`, and `thermal_gate_timeouts` should be empty, or show how long cooling takes. Don't publish it.
 
-Thinking off: all four models, all phases, 4 rounds.
+Thinking off: all four models, all phases, three passes.
 
 ```bash
 python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b gemma4:e4b \
-  --cycles 1 --threads 2 --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off
+  --passes 3 --threads 2 --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off
 ```
 
 Thinking on: one model per run, warm phase only.
 
 ```bash
 for model in qwen3.5:2b gemma4:e2b qwen3.5:4b; do
-  python3 light_eval.py run --models "$model" --phases warm --thinking on --threads 2 \
+  python3 light_eval.py run --models "$model" --phases warm --thinking on --threads 2 --passes 1 \
     --temp-min 30 --temp-max 50 --setup "$SETUP" --out "results/official_v1_7_on_${model//[:.]/_}"
 done
 ```
@@ -105,10 +105,10 @@ The first official runs used `--threads 2`, and Ollama's runner was started with
 The 4-thread runs repeated the official runs with `--threads 4` and nothing else changed. They left out `gemma4:e4b`, which hung the Pi with thinking off. They were chained in one tmux session:
 
 ```bash
-python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b --cycles 1 --threads 4 \
+python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b --passes 3 --threads 4 \
   --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/official_v1_7_off_threads4 ; \
 for model in gemma4:e2b qwen3.5:2b qwen3.5:4b; do
-  python3 light_eval.py run --models "$model" --phases warm --thinking on --threads 4 \
+  python3 light_eval.py run --models "$model" --phases warm --thinking on --threads 4 --passes 1 \
     --temp-min 30 --temp-max 50 --setup "$SETUP" --out "results/official_v1_7_on_threads4_${model//[:.]/_}"
 done
 ```

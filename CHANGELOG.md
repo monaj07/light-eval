@@ -4,6 +4,23 @@ Each run records the suite version in `manifest.json`. Scores are comparable onl
 
 Since protocol 2, runs also record `protocol_version`: how runs are made, separately from the suite version, which covers cases and scoring. A protocol change can alter timings or how failures are classified without changing any case, so it no longer needs a new suite version, which would retire every published result.
 
+## Protocol 3 (2026-11-23)
+
+Cases and scoring are unchanged (suite 1.7.0).
+
+- **`--passes N` replaces `--cycles`.** Every model runs N times (default 3), whatever the number of models. With `--cycles`, one cycle meant one pass per model in the run, so the pass count depended on how many models were listed (3 for three models, 4 for four). The runner rejects `--cycles` with a message pointing to `--passes`.
+- The model orders are the first N of the same balanced, seeded schedule, so three passes of four models run in exactly the order of the first three rounds of a protocol 1–2 run, which is what was published for those runs.
+- Single-model thinking-on runs use the default of 3 passes, or `--passes 1` for the 2-thread comparison.
+- **Fixes from a second review of protocols 2 and 3.**
+  - An input longer than `--context` is `context_overflow`, the model's result like out of memory, not `api_error`, which counted as a server fault and made `add` refuse the run.
+  - A failed sustained-phase warmup, which writes no case row, counts as an infrastructure error, so the run ends `complete_with_errors`.
+  - `server_environment` records only an allowlist of performance settings (flash attention, KV-cache type, parallelism and so on, plus `LLAMA_ARG_*`), never anything named like a credential. Protocol 2 recorded every `OLLAMA_*` variable, which could include a key, host or path; `add` applies the same allowlist to manifests made before this fix.
+  - A zram device whose statistics can't be read leaves `zram_ram_kib` out of that sample, so peak memory is reported as unknown rather than overstated.
+  - The thermal band also narrows when the idle baseline is within 3 °C of `--temp-max` (since protocol 2), not only when the first gate times out.
+- **Publishing (`tools/publish.py add`) also refuses:** an official run without its mode's phases (thinking off: cold, warm and sustained; thinking on: warm), a run or model with no warm cases, non-standard `--sustain-seconds`, `--sustain-tokens` or `--seed`, and a thinking-off model with thinking text in more than 2 cases. The thinking checks count only cases with model turns, so failed warmups aren't misread as a missing thinking mode.
+
+All published results are unchanged: `build` produces the same README and charts.
+
 ## Protocol 2 (2026-11-22)
 
 Cases and scoring are unchanged (suite 1.7.0). Changes from an independent review of the runner and the publishing step:

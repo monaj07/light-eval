@@ -26,7 +26,7 @@ PHASES = ("cold", "warm", "sustained")
 #   (not recorded): runs before 2026-11-22.
 #   2: prompts are never silently truncated; the model is reloaded after any infrastructure
 #      error; tool-call parse errors are the model's failure. See CHANGELOG.md, "Protocol 2".
-PROTOCOL_VERSION = 2
+PROTOCOL_VERSION = 3
 # Outcomes that come from the infrastructure, not the model's answer.
 INFRASTRUCTURE_STATUSES = ("api_error", "connection_error", "protocol_error")
 # Keep prompt-processing workspace small without shortening the context.
@@ -43,10 +43,18 @@ def model_name(name):
     return name if ":" in name.rsplit("/", 1)[-1] else f"{name}:latest"
 
 
-def rounds(models, cycles, seed):
-    """Balance positions per cycle and use opposite cyclic orders in each pair."""
+def rounds(models, passes, seed):
+    """The model order for each of `passes` passes; every model runs once per pass.
+
+    Orders come from balanced cycles: each block of len(models) passes gives every model every
+    position once, and paired blocks use opposite cyclic orders. Taking the first `passes` orders
+    keeps the count independent of the number of models: 3 passes of 4 models are the first 3
+    rounds of a full cycle, the same schedule as the protocol 1-2 runs published as rounds 1-3."""
+    if not models:
+        return
     rng = random.Random(seed)
-    for cycle in range(cycles):
+    produced, cycle = 0, 0
+    while produced < passes:
         if cycle % 2 == 0:
             order = sorted(models)
             rng.shuffle(order)
@@ -56,7 +64,11 @@ def rounds(models, cycles, seed):
         offsets = list(range(len(order)))
         rng.shuffle(offsets)
         for offset in offsets:
+            if produced == passes:
+                return
+            produced += 1
             yield order[offset:] + order[:offset]
+        cycle += 1
 
 
 def file_hash(path):
@@ -505,14 +517,22 @@ def thermal_band(baseline, temp_max):
     return (max(0, min(baseline - 4, high - 7)), high)
 
 
-def infrastructure_errors(rows):
+def infrastructure_errors(rows, blocks=()):
     """Count, per status, the cases that failed for infrastructure reasons (server, connection or
     protocol errors) rather than because of the model's answer. A failed warmup's rows carry its
-    status, so they count too, except out of memory: not fitting is a real result."""
+    status, so they count too, except out of memory: not fitting is a real result.
+
+    A failed sustained-phase warmup writes no row, only its block (with no requests), so those
+    count from the blocks."""
     counts = defaultdict(int)
     for row in rows:
         if row.get("status") in INFRASTRUCTURE_STATUSES:
             counts[row["status"]] += 1
+    for block in blocks:
+        failure = block.get("failure") or {}
+        if (block.get("phase") == "sustained" and not block.get("requests")
+                and failure.get("status") in INFRASTRUCTURE_STATUSES):
+            counts[failure["status"]] += 1
     return dict(sorted(counts.items()))
 
 
@@ -572,7 +592,10 @@ def build_parser():
     run.add_argument("--out", type=Path, help="new output directory")
     run.add_argument("--tracks", choices=TRACKS, nargs="+", default=TRACKS)
     run.add_argument("--phases", choices=PHASES, nargs="+", default=PHASES)
-    run.add_argument("--cycles", type=int, default=1, help="each cycle gives every model every run position")
+    run.add_argument("--passes", type=int, default=3,
+                     help="times every model runs the cases (default: 3), whatever the number of models")
+    # Removed in protocol 3; kept only to explain the replacement instead of a bare "unrecognized argument".
+    run.add_argument("--cycles", help=argparse.SUPPRESS)
     run.add_argument("--seed", type=int, default=42)
     run.add_argument("--setup", help="cooler, power supply, storage and Ollama service settings for the manifest")
     run.add_argument("--threads", type=int, default=4, help="CPU threads for inference (default: 4, all Pi 5 cores)")
@@ -610,7 +633,11 @@ def apply_budget_defaults(args):
 
 def run_benchmark(args, parser):
     apply_budget_defaults(args)
-    for key in ("cycles", "threads", "context", "max_tokens", "timeout", "tool_rounds",
+    if args.cycles is not None:
+        parser.error("--cycles was replaced by --passes N in protocol 3: every model runs N times "
+                     "(default 3), whatever the number of models")
+    del args.cycles
+    for key in ("passes", "threads", "context", "max_tokens", "timeout", "tool_rounds",
                 "tool_calls", "sustain_seconds", "sustain_tokens", "sample_seconds", "cooldown"):
         value = getattr(args, key)
         if not math.isfinite(value) or value <= 0:
@@ -623,7 +650,7 @@ def run_benchmark(args, parser):
     models = [model_name(name) for name in args.models]
     if len(set(models)) != len(models):
         parser.error("model names must be distinct")
-    order = list(rounds(models, args.cycles, args.seed))
+    order = list(rounds(models, args.passes, args.seed))
     selection = [case for case in dataset() if case.track in args.tracks]
     plan = []
     for round_num, model_order in enumerate(order, 1):
@@ -675,7 +702,8 @@ def run_locked(args, api, models, plan, selection):
         "server_prompt_cache_ram_mib": cache_ram,
         "server_environment": server_environment(),
         "warm_prompt_cache": "one load and warmup for all warm cases, outside case timing; reload after a "
-                             "failed warmup, out-of-memory error or eviction; cross-request prompt cache "
+                             "failed warmup, out-of-memory error, server or connection error, or eviction; "
+                             "cross-request prompt cache "
                              "set by server_prompt_cache_ram_mib",
         "sustained_prompt_cache": "one repeated prompt reference; native prefix reuse allowed",
         "response_schemas": {case.id: case.response_schema for case in selection},
@@ -711,7 +739,7 @@ def run_locked(args, api, models, plan, selection):
                 for position, model in enumerate(row["models"], 1):
                     identity = {"round": round_num, "position": position, "model": model, "metadata": metadata[model]}
                     run_slot(api, args, monitor, band, identity, candidates, images, records, blocks)
-        errors = infrastructure_errors(read_rows(out / "cases.jsonl"))
+        errors = infrastructure_errors(read_rows(out / "cases.jsonl"), read_rows(out / "blocks.jsonl"))
         manifest["status"] = "complete_with_errors" if errors else "complete"
         if errors:
             manifest["infrastructure_errors"] = errors

@@ -1,4 +1,5 @@
 import base64
+import contextlib
 import io
 import json
 import random
@@ -18,7 +19,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from cases import ROOT, Case, dataset, dispatch, score, score_tools
-from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, build_parser, inspect_models, print_summary, rounds, run_case, run_locked, run_slot, summarize, temperature_summary
+from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, build_parser, inspect_models, print_summary, rounds, run_benchmark, run_case, run_locked, run_slot, summarize, temperature_summary
 from runtime import BenchError, Ollama, Telemetry, mac_memory, mac_total_memory_kib, range_stats, server_setting
 
 CASES = {case.prompt: case for case in dataset()}
@@ -578,9 +579,9 @@ class BenchmarkTest(unittest.TestCase):
             models = list("abcde"[:count])
             for cycles in range(1, 5):
                 with self.subTest(models=count, cycles=cycles):
-                    scheduled = list(rounds(models, cycles, 31))
+                    scheduled = list(rounds(models, count * cycles, 31))
                     self.assertEqual(len(scheduled), count * cycles)
-                    self.assertEqual(scheduled, list(rounds(models[::-1], cycles, 31)))
+                    self.assertEqual(scheduled, list(rounds(models[::-1], count * cycles, 31)))
                     for start in range(0, len(scheduled), count):
                         for column in zip(*scheduled[start:start + count]):
                             self.assertEqual(Counter(column), Counter(models))
@@ -590,16 +591,51 @@ class BenchmarkTest(unittest.TestCase):
         expected = Counter(permutations(models))
         for seed in range(100):
             with self.subTest(seed=seed):
-                scheduled = list(rounds(models, 4, seed))
+                scheduled = list(rounds(models, 12, seed))
                 for start in (0, 6):
                     self.assertEqual(Counter(map(tuple, scheduled[start:start + 6])), expected)
 
     def test_paired_cycles_reverse_order_after_each_leading_model(self):
         for count in (3, 4, 5):
             models = list("abcde"[:count])
-            scheduled = list(rounds(models, 2, 31))
+            scheduled = list(rounds(models, 2 * count, 31))
             expected = {tuple(row[:1] + row[:0:-1]) for row in scheduled[:count]}
             self.assertEqual(set(map(tuple, scheduled[count:])), expected)
+
+    def test_passes_do_not_depend_on_the_model_count(self):
+        for count in range(1, 6):
+            models = list("abcde"[:count])
+            for passes in (1, 2, 3, 7):
+                with self.subTest(models=count, passes=passes):
+                    scheduled = list(rounds(models, passes, 42))
+                    self.assertEqual(len(scheduled), passes)
+                    self.assertTrue(all(sorted(order) == models for order in scheduled))
+                    # A prefix of the balanced schedule: no model leads twice before all have led once.
+                    leaders = [order[0] for order in scheduled[:count]]
+                    self.assertEqual(len(set(leaders)), len(leaders))
+        # Pinned literally, as documented in docs/METHODOLOGY.md, so a change to the shuffles shows.
+        self.assertEqual(list(rounds(["A", "B", "C"], 2, 42)), [["C", "B", "A"], ["A", "C", "B"]])
+        self.assertEqual(list(rounds([], 3, 42)), [])
+        # Three passes of four models are the first three rounds that the protocol 1-2 official run
+        # actually ran (its recorded plan), which is what was published.
+        manifest = json.loads((ROOT / "docs" / "results" / "pi5-off-official" / "manifest.json").read_text())
+        recorded = [row["models"] for row in manifest["plan"]]
+        self.assertEqual(list(rounds(list(manifest["models"]), 3, manifest["options"]["seed"])), recorded[:3])
+
+    def test_cycles_is_replaced_by_passes(self):
+        parser = build_parser()
+        stderr = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(stderr):
+            run_benchmark(parser.parse_args(["run", "--models", "fixture", "--cycles", "1", "--plan"]), parser)
+        self.assertIn("--cycles was replaced by --passes", stderr.getvalue())
+        stderr = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(stderr):
+            run_benchmark(parser.parse_args(["run", "--models", "fixture", "--cycles", "abc", "--plan"]), parser)
+        self.assertIn("--cycles was replaced by --passes", stderr.getvalue())
+        plan = io.StringIO()
+        with contextlib.redirect_stdout(plan):
+            run_benchmark(parser.parse_args(["run", "--models", "a", "b", "c", "d", "--plan"]), parser)
+        self.assertEqual(len(json.loads(plan.getvalue())), 3)
 
     def test_typed_scoring(self):
         arithmetic = Case("test", "arithmetic", "", 1)
@@ -858,6 +894,69 @@ class BenchmarkTest(unittest.TestCase):
         self.assertEqual(events, ["warmup", candidates[0].id, "warmup", candidates[1].id, candidates[2].id])
         self.assertEqual(json.loads(blocks.getvalue())["warmups"], 2)
 
+    def test_server_errors_force_reload_but_context_overflow_does_not(self):
+        candidates = [case for case in dataset() if case.track == "arithmetic"][:3]
+        for status, reloads in (("api_error", True), ("connection_error", True), ("protocol_error", True),
+                                ("context_overflow", False)):
+            with self.subTest(status=status):
+                args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
+                api, monitor = Mock(), Mock()
+                live, events = [], []
+                api.loaded.side_effect = lambda: live[:]
+                api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "fixture-digest"}]}
+                api.unload.side_effect = lambda model: live.clear()
+
+                def generate(api, args, model, metadata, case, images, **kwargs):
+                    if case is WARMUP:
+                        live.append({"digest": "fixture-digest"})
+                        events.append("warmup")
+                        return {"status": "complete"}
+                    events.append(case.id)
+                    return {"status": status if case is candidates[0] else "pass"}
+
+                monitor.take.return_value = monitor.gate.return_value = {"t": 0}
+                monitor.stats.return_value = {"system_oom_kills": None}
+                records, blocks = io.StringIO(), io.StringIO()
+                with patch("light_eval.run_case", side_effect=generate), patch("sys.stdout", new_callable=io.StringIO):
+                    run_slot(api, args, monitor, None,
+                             {"round": 1, "position": 1, "model": "fixture:latest",
+                              "metadata": {"digest": "fixture-digest", "capabilities": ["completion"]}},
+                             candidates, {}, records, blocks)
+                expected = ["warmup", candidates[0].id] + (["warmup"] if reloads else []) + [c.id for c in candidates[1:]]
+                self.assertEqual(events, expected)
+
+    def test_run_with_infrastructure_errors_ends_complete_with_errors(self):
+        selection = [case for case in dataset() if case.track == "arithmetic"][:2]
+        plan = [{"models": ["fixture:latest"], "cases": [case.id for case in selection]}]
+        for kind in ("case", "sustained warmup"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
+                args = build_parser().parse_args(["run", "--models", "fixture", "--no-thermal-gate",
+                                                  "--out", str(Path(tmp) / "run")])
+                api = Mock()
+                api.json.return_value = {"version": "test"}
+                api.loaded.return_value = []
+
+                def slot(api, args, monitor, band, identity, candidates, images, records, blocks):
+                    base = {"model": identity["model"], "round": identity["round"], "position": 1}
+                    for index, case in enumerate(candidates):
+                        status = "api_error" if kind == "case" and index == 0 else "pass"
+                        records.write(json.dumps({**base, "phase": "warm", "case": case.id, "track": case.track,
+                                                  "difficulty": case.difficulty, "status": status}) + "\n")
+                    failure = {"status": "connection_error", "reason": "reset"} if kind != "case" else None
+                    blocks.write(json.dumps({**base, "phase": "sustained", "requests": 0, "failure": failure,
+                                             "environment": {}}) + "\n")
+
+                with patch("light_eval.run_slot", side_effect=slot), \
+                        patch("light_eval.server_setting", return_value="0"), \
+                        patch("light_eval.server_environment", return_value={}), \
+                        patch("light_eval.inspect_models", return_value={"fixture:latest": {"digest": "d"}}), \
+                        patch("sys.stdout", new_callable=io.StringIO), patch("sys.stderr", new_callable=io.StringIO):
+                    run_locked(args, api, ["fixture:latest"], plan, selection)
+                manifest = json.loads((Path(tmp) / "run" / "manifest.json").read_text())
+                self.assertEqual(manifest["status"], "complete_with_errors")
+                self.assertEqual(manifest["infrastructure_errors"],
+                                 {"api_error": 1} if kind == "case" else {"connection_error": 1})
+
     def test_gate_waits_for_temperature_and_active_flags(self):
         samples = [
             {"cpu_c": 64, "throttled_bits": 0},
@@ -897,7 +996,7 @@ class BenchmarkTest(unittest.TestCase):
                 self.assertEqual(caught.exception.status, "timeout")
                 out = Path(tmp) / "eval"
                 command = [sys.executable, str(ROOT / "light_eval.py"), "run", "--models", "alpha", "beta",
-                           "--port", port, "--no-thermal-gate", "--cpu-only", "--sustain-seconds", ".025", "--out", str(out)]
+                           "--port", port, "--passes", "2", "--no-thermal-gate", "--cpu-only", "--sustain-seconds", ".025", "--out", str(out)]
                 result = subprocess.run(command, capture_output=True, text=True, timeout=25, check=False)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 manifest = json.loads((out / "manifest.json").read_text())

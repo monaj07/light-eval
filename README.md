@@ -16,7 +16,7 @@
 - 🧱 **65 cases across 5 tracks**, each with controls and harder challenges. Every case was solved blind by a reviewer who saw only the prompts and images.
 - 🌡️ **Hardware-aware.** For every case it records time, tokens per second, RAM, zram swap, CPU temperature and throttling flags.
 - 🧠 **Thinking off and on as separate runs**, each with its own token budget, and models compared only within one mode.
-- ⚖️ **Fair scheduling.** Model order is balanced across cycles, every model starts from the same temperature, and model digests and source hashes are recorded.
+- ⚖️ **Fair scheduling.** Every model runs three passes in a rotating, seeded order, every model starts from the same temperature, and model digests and source hashes are recorded.
 - 📦 **Python standard library only.** It talks to your local [Ollama](https://ollama.com) server and needs no packages or API keys.
 
 ## Results

@@ -267,7 +267,7 @@ def entries():
             envs = [block["environment"] for block in blocks if block["model"] == model]
             found.append({
                 "run": directory.name, "device": device(manifest), "model": model,
-                "thinking": manifest["options"]["thinking"], "cycles": manifest["options"]["cycles"],
+                "thinking": manifest["options"]["thinking"],
                 # Official runs record the hardware setup (--setup); everything else is exploratory.
                 "setup": (manifest["options"].get("setup") or "").strip(),
                 "threads": manifest["options"].get("threads"),

@@ -31,7 +31,7 @@ python3 fixtures/make_fixtures.py
 python3 tools/show_case.py docs/results/pi5-off-official json-24h-times
 
 # Publish a run (copies it into docs/results/, which is committed) and rebuild the README results
-python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>   # thinking off: --rounds 1-3 (3 passes, whatever the model count)
+python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>   # protocol 1-2 multi-model runs: --rounds 1-3
 python3 tools/publish.py build
 ```
 
@@ -50,7 +50,7 @@ There are three modules; each depends only on the ones listed before it.
   - `VERSION` is the suite version recorded in every manifest.
 - **`runtime.py`**: the `Ollama` client (streaming chat, `/api/ps`, unload), error classification (`api_error` maps OOM text to `out_of_memory`), passive telemetry (`sample()`, the `Telemetry` thread, `range_stats`, the thermal `gate`), and `server_setting()`, which reads an environment variable from the running Ollama server process (Mac: `ps -E`; Linux: `/proc/<pid>/environ` or `systemctl show ollama`).
 - **`light_eval.py`**: the CLI and orchestration.
-  - `rounds()` builds the balanced, seeded model order. Paired cycles reverse the order; with three models, `--cycles 2` covers every order. Official runs use `--cycles 1` (see `docs/OFFICIAL_RUNS.md`).
+  - `rounds()` builds the seeded model order for `--passes N` (default 3): every model runs once per pass, whatever the number of models. The orders are a prefix of balanced cycles (each block of len(models) passes puts every model in every position once). `--passes` replaced `--cycles` in protocol 3; the runner rejects `--cycles` (see `docs/OFFICIAL_RUNS.md`).
   - `run_locked()` writes the manifest and opens the output files.
   - `run_slot()` runs the cold, warm and sustained phases for one model.
   - `run_case()` handles one case, including the agent loop: native tool calls first, then one schema-constrained final answer with tools removed, all within one deadline.

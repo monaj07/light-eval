@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="440" height="990" viewBox="0 0 440 990" role="img" aria-label="Where each model succeeds">
-<rect width="440" height="990" rx="8" fill="#1a1a19"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="1130" viewBox="0 0 440 1130" role="img" aria-label="Where each model succeeds">
+<rect width="440" height="1130" rx="8" fill="#1a1a19"/>
 <text x="24.0" y="36.0" font-size="20" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Where each model succeeds</text>
 <text x="24.0" y="62.0" font-size="14.5" font-weight="normal" text-anchor="start" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Share of each track's cases passed.</text>
 <text x="24.0" y="81.0" font-size="14.5" font-weight="normal" text-anchor="start" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Brighter cells are better.</text>
@@ -14,159 +14,187 @@
 <text x="318.0" y="144.0" font-size="14" font-weight="700" text-anchor="middle" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">Ctx</text>
 <text x="383.3" y="144.0" font-size="14" font-weight="700" text-anchor="middle" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">All</text>
 <circle cx="31.0" cy="170.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="175.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b</text>
-<rect x="26.0" y="184" width="61.3" height="30" rx="5" fill="#cde2fb"/>
-<text x="56.7" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<text x="44.0" y="175.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-vl:2b</text>
+<rect x="26.0" y="184" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
+<text x="56.7" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
 <rect x="91.3" y="184" width="61.3" height="30" rx="5" fill="#cde2fb"/>
 <text x="122.0" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
-<rect x="156.7" y="184" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
-<text x="187.3" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
-<rect x="222.0" y="184" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="252.7" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
-<rect x="287.3" y="184" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="318.0" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="156.7" y="184" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="187.3" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="222.0" y="184" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="252.7" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="287.3" y="184" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="318.0" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
 <rect x="352.7" y="184" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
-<text x="383.3" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">86%</text>
+<text x="383.3" y="204.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">94%</text>
 <circle cx="31.0" cy="240.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="245.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b</text>
-<rect x="26.0" y="254" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
-<text x="56.7" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">85%</text>
-<rect x="91.3" y="254" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="122.0" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
-<rect x="156.7" y="254" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="187.3" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
-<rect x="222.0" y="254" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="252.7" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
-<rect x="287.3" y="254" width="61.3" height="30" rx="5" fill="#6da7ec"/>
-<text x="318.0" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
-<rect x="352.7" y="254" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="383.3" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">71%</text>
-<circle cx="31.0" cy="310.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="315.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e4b (2 threads only)</text>
-<rect x="26.0" y="324" width="61.3" height="30" rx="5" fill="#256abf"/>
-<text x="56.7" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
-<rect x="91.3" y="324" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
-<text x="122.0" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
+<text x="44.0" y="245.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3</text>
+<rect x="26.0" y="254" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="56.7" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="91.3" y="254" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="122.0" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="156.7" y="254" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="187.3" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="222.0" y="254" width="61.3" height="30" rx="5" fill="none" stroke="#c3c2b7" stroke-opacity="0.6" stroke-dasharray="4 3"/>
+<text x="252.7" y="274.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">n/a</text>
+<rect x="287.3" y="254" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="318.0" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="352.7" y="254" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
+<text x="383.3" y="274.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
+<circle cx="31.0" cy="310.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
+<text x="44.0" y="315.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b</text>
+<rect x="26.0" y="324" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="56.7" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="91.3" y="324" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="122.0" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
 <rect x="156.7" y="324" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
 <text x="187.3" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
-<rect x="222.0" y="324" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="252.7" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">54%</text>
+<rect x="222.0" y="324" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="252.7" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
 <rect x="287.3" y="324" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="318.0" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">72%</text>
-<rect x="352.7" y="324" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="383.3" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">67%</text>
+<text x="318.0" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="352.7" y="324" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
+<text x="383.3" y="344.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">86%</text>
 <circle cx="31.0" cy="380.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="385.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b</text>
-<rect x="26.0" y="394" width="61.3" height="30" rx="5" fill="#cde2fb"/>
-<text x="56.7" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
-<rect x="91.3" y="394" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
-<text x="122.0" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
-<rect x="156.7" y="394" width="61.3" height="30" rx="5" fill="#1c5cab"/>
-<text x="187.3" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">8%</text>
-<rect x="222.0" y="394" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
-<text x="252.7" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
-<rect x="287.3" y="394" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="318.0" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<text x="44.0" y="385.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b</text>
+<rect x="26.0" y="394" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="56.7" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">85%</text>
+<rect x="91.3" y="394" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="122.0" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="156.7" y="394" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="187.3" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="222.0" y="394" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="252.7" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="287.3" y="394" width="61.3" height="30" rx="5" fill="#6da7ec"/>
+<text x="318.0" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
 <rect x="352.7" y="394" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="383.3" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">66%</text>
+<text x="383.3" y="414.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">71%</text>
 <circle cx="31.0" cy="450.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="455.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-omni:2b</text>
-<rect x="26.0" y="464" width="61.3" height="30" rx="5" fill="#2a78d6"/>
-<text x="56.7" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
-<rect x="91.3" y="464" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="122.0" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
-<rect x="156.7" y="464" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
-<text x="187.3" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
-<rect x="222.0" y="464" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
-<text x="252.7" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
-<rect x="287.3" y="464" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
-<text x="318.0" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
-<rect x="352.7" y="464" width="61.3" height="30" rx="5" fill="#6da7ec"/>
-<text x="383.3" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
-<circle cx="31.0" cy="520.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="525.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-vl:2b</text>
-<rect x="26.0" y="534" width="61.3" height="30" rx="5" fill="#1c5cab"/>
-<text x="56.7" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">8%</text>
-<rect x="91.3" y="534" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="122.0" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
-<rect x="156.7" y="534" width="61.3" height="30" rx="5" fill="#cde2fb"/>
-<text x="187.3" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<text x="44.0" y="455.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e4b (2 threads only)</text>
+<rect x="26.0" y="464" width="61.3" height="30" rx="5" fill="#256abf"/>
+<text x="56.7" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
+<rect x="91.3" y="464" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
+<text x="122.0" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
+<rect x="156.7" y="464" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
+<text x="187.3" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
+<rect x="222.0" y="464" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="252.7" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">54%</text>
+<rect x="287.3" y="464" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="318.0" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">72%</text>
+<rect x="352.7" y="464" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="383.3" y="484.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">67%</text>
+<circle cx="31.0" cy="520.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
+<text x="44.0" y="525.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b</text>
+<rect x="26.0" y="534" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="56.7" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="91.3" y="534" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="122.0" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
+<rect x="156.7" y="534" width="61.3" height="30" rx="5" fill="#1c5cab"/>
+<text x="187.3" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">8%</text>
 <rect x="222.0" y="534" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
 <text x="252.7" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
 <rect x="287.3" y="534" width="61.3" height="30" rx="5" fill="#86b6ef"/>
 <text x="318.0" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
-<rect x="352.7" y="534" width="61.3" height="30" rx="5" fill="#6da7ec"/>
-<text x="383.3" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">60%</text>
+<rect x="352.7" y="534" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="383.3" y="554.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">66%</text>
 <circle cx="31.0" cy="590.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="595.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b</text>
+<text x="44.0" y="595.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-omni:2b</text>
 <rect x="26.0" y="604" width="61.3" height="30" rx="5" fill="#2a78d6"/>
 <text x="56.7" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
-<rect x="91.3" y="604" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="122.0" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
-<rect x="156.7" y="604" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
-<text x="187.3" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
-<rect x="222.0" y="604" width="61.3" height="30" rx="5" fill="#6da7ec"/>
-<text x="252.7" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
-<rect x="287.3" y="604" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="318.0" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
+<rect x="91.3" y="604" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="122.0" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
+<rect x="156.7" y="604" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="187.3" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
+<rect x="222.0" y="604" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="252.7" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
+<rect x="287.3" y="604" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="318.0" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
 <rect x="352.7" y="604" width="61.3" height="30" rx="5" fill="#6da7ec"/>
-<text x="383.3" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">60%</text>
+<text x="383.3" y="624.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
 <circle cx="31.0" cy="660.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="665.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b</text>
-<rect x="26.0" y="674" width="61.3" height="30" rx="5" fill="#2a78d6"/>
-<text x="56.7" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
+<text x="44.0" y="665.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-vl:2b</text>
+<rect x="26.0" y="674" width="61.3" height="30" rx="5" fill="#1c5cab"/>
+<text x="56.7" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">8%</text>
 <rect x="91.3" y="674" width="61.3" height="30" rx="5" fill="#5598e7"/>
 <text x="122.0" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
-<rect x="156.7" y="674" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
-<text x="187.3" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">85%</text>
-<rect x="222.0" y="674" width="61.3" height="30" rx="5" fill="#2a78d6"/>
-<text x="252.7" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
-<rect x="287.3" y="674" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="318.0" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">54%</text>
-<rect x="352.7" y="674" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="383.3" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">49%</text>
+<rect x="156.7" y="674" width="61.3" height="30" rx="5" fill="#cde2fb"/>
+<text x="187.3" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">100%</text>
+<rect x="222.0" y="674" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="252.7" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">77%</text>
+<rect x="287.3" y="674" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="318.0" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="352.7" y="674" width="61.3" height="30" rx="5" fill="#6da7ec"/>
+<text x="383.3" y="694.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">60%</text>
 <circle cx="31.0" cy="730.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="735.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b</text>
+<text x="44.0" y="735.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b</text>
 <rect x="26.0" y="744" width="61.3" height="30" rx="5" fill="#2a78d6"/>
 <text x="56.7" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
-<rect x="91.3" y="744" width="61.3" height="30" rx="5" fill="#6da7ec"/>
-<text x="122.0" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">59%</text>
-<rect x="156.7" y="744" width="61.3" height="30" rx="5" fill="#256abf"/>
-<text x="187.3" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
+<rect x="91.3" y="744" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="122.0" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="156.7" y="744" width="61.3" height="30" rx="5" fill="#b7d3f6"/>
+<text x="187.3" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">92%</text>
 <rect x="222.0" y="744" width="61.3" height="30" rx="5" fill="#6da7ec"/>
 <text x="252.7" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
-<rect x="287.3" y="744" width="61.3" height="30" rx="5" fill="#86b6ef"/>
-<text x="318.0" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
-<rect x="352.7" y="744" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="383.3" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">49%</text>
+<rect x="287.3" y="744" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="318.0" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
+<rect x="352.7" y="744" width="61.3" height="30" rx="5" fill="#6da7ec"/>
+<text x="383.3" y="764.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">60%</text>
 <circle cx="31.0" cy="800.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="805.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3</text>
-<rect x="26.0" y="814" width="61.3" height="30" rx="5" fill="#256abf"/>
-<text x="56.7" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
-<rect x="91.3" y="814" width="61.3" height="30" rx="5" fill="#6da7ec"/>
-<text x="122.0" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
-<rect x="156.7" y="814" width="61.3" height="30" rx="5" fill="#2a78d6"/>
-<text x="187.3" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">26%</text>
-<rect x="222.0" y="814" width="61.3" height="30" rx="5" fill="none" stroke="#c3c2b7" stroke-opacity="0.6" stroke-dasharray="4 3"/>
-<text x="252.7" y="834.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">n/a</text>
-<rect x="287.3" y="814" width="61.3" height="30" rx="5" fill="#3987e5"/>
-<text x="318.0" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">38%</text>
-<rect x="352.7" y="814" width="61.3" height="30" rx="5" fill="#3987e5"/>
-<text x="383.3" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">37%</text>
+<text x="44.0" y="805.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b</text>
+<rect x="26.0" y="814" width="61.3" height="30" rx="5" fill="#2a78d6"/>
+<text x="56.7" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
+<rect x="91.3" y="814" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="122.0" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
+<rect x="156.7" y="814" width="61.3" height="30" rx="5" fill="#9ec5f4"/>
+<text x="187.3" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">85%</text>
+<rect x="222.0" y="814" width="61.3" height="30" rx="5" fill="#2a78d6"/>
+<text x="252.7" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
+<rect x="287.3" y="814" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="318.0" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">54%</text>
+<rect x="352.7" y="814" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="383.3" y="834.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">49%</text>
 <circle cx="31.0" cy="870.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
-<text x="44.0" y="875.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">LFM2.5-1.2B-Instruct-GGUF:Q4_K_M</text>
+<text x="44.0" y="875.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b</text>
 <rect x="26.0" y="884" width="61.3" height="30" rx="5" fill="#2a78d6"/>
 <text x="56.7" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
-<rect x="91.3" y="884" width="61.3" height="30" rx="5" fill="#2a78d6"/>
-<text x="122.0" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
-<rect x="156.7" y="884" width="61.3" height="30" rx="5" fill="#5598e7"/>
-<text x="187.3" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
-<rect x="222.0" y="884" width="61.3" height="30" rx="5" fill="none" stroke="#c3c2b7" stroke-opacity="0.6" stroke-dasharray="4 3"/>
-<text x="252.7" y="904.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">n/a</text>
-<rect x="287.3" y="884" width="61.3" height="30" rx="5" fill="#256abf"/>
-<text x="318.0" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
-<rect x="352.7" y="884" width="61.3" height="30" rx="5" fill="#2a78d6"/>
-<text x="383.3" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">33%</text>
-<text x="24.0" y="950.0" font-size="13.5" font-weight="normal" text-anchor="start" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">n/a: the model can't attempt that track.</text>
-<text x="24.0" y="970.0" font-size="13.5" font-weight="normal" text-anchor="start" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">All: the tracks each model supports.</text>
+<rect x="91.3" y="884" width="61.3" height="30" rx="5" fill="#6da7ec"/>
+<text x="122.0" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">59%</text>
+<rect x="156.7" y="884" width="61.3" height="30" rx="5" fill="#256abf"/>
+<text x="187.3" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
+<rect x="222.0" y="884" width="61.3" height="30" rx="5" fill="#6da7ec"/>
+<text x="252.7" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
+<rect x="287.3" y="884" width="61.3" height="30" rx="5" fill="#86b6ef"/>
+<text x="318.0" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">69%</text>
+<rect x="352.7" y="884" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="383.3" y="904.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">49%</text>
+<circle cx="31.0" cy="940.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
+<text x="44.0" y="945.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3</text>
+<rect x="26.0" y="954" width="61.3" height="30" rx="5" fill="#256abf"/>
+<text x="56.7" y="974.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
+<rect x="91.3" y="954" width="61.3" height="30" rx="5" fill="#6da7ec"/>
+<text x="122.0" y="974.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">62%</text>
+<rect x="156.7" y="954" width="61.3" height="30" rx="5" fill="#2a78d6"/>
+<text x="187.3" y="974.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">26%</text>
+<rect x="222.0" y="954" width="61.3" height="30" rx="5" fill="none" stroke="#c3c2b7" stroke-opacity="0.6" stroke-dasharray="4 3"/>
+<text x="252.7" y="974.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">n/a</text>
+<rect x="287.3" y="954" width="61.3" height="30" rx="5" fill="#3987e5"/>
+<text x="318.0" y="974.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">38%</text>
+<rect x="352.7" y="954" width="61.3" height="30" rx="5" fill="#3987e5"/>
+<text x="383.3" y="974.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">37%</text>
+<circle cx="31.0" cy="1010.0" r="7" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
+<text x="44.0" y="1015.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">LFM2.5-1.2B-Instruct-GGUF:Q4_K_M</text>
+<rect x="26.0" y="1024" width="61.3" height="30" rx="5" fill="#2a78d6"/>
+<text x="56.7" y="1044.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
+<rect x="91.3" y="1024" width="61.3" height="30" rx="5" fill="#2a78d6"/>
+<text x="122.0" y="1044.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31%</text>
+<rect x="156.7" y="1024" width="61.3" height="30" rx="5" fill="#5598e7"/>
+<text x="187.3" y="1044.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#0b0b0b" font-family="system-ui, -apple-system, Segoe UI, sans-serif">46%</text>
+<rect x="222.0" y="1024" width="61.3" height="30" rx="5" fill="none" stroke="#c3c2b7" stroke-opacity="0.6" stroke-dasharray="4 3"/>
+<text x="252.7" y="1044.0" font-size="14" font-weight="normal" text-anchor="middle" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">n/a</text>
+<rect x="287.3" y="1024" width="61.3" height="30" rx="5" fill="#256abf"/>
+<text x="318.0" y="1044.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">23%</text>
+<rect x="352.7" y="1024" width="61.3" height="30" rx="5" fill="#2a78d6"/>
+<text x="383.3" y="1044.5" font-size="14.5" font-weight="700" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif">33%</text>
+<text x="24.0" y="1090.0" font-size="13.5" font-weight="normal" text-anchor="start" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">n/a: the model can't attempt that track.</text>
+<text x="24.0" y="1110.0" font-size="13.5" font-weight="normal" text-anchor="start" fill="#c3c2b7" font-family="system-ui, -apple-system, Segoe UI, sans-serif">All: the tracks each model supports.</text>
 </svg>

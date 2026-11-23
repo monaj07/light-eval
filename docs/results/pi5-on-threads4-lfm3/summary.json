@@ -1,0 +1,554 @@
+{
+  "groups": [
+    {
+      "agent_metrics": {
+        "final_answer_pass_rate": 1.0,
+        "final_answer_passed": 39,
+        "n": 39,
+        "tool_use_pass_rate": 1.0,
+        "tool_use_passed": 39
+      },
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 21
+          },
+          "pass_rate": 1.0,
+          "passed": 21,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 18
+          },
+          "pass_rate": 1.0,
+          "passed": 18,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 374.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 162,
+        "p95": 332.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.067326854830004,
+        "median": 9.797773070217161,
+        "min": 9.355595113657722,
+        "n": 162,
+        "p95": 9.953915403094976
+      },
+      "generated_tokens": {
+        "max": 1400,
+        "median": 750,
+        "min": 322,
+        "n": 39,
+        "p95": 1400
+      },
+      "load_s": {
+        "max": 0.011885155,
+        "median": 0.0009965305,
+        "min": 0.000795484,
+        "n": 162,
+        "p95": 0.003637146
+      },
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "pass": 39
+      },
+      "pass_rate": 1.0,
+      "peak_system_used_estimate_kib": 2159136,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 11.279838,
+        "median": 5.434268,
+        "min": 1.869474,
+        "n": 162,
+        "p95": 9.889243
+      },
+      "prompt_tokens": {
+        "max": 1000.0,
+        "median": 438.0,
+        "min": 122.0,
+        "n": 162,
+        "p95": 947.0
+      },
+      "track": "agent",
+      "ttft_s": {
+        "max": 6.183769759999905,
+        "median": 4.848724833000233,
+        "min": 4.209533609000573,
+        "n": 39,
+        "p95": 6.0022417929994845
+      },
+      "wall_s": {
+        "max": 204.918975349,
+        "median": 97.82085517100131,
+        "min": 45.97803571300028,
+        "n": 39,
+        "p95": 204.73406343900024
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 21
+          },
+          "pass_rate": 1.0,
+          "passed": 21,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 18
+          },
+          "pass_rate": 1.0,
+          "passed": 18,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 0.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.262121591017728,
+        "median": 9.916542205286289,
+        "min": 8.996747002332876,
+        "n": 39,
+        "p95": 10.116970335745927
+      },
+      "generated_tokens": {
+        "max": 2985,
+        "median": 209,
+        "min": 117,
+        "n": 39,
+        "p95": 2985
+      },
+      "load_s": {
+        "max": 0.00248072,
+        "median": 0.000828173,
+        "min": 0.000685839,
+        "n": 39,
+        "p95": 0.001067117
+      },
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "pass": 39
+      },
+      "pass_rate": 1.0,
+      "peak_system_used_estimate_kib": 2160832,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.175231,
+        "median": 0.83506,
+        "min": 0.583646,
+        "n": 39,
+        "p95": 1.168432
+      },
+      "prompt_tokens": {
+        "max": 73.0,
+        "median": 51.0,
+        "min": 34.0,
+        "n": 39,
+        "p95": 73.0
+      },
+      "track": "arithmetic",
+      "ttft_s": {
+        "max": 1.1787031429994386,
+        "median": 0.8416410479985643,
+        "min": 0.5876416029987013,
+        "n": 39,
+        "p95": 1.174551314999917
+      },
+      "wall_s": {
+        "max": 332.6377336360001,
+        "median": 21.856144567998854,
+        "min": 12.233397528998466,
+        "n": 39,
+        "p95": 332.3501221619995
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "timeout": 12
+          },
+          "pass_rate": 0.0,
+          "passed": 0,
+          "supported": 12
+        },
+        "control": {
+          "n": 9,
+          "outcomes": {
+            "pass": 9
+          },
+          "pass_rate": 1.0,
+          "passed": 9,
+          "supported": 9
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 9,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 9.144664523606513,
+        "median": 9.048130327572714,
+        "min": 8.565592305409291,
+        "n": 9,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 1366,
+        "median": 256,
+        "min": 209,
+        "n": 9,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.00110979,
+        "median": 0.000939565,
+        "min": 0.000852934,
+        "n": 9,
+        "p95": null
+      },
+      "model": "lfm3:latest",
+      "n": 21,
+      "outcomes": {
+        "pass": 9,
+        "timeout": 12
+      },
+      "pass_rate": 0.42857142857142855,
+      "peak_system_used_estimate_kib": 2157536,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 25.074336,
+        "median": 24.970462,
+        "min": 24.674672,
+        "n": 9,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 1569.0,
+        "median": 1569.0,
+        "min": 1569.0,
+        "n": 9,
+        "p95": null
+      },
+      "track": "context-long",
+      "ttft_s": {
+        "max": 25.08030987699749,
+        "median": 24.974549130000014,
+        "min": 24.678736036999908,
+        "n": 9,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 184.41745828700004,
+        "median": 53.265448483998625,
+        "min": 47.53434056599963,
+        "n": 9,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 12,
+          "outcomes": {
+            "pass": 12
+          },
+          "pass_rate": 1.0,
+          "passed": 12,
+          "supported": 12
+        },
+        "control": {
+          "n": 6,
+          "outcomes": {
+            "pass": 6
+          },
+          "pass_rate": 1.0,
+          "passed": 6,
+          "supported": 6
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 18,
+        "p95": null
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.199083350492602,
+        "median": 9.671774115889026,
+        "min": 9.22839800319702,
+        "n": 18,
+        "p95": null
+      },
+      "generated_tokens": {
+        "max": 1959,
+        "median": 772.5,
+        "min": 185,
+        "n": 18,
+        "p95": null
+      },
+      "load_s": {
+        "max": 0.001907074,
+        "median": 0.0009868385,
+        "min": 0.000723582,
+        "n": 18,
+        "p95": null
+      },
+      "model": "lfm3:latest",
+      "n": 18,
+      "outcomes": {
+        "pass": 18
+      },
+      "pass_rate": 1.0,
+      "peak_system_used_estimate_kib": 2158432,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 5.476773,
+        "median": 4.0820874995,
+        "min": 2.635393,
+        "n": 18,
+        "p95": null
+      },
+      "prompt_tokens": {
+        "max": 346.0,
+        "median": 269.0,
+        "min": 175.0,
+        "n": 18,
+        "p95": null
+      },
+      "track": "context-short",
+      "ttft_s": {
+        "max": 5.480420591999973,
+        "median": 4.086247833000016,
+        "min": 2.642260381999222,
+        "n": 18,
+        "p95": null
+      },
+      "wall_s": {
+        "max": 217.72511181399977,
+        "median": 83.9563104785002,
+        "min": 20.785447813000246,
+        "n": 18,
+        "p95": null
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "pass": 21
+          },
+          "pass_rate": 1.0,
+          "passed": 21,
+          "supported": 21
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "pass": 18
+          },
+          "pass_rate": 1.0,
+          "passed": 18,
+          "supported": 18
+        }
+      },
+      "cached_prompt_tokens": {
+        "max": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "n": 39,
+        "p95": 0.0
+      },
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": {
+        "max": 10.166552933521654,
+        "median": 9.870199950583443,
+        "min": 9.66146783365865,
+        "n": 39,
+        "p95": 10.14325241162011
+      },
+      "generated_tokens": {
+        "max": 1023,
+        "median": 451,
+        "min": 82,
+        "n": 39,
+        "p95": 1023
+      },
+      "load_s": {
+        "max": 0.007869415,
+        "median": 0.000876268,
+        "min": 0.000678934,
+        "n": 39,
+        "p95": 0.003463186
+      },
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "pass": 39
+      },
+      "pass_rate": 1.0,
+      "peak_system_used_estimate_kib": 2318784,
+      "phase": "warm",
+      "prefill_s": {
+        "max": 1.422361,
+        "median": 0.744117,
+        "min": 0.592898,
+        "n": 39,
+        "p95": 1.415462
+      },
+      "prompt_tokens": {
+        "max": 90.0,
+        "median": 45.0,
+        "min": 36.0,
+        "n": 39,
+        "p95": 90.0
+      },
+      "track": "structured",
+      "ttft_s": {
+        "max": 1.4258327509996889,
+        "median": 0.7857567410001138,
+        "min": 0.6025373980010045,
+        "n": 39,
+        "p95": 1.4190229310006544
+      },
+      "wall_s": {
+        "max": 107.01590271699934,
+        "median": 46.92696745300054,
+        "min": 8.727090344000317,
+        "n": 39,
+        "p95": 106.33280908399865
+      }
+    },
+    {
+      "by_difficulty": {
+        "challenge": {
+          "n": 21,
+          "outcomes": {
+            "unsupported": 21
+          },
+          "pass_rate": null,
+          "passed": 0,
+          "supported": 0
+        },
+        "control": {
+          "n": 18,
+          "outcomes": {
+            "unsupported": 18
+          },
+          "pass_rate": null,
+          "passed": 0,
+          "supported": 0
+        }
+      },
+      "cached_prompt_tokens": null,
+      "cases_with_throttling_flags": 0,
+      "decode_tok_s": null,
+      "generated_tokens": null,
+      "load_s": null,
+      "model": "lfm3:latest",
+      "n": 39,
+      "outcomes": {
+        "unsupported": 39
+      },
+      "pass_rate": null,
+      "peak_system_used_estimate_kib": 2158560,
+      "phase": "warm",
+      "prefill_s": null,
+      "prompt_tokens": null,
+      "track": "vision",
+      "ttft_s": null,
+      "wall_s": null
+    }
+  ],
+  "repeatability": {
+    "lfm3:latest": {
+      "cases_with_complete_outputs": 48,
+      "raw_output_stable": 36,
+      "repeated_cases": 52,
+      "status_stable": 52
+    }
+  },
+  "sustained": [],
+  "temperature": [
+    {
+      "case_start_cpu_c": {
+        "max": 67.75,
+        "median": 66.1,
+        "min": 45.2,
+        "n": 65,
+        "p95": 67.2
+      },
+      "cases": 65,
+      "mean_cpu_c": 66.24522373849572,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 74.35,
+      "phase": "warm",
+      "round": 1,
+      "samples": 6302,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 68.85,
+        "median": 66.1,
+        "min": 58.4,
+        "n": 65,
+        "p95": 67.2
+      },
+      "cases": 65,
+      "mean_cpu_c": 66.2756434699714,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 74.35,
+      "phase": "warm",
+      "round": 2,
+      "samples": 6294,
+      "throttled_cases": 0
+    },
+    {
+      "case_start_cpu_c": {
+        "max": 68.3,
+        "median": 65.55,
+        "min": 58.95,
+        "n": 65,
+        "p95": 67.2
+      },
+      "cases": 65,
+      "mean_cpu_c": 65.93856893542757,
+      "model": "lfm3:latest",
+      "peak_cpu_c": 73.8,
+      "phase": "warm",
+      "round": 3,
+      "samples": 6303,
+      "throttled_cases": 0
+    }
+  ]
+}

@@ -7,12 +7,14 @@ This is the protocol behind the published Raspberry Pi 5 results. It uses suite 
 | | Thinking off | Thinking on |
 |---|---|---|
 | Invocation | one run with all four models, `--cycles 1` | one run per model |
-| What runs | one round per model in the run, each model taking every position once | one pass of the 65 cases |
-| Published | the first 3 rounds, so every thinking-off result averages 3 passes | the single pass |
+| What runs | one round per model in the run, each model taking every position once | at 4 threads, three passes of the 65 cases (`--cycles 3`); at 2 threads, one pass |
+| Published | the first 3 rounds, so every thinking-off result averages 3 passes | every pass |
 | Phases | cold, warm, sustained | warm only |
 | Expected time on the Pi | about 10 hours | from about 4.5 hours (`qwen3.5:2b`) upwards per model |
 
 **Why not `--cycles 2`.** With four models, `--cycles 2` would mean 8 rounds. With thinking off, 4 rounds already give a balanced order, a timing spread and a repeatability check. Outputs are close but not identical between passes: in the official run, 74–82% of cases repeated word for word, and the pass or fail result differed between passes for 2 of 260 model–case pairs. So the scores are averaged over the passes.
+
+**Why three thinking-on passes at 4 threads, and one at 2.** A thinking-on pass takes 1–6 hours per model, so passes are spent where the main results are: the 4-thread runs, which the README's tables and charts use. The 2-thread runs only feed the thread comparison. The `lfm3` and `lfm3-vl:2b` runs follow this plan. The earlier 4-thread runs of `gemma4:e2b` and the Qwen models were single passes and are being re-run with three. In the three-pass runs so far, 69–77% of cases repeated word for word, and no case's pass or fail result changed between passes.
 
 **Why thinking-on runs are warm only.** Cold and sustained measure the hardware: model load time and whether speed holds under continuous generation. They don't depend on the thinking mode, so they're measured once, with thinking off.
 

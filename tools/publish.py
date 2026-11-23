@@ -161,14 +161,14 @@ def run_problems(manifest, rows, keep=None, allow_errors=False):
         # carry the flag and still never reason, which would label a thinking-off result "on".
         thought, total = defaultdict(int), defaultdict(int)
         for row in rows:
-            if row["phase"] == "warm":
+            if row["phase"] == "warm" and row["status"] != "unsupported":  # e.g. vision on a text model
                 total[row["model"]] += 1
                 thought[row["model"]] += any((turn.get("thinking") or "").strip()
                                              for turn in row.get("turns") or [])
         for model, count in sorted(total.items()):
             if thought[model] < count / 2:
                 problems.append(f"{model} produced thinking text in only {thought[model]} of {count} warm "
-                                "cases, so it doesn't really have a thinking mode")
+                                "supported cases, so it doesn't really have a thinking mode")
     expected = len(manifest.get("case_metadata") or {})
     warm = defaultdict(int)
     for row in rows:
@@ -578,39 +578,54 @@ def time_table(group):
     return "\n".join(lines)
 
 
+def text_width(content, size):
+    """Rough rendered width of a label in the system sans-serif, on the generous side."""
+    narrow, wide = set("il.:,;!|'-·1()[]IJfjrt "), set("mwMW%@")
+    units = sum(0.32 if ch in narrow else 0.86 if ch in wide else 0.68 if ch.isupper() else 0.6 for ch in content)
+    return units * size
+
+
 def svg_chart(points, theme, title):
     """Accuracy against speed. Bubble area shows peak memory in use, colour shows the thinking
     mode, and a thin connector joins each model's thinking-off and thinking-on points."""
     t = THEMES[theme]
-    width, height = 920, 620
-    left, top, plot_w, plot_h = 68, 104, 580, 430
-    legend_x = left + plot_w + 36
-    total = len(dataset())
+    # The README shows the chart 920 px wide, so the plot gets the full width and the legend
+    # sits in a row above it; both axes hug the data instead of starting at zero.
+    width, height = 920, 820
+    left, top, plot_w, plot_h = 68, 206, 824, 540
     font = 'font-family="system-ui, -apple-system, Segoe UI, sans-serif"'
     with_memory = [point for point in points if point["peak_mem_gb"]]
-    # Area encodes memory: radius grows with the square root, 10 GB -> 26 px.
-    scale = 26 / math.sqrt(10)
+    # Area encodes memory: radius grows with the square root, 10 GB -> 32 px.
+    scale = 32 / math.sqrt(10)
 
     def radius(point):
-        return scale * math.sqrt(point["peak_mem_gb"]) if point["peak_mem_gb"] else 6
-
-    # Pad the log-scale time axis so the largest bubbles stay inside the plot.
-    times = [point["median_s"] for point in points]
-    # Finer round ticks than the other charts, so the axis can hug the data and spread the bubbles out.
-    fine = (1, 2, 5, 10, 20, 30, 60, 120, 300, 600, 1200)
-    low = max((tick for tick in fine if tick <= min(times) / 1.25), default=fine[0])
-    high = min((tick for tick in fine if tick >= max(times) * 1.25), default=fine[-1])
-    ticks = [tick for tick in fine if low <= tick <= high]
-
-    def x(seconds):
-        return left + plot_w * (math.log10(seconds) - math.log10(low)) / (math.log10(high) - math.log10(low))
-
-    def y(percent):
-        return top + plot_h * (1 - percent / 100)
+        return scale * math.sqrt(point["peak_mem_gb"]) if point["peak_mem_gb"] else 7
 
     def accuracy(point):
         # Over the tracks the model supports, as in the tables.
         return point["accuracy"]
+
+    # Accuracy axis: round tens just beyond the data. Position, not length, carries the value,
+    # so the axis needn't start at zero.
+    scores = [accuracy(point) for point in points]
+    y_low = max(0, 10 * math.floor((min(scores) - 9) / 10))
+    y_high = min(100, 10 * math.ceil((max(scores) + 9) / 10))
+
+    # Time axis (log): padded in pixels so the largest bubble and a label fit at either end.
+    times = [point["median_s"] for point in points]
+    pad = max(radius(point) for point in points) + 26
+    span = math.log10(max(times)) - math.log10(min(times)) or 1
+    per_decade = (plot_w - 2 * pad) / span
+    x_low = math.log10(min(times)) - pad / per_decade
+    x_high = math.log10(max(times)) + pad / per_decade
+    fine = (1, 2, 3, 5, 10, 20, 30, 60, 120, 180, 300, 600, 900, 1200, 1800, 3600)
+    ticks = [tick for tick in fine if x_low <= math.log10(tick) <= x_high]
+
+    def x(seconds):
+        return left + plot_w * (math.log10(seconds) - x_low) / (x_high - x_low)
+
+    def y(percent):
+        return top + plot_h * (y_high - percent) / (y_high - y_low)
 
     def text(px, py, content, size=13, fill="ink2", anchor="start", weight="normal", halo=False):
         # A halo in the surface colour keeps labels legible where they cross a connector.
@@ -625,27 +640,56 @@ def svg_chart(points, theme, title):
            f'<rect width="{width}" height="{height}" rx="8" fill="{t["surface"]}"/>',
            text(24, 36, title, size=19, fill="ink", weight="700"),
            text(24, 60, subtitle, size=13.5, fill="ink2")]
-    for percent in range(0, 101, 20):
+
+    # Legend row: thinking modes, memory sizes, then the flag marker.
+    ly, lx = 116, 24
+    modes = [mode for mode in ("off", "on") if any(point["thinking"] == mode for point in points)]
+    out.append(text(lx, ly + 5, "Thinking", size=14, fill="ink", weight="700"))
+    lx += 76
+    for mode in modes:
+        out.append(f'<circle cx="{lx + 8}" cy="{ly}" r="8" fill="{t[mode]}"/>')
+        out.append(text(lx + 22, ly + 5, mode, fill="ink"))
+        lx += 62
+    if with_memory:
+        lx += 24
+        out.append(text(lx, ly + 5, "Memory in use", size=14, fill="ink", weight="700"))
+        lx += 112
+        for gb in (2, 4, 8):
+            r = scale * math.sqrt(gb)
+            out.append(f'<circle cx="{lx + r:.1f}" cy="{ly}" r="{r:.1f}" fill="none" '
+                       f'stroke="{t["ink2"]}" stroke-width="1.5"/>')
+            out.append(text(lx + 2 * r + 8, ly + 5, f"{gb} GB", fill="ink"))
+            lx += 2 * r + 58
+    if any(point["flag"] for point in points):
+        lx += 16
+        out.append(f'<circle cx="{lx + 9}" cy="{ly}" r="9" fill="none" stroke="{t["ink2"]}" '
+                   f'stroke-width="2" stroke-dasharray="4 3"/>')
+        out.append(text(lx + 26, ly + 5, "Didn't reliably fit", fill="ink"))
+    if with_memory:
+        out.append(text(24, ly + 48, "For scale: the Pi has 8 GB of RAM and 2 GB of zram.", size=12.5))
+
+    for percent in range(y_low, y_high + 1, 10):
         out.append(f'<line x1="{left}" x2="{left + plot_w}" y1="{y(percent):.1f}" y2="{y(percent):.1f}" '
-                   f'stroke="{t["grid"] if percent else t["axis"]}" stroke-width="1"/>')
+                   f'stroke="{t["axis"] if percent == y_low else t["grid"]}" stroke-width="1"/>')
         out.append(text(left - 10, y(percent) + 4, f"{percent}%", size=12.5, anchor="end"))
     for tick in ticks:
         out.append(f'<line x1="{x(tick):.1f}" x2="{x(tick):.1f}" y1="{top}" y2="{top + plot_h}" '
                    f'stroke="{t["grid"]}" stroke-width="1"/>')
         label = f"{tick:g} s" if tick < 60 else f"{tick / 60:g} min"
         out.append(text(x(tick), top + plot_h + 20, label, size=12.5, anchor="middle"))
-    out.append(text(left + plot_w / 2, top + plot_h + 46, "Median time per case (log scale)", size=14, fill="ink",
+    out.append(text(left + plot_w / 2, top + plot_h + 50, "Median time per case (log scale)", size=14, fill="ink",
                     weight="700", anchor="middle"))
-    out.append(text(left - 44, top - 14, "Accuracy (cases passed on supported tracks)", size=14, fill="ink", weight="700"))
-    out.append(text(left + plot_w - 6, top + 18, "better ↖", size=13, anchor="end"))
+    out.append(text(left - 44, top - 16, "Accuracy (cases passed on supported tracks)", size=14, fill="ink", weight="700"))
+    better = (left + plot_w - 8, top + 20)
+    out.append(text(*better, "better ↖", size=13, anchor="end"))
 
     # Connectors first, so the bubbles sit on top of them.
     by_model = defaultdict(dict)
     for point in points:
         by_model[point["model"]][point["thinking"]] = point
-    for modes in by_model.values():
-        if "off" in modes and "on" in modes:
-            a, b = modes["off"], modes["on"]
+    for modes_of in by_model.values():
+        if "off" in modes_of and "on" in modes_of:
+            a, b = modes_of["off"], modes_of["on"]
             out.append(f'<line x1="{x(a["median_s"]):.1f}" y1="{y(accuracy(a)):.1f}" x2="{x(b["median_s"]):.1f}" '
                        f'y2="{y(accuracy(b)):.1f}" stroke="{t["ink2"]}" stroke-width="1.75" stroke-dasharray="1 4" '
                        f'stroke-linecap="round"/>')
@@ -660,95 +704,97 @@ def svg_chart(points, theme, title):
         out.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r:.1f}" fill="{color}" fill-opacity="0.9" '
                    f'stroke="{ring}" stroke-width="2"{dashed}/>')
 
-    def hits_circle(box, cx, cy, r):
+    def gap_to(box, cx, cy, cr):
+        """Distance from a bubble's edge to a box; negative when they overlap."""
         x0, y0, x1, y1 = box
-        nearest_x, nearest_y = min(max(cx, x0), x1), min(max(cy, y0), y1)
-        return (nearest_x - cx) ** 2 + (nearest_y - cy) ** 2 < r * r
+        nx, ny = min(max(cx, x0), x1), min(max(cy, y0), y1)
+        return math.hypot(nx - cx, ny - cy) - cr
 
-    # Each label tries right, left, above and below its bubble, taking the first spot that
-    # stays inside the plot and clear of every bubble and earlier label.
-    placed, leaders, labels = [], [], []
-    for point, px, py, r in sorted(bubbles, key=lambda item: item[2]):
+    def apart(a, b, margin=3):
+        return a[2] + margin <= b[0] or b[2] + margin <= a[0] or a[3] + margin <= b[1] or b[3] + margin <= a[1]
+
+    # Label spots: 16 directions around each bubble, at growing distances (with a leader line
+    # when pushed out). Every spot is scored; labels are placed greedily, crowded bubbles first,
+    # then each is moved again, given where all the others ended up, until nothing improves.
+    better_box = (better[0] - 70, better[1] - 14, better[0], better[1] + 4)
+    specs = []
+    for point, px, py, r in bubbles:
         label = f'{display_name(point["model"])} · {accuracy(point):.0f}%'
         # Flags and a different thread count go on a second line under the name, so the label stays narrow.
         notes = (["hung the Pi"] if point["flag"] else []) + ([point["threads_note"]] if point.get("threads_note") else [])
         note = f"({', '.join(notes)})" if notes else None
-        # Width estimates for 14 px semibold labels and 12.5 px notes, on the generous side.
-        w = max(8.2 * len(label), 7.2 * len(note or ""))
-        extra = 15 if note else 0  # height of the second line
-        # Spots in eight directions, first beside the bubble, then further out (with a leader line)
-        # for crowded clusters. Text baselines sit 4 px below the anchor point's centre line.
-        candidates = []
-        for distance in (8, 28, 52, 80, 110):
-            reach = r + distance
-            diagonal = r * 0.7 + distance * 0.8
-            candidates += [(px + reach, py + 4, "start", distance), (px - reach, py + 4, "end", distance),
-                           (px, py - reach, "middle", distance), (px, py + reach + 10, "middle", distance),
-                           (px + diagonal, py - diagonal, "start", distance), (px - diagonal, py - diagonal, "end", distance),
-                           (px + diagonal, py + diagonal + 10, "start", distance),
-                           (px - diagonal, py + diagonal + 10, "end", distance)]
+        w = max(text_width(label, 14.5), text_width(note or "", 12.5))
+        h = 18 + (16 if note else 0)
+        spots = []
+        for distance in (5, 16, 30, 48, 72, 100):
+            for k in range(16):
+                angle = math.pi * k / 8
+                c, s = math.cos(angle), math.sin(angle)
+                ax, ay = px + (r + distance) * c, py + (r + distance) * s
+                y0 = ay if s > 0.38 else ay - h if s < -0.38 else ay - h / 2
+                # Beside the bubble reads best, then above, then below, then the diagonals.
+                preference = 0 if k in (0, 8) else 2 if k == 12 else 3 if k == 4 else 6
+                if c > 0.38:
+                    starts = [ax]
+                elif c < -0.38:
+                    starts = [ax - w]
+                else:
+                    # Above or below: centred, or slid sideways so a bubble near the edge keeps its label.
+                    starts = [ax - w / 2, ax - w + 14, ax - 14]
+                for index, x0 in enumerate(starts):
+                    spots.append(((x0, y0, x0 + w, y0 + h), distance + preference + 2 * bool(index)))
+        specs.append({"point": point, "px": px, "py": py, "r": r, "label": label, "note": note, "spots": spots})
 
-        def box(cand):
-            lx, ly, anchor, _ = cand
-            x0 = lx if anchor == "start" else lx - w if anchor == "end" else lx - w / 2
-            return (x0, ly - 12, x0 + w, ly + 4 + extra)
+    def cost(spec, spot, others):
+        box, base = spot
+        x0, y0, x1, y1 = box
+        outside = not (left + 2 <= x0 and x1 <= left + plot_w - 2 and top + 2 <= y0 and y1 <= top + plot_h - 2)
+        circles = sum(gap_to(box, cx, cy, cr) < 3 for p, cx, cy, cr in bubbles if p is not spec["point"])
+        labels = sum(not apart(box, other) for other in others) + (not apart(box, better_box))
+        # A label nearer another bubble than its own reads as that bubble's label, leader or not.
+        own = gap_to(box, spec["px"], spec["py"], spec["r"])
+        misleading = sum(gap_to(box, cx, cy, cr) < own for p, cx, cy, cr in bubbles if p is not spec["point"])
+        return 1000 * outside + 200 * circles + 200 * labels + 150 * misleading + base
 
-        def overlaps(cand):
-            """How badly a spot collides: leaving the plot counts most, then bubbles and other labels;
-            among clear spots, the nearest wins."""
-            x0, y0, x1, y1 = box(cand)
-            outside = not (left <= x0 and x1 <= left + plot_w + 30 and top <= y0 and y1 <= top + plot_h)
-            circles = sum(hits_circle((x0 - 2, y0 - 2, x1 + 2, y1 + 2), cx, cy, cr)
-                          for other, cx, cy, cr in bubbles if other is not point)
-            labels = sum(x0 < b[2] + 4 and b[0] - 4 < x1 and y0 < b[3] + 2 and b[1] - 2 < y1 for b in placed)
-            # A label nearer another bubble than its own reads as that bubble's label, leader or not.
-            def edge_gap(cx, cy, cr):
-                nx, ny = min(max(cx, x0), x1), min(max(cy, y0), y1)
-                return math.hypot(nx - cx, ny - cy) - cr
-            own = edge_gap(px, py, r)
-            misleading = sum(edge_gap(cx, cy, cr) < own for other, cx, cy, cr in bubbles if other is not point)
-            return 1000 * outside + 100 * circles + 100 * labels + 150 * misleading + cand[3]
-        # The first clear spot wins; if none is clear, take the least crowded one.
-        choice = min(candidates, key=overlaps)
-        placed.append(box(choice))
+    def crowding(spec):
+        return sum(math.hypot(o["px"] - spec["px"], o["py"] - spec["py"]) < 140 for o in specs)
+
+    chosen = {}
+    for spec in sorted(specs, key=lambda item: (-crowding(item), item["label"])):
+        others = [chosen[id(o)][0] for o in specs if id(o) in chosen]
+        chosen[id(spec)] = min(spec["spots"], key=lambda spot: cost(spec, spot, others))
+    for _ in range(6):
+        moved = False
+        for spec in specs:
+            others = [chosen[id(o)][0] for o in specs if o is not spec]
+            best = min(spec["spots"], key=lambda spot: cost(spec, spot, others))
+            if cost(spec, best, others) < cost(spec, chosen[id(spec)], others):
+                chosen[id(spec)], moved = best, True
+        if not moved:
+            break
+
+    leaders, labels = [], []
+    for spec in specs:
+        (x0, y0, x1, y1), _ = chosen[id(spec)]
+        px, py, r = spec["px"], spec["py"], spec["r"]
         # A label pushed away from its bubble gets a thin leader line, so it can't be mistaken for a neighbour's.
-        x0, y0, x1, y1 = box(choice)
-        nearest_x, nearest_y = min(max(px, x0), x1), min(max(py, y0), y1)
-        gap = math.hypot(nearest_x - px, nearest_y - py) - r
-        if gap > 10:
-            ux, uy = (nearest_x - px) / (gap + r), (nearest_y - py) / (gap + r)
-            leaders.append(f'<line x1="{px + ux * (r + 2):.1f}" y1="{py + uy * (r + 2):.1f}" x2="{nearest_x - ux * 3:.1f}" '
-                           f'y2="{nearest_y - uy * 3:.1f}" stroke="{t["ink2"]}" stroke-width="1"/>')
-        labels.append(text(choice[0], choice[1], label, size=14, fill="ink", weight="600", anchor=choice[2], halo=True))
-        if note:
-            labels.append(text(choice[0], choice[1] + 16, note, size=12.5, fill="ink2", anchor=choice[2], halo=True))
+        nx, ny = min(max(px, x0), x1), min(max(py, y0), y1)
+        gap = math.hypot(nx - px, ny - py) - r
+        if gap > 12:
+            ux, uy = (nx - px) / (gap + r), (ny - py) / (gap + r)
+            leaders.append(f'<line x1="{px + ux * (r + 2):.1f}" y1="{py + uy * (r + 2):.1f}" x2="{nx - ux * 3:.1f}" '
+                           f'y2="{ny - uy * 3:.1f}" stroke="{t["ink2"]}" stroke-width="1"/>')
+        # Anchor the text on the side facing the bubble, so estimate errors fall away from it.
+        if x1 <= px:
+            tx, anchor = x1, "end"
+        elif x0 >= px:
+            tx, anchor = x0, "start"
+        else:
+            tx, anchor = (x0 + x1) / 2, "middle"
+        labels.append(text(tx, y0 + 14, spec["label"], size=14.5, fill="ink", weight="600", anchor=anchor, halo=True))
+        if spec["note"]:
+            labels.append(text(tx, y0 + 30, spec["note"], size=12.5, fill="ink2", anchor=anchor, halo=True))
     out += leaders + labels
-
-    # Legend column: thinking modes, then memory sizes, then the flag marker.
-    ly = top + 6
-    modes = [mode for mode in ("off", "on") if any(point["thinking"] == mode for point in points)]
-    out.append(text(legend_x, ly, "Thinking", size=14, fill="ink", weight="700"))
-    for mode in modes:
-        ly += 24
-        out.append(f'<circle cx="{legend_x + 7}" cy="{ly - 4}" r="7" fill="{t[mode]}"/>')
-        out.append(text(legend_x + 22, ly, mode, fill="ink"))
-    if with_memory:
-        ly += 34
-        out.append(text(legend_x, ly, "Memory in use", size=14, fill="ink", weight="700"))
-        for gb in (2, 4, 8):
-            r = scale * math.sqrt(gb)
-            ly += 2 * r + 6
-            out.append(f'<circle cx="{legend_x + 22}" cy="{ly - r:.1f}" r="{r:.1f}" fill="none" '
-                       f'stroke="{t["ink2"]}" stroke-width="1.5"/>')
-            out.append(text(legend_x + 54, ly - r + 4, f"{gb} GB", fill="ink"))
-        for offset, line in enumerate(("For scale: the Pi has", "8 GB of RAM and", "2 GB of zram.")):
-            out.append(text(legend_x, ly + 24 + 17 * offset, line, size=12.5))
-        ly += 58
-    if any(point["flag"] for point in points):
-        ly += 34
-        out.append(f'<circle cx="{legend_x + 9}" cy="{ly - 4}" r="8" fill="none" stroke="{t["ink2"]}" '
-                   f'stroke-width="2" stroke-dasharray="4 3"/>')
-        out.append(text(legend_x + 24, ly, "Didn't reliably fit", fill="ink"))
     out.append("</svg>")
     return "\n".join(out) + "\n"
 
@@ -954,8 +1000,18 @@ def build():
                 if any(len(entry["supported_tracks"]) < len(TRACKS) for entry in subset):
                     note += (" A model without vision or tools has fewer challenge cases, and its unsupported "
                              "tracks show n/a.")
-                if rounds != [1]:
-                    note = f"Scores are averaged over {'/'.join(map(str, rounds))} passes. " + note
+                if len(rounds) == 1 and rounds != [1]:
+                    note = f"Scores are averaged over {rounds[0]} passes. " + note
+                elif len(rounds) > 1:
+                    # Mixed pass counts: name the models with more than one pass, the rest are single passes.
+                    named = []
+                    for count in [count for count in rounds if count > 1]:
+                        models = sorted({f"`{display_name(entry['model'])}`" for entry in subset
+                                         if entry["rounds"] == count})
+                        named.append(f"{' and '.join([', '.join(models[:-1]), models[-1]] if len(models) > 1 else models)} "
+                                     f"are averaged over {count} passes")
+                    rest = "; the others come from a single pass" if 1 in rounds else ""
+                    note = f"Scores for {'; '.join(named)}{rest}. " + note
                 parts += [f"#### Thinking {mode}: scores by track", "", table(subset, totals), "", note, ""]
         if any(entry["peak_mem_gb"] is not None for entry in group):
             parts += [MEMORY_NOTE, ""]

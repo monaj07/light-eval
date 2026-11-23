@@ -5,6 +5,8 @@ a real published run, modified to show each way a run can go wrong."""
 import contextlib
 import io
 import json
+import math
+import re
 import shutil
 import sys
 import tempfile
@@ -70,7 +72,7 @@ class RunChecksTest(unittest.TestCase):
         for row in rows:
             for turn in row.get("turns") or []:
                 turn["thinking"] = ""
-        self.assertIn("gemma4:e2b produced thinking text in only 0 of 65 warm cases",
+        self.assertIn("gemma4:e2b produced thinking text in only 0 of 65 warm supported cases",
                       " ".join(publish.run_problems(self.manifest, rows)))
 
     def test_incomplete_round_is_refused(self):
@@ -204,6 +206,54 @@ class RunnerFailureTest(unittest.TestCase):
                                                     "OLLAMA_KV_CACHE_TYPE": "q8_0"})
         with patch("runtime._server_environment_sources", return_value=[""]):
             self.assertIsNone(server_environment())
+
+
+class BubbleChartTest(unittest.TestCase):
+    """The accuracy-and-speed chart's layout rules, checked on the published chart and on a crowded
+    synthetic one, so a new model can't silently break them: every label sits inside the plot,
+    clear of every other label and every other bubble, and nearer its own bubble than any other."""
+    LEFT, TOP, RIGHT, BOTTOM = 68, 206, 68 + 824, 206 + 540
+
+    def layout(self, svg):
+        bubbles = [tuple(map(float, found)) for found in
+                   re.findall(r'<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)" fill="[^"]+" fill-opacity', svg)]
+        boxes = []
+        for x, y, anchor, content in re.findall(
+                r'<text x="([\d.]+)" y="([\d.]+)" font-size="14.5" font-weight="600" text-anchor="(\w+)"[^>]*>([^<]+)<', svg):
+            x, y, w = float(x), float(y), publish.text_width(content, 14.5)
+            x0 = x if anchor == "start" else x - w if anchor == "end" else x - w / 2
+            boxes.append((content, (x0, y - 14, x0 + w, y + 4)))
+        return bubbles, boxes
+
+    def gap(self, box, cx, cy, r):
+        x0, y0, x1, y1 = box
+        return math.hypot(min(max(cx, x0), x1) - cx, min(max(cy, y0), y1) - cy) - r
+
+    def check(self, svg, count):
+        bubbles, boxes = self.layout(svg)
+        self.assertEqual((len(bubbles), len(boxes)), (count, count))
+        for index, (name, box) in enumerate(boxes):
+            x0, y0, x1, y1 = box
+            self.assertTrue(self.LEFT <= x0 and x1 <= self.RIGHT and self.TOP <= y0 and y1 <= self.BOTTOM,
+                            f"{name} leaves the plot")
+            for other_name, other in boxes[index + 1:]:
+                apart = x1 <= other[0] or other[2] <= x0 or y1 <= other[1] or other[3] <= y0
+                self.assertTrue(apart, f"{name} overlaps {other_name}")
+            gaps = sorted(self.gap(box, *bubble) for bubble in bubbles)
+            # Its own bubble is the nearest; no other bubble is touched.
+            self.assertGreaterEqual(gaps[1], 0, f"{name} covers another bubble")
+            self.assertLess(gaps[0], gaps[1], f"{name} is nearer another bubble than its own")
+
+    def test_published_chart(self):
+        svg = (ROOT / "docs" / "assets" / "score-vs-time-raspberry-pi-5-8-gb-light.svg").read_text()
+        self.check(svg, svg.count('fill-opacity="0.9"'))
+
+    def test_crowded_chart(self):
+        # A tight cluster of similar models, as a batch of new small models would add.
+        points = [{"model": f"model-{i}:{size}b", "thinking": "on" if i % 3 == 0 else "off",
+                   "median_s": 8 * 1.18 ** i, "accuracy": 55 + 4 * math.sin(i), "peak_mem_gb": 1.5 + i % 4,
+                   "flag": None} for i, size in enumerate((1, 2, 3, 4, 7, 8, 9, 12, 14, 27))]
+        self.check(publish.svg_chart(points, "light", "Crowded"), len(points))
 
 
 if __name__ == "__main__":

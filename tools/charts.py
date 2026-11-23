@@ -260,6 +260,12 @@ def threads(rows, theme, title, low, high, primary):
 MOBILE_W = 440
 
 
+def bold_width(content, size):
+    """Generous width estimate for a short bold label such as '94%' or '5.1 min'."""
+    narrow, wide = set(".,:1il "), set("mw%")
+    return sum(0.36 if ch in narrow else 0.9 if ch in wide else 0.64 for ch in content) * size
+
+
 def _mobile_canvas(theme, height, title, subtitle_lines):
     c = Canvas(theme, MOBILE_W, height, title)
     c.parts[-1] = c.parts[-1].replace('font-size="19"', 'font-size="20"')
@@ -312,13 +318,15 @@ def dumbbell_mobile(rows, theme, title):
             ordered = sorted(points, key=lambda item: item[1])
             for position, (mode, value) in enumerate(ordered):
                 outer_right = position == len(ordered) - 1
-                x = scale(value) + (13 if outer_right else -13)
-                anchor = "start" if outer_right else "end"
-                if outer_right and x > MOBILE_W - 70:  # keep the label inside the frame
+                text = fmt(value)
+                # The right-hand label goes right of its dot if its own width fits inside the frame;
+                # otherwise left of it, anchored at its end so it never covers the dot.
+                fits = scale(value) + 13 + bold_width(text, 15) <= MOBILE_W - 8
+                if outer_right and fits:
+                    x, anchor = scale(value) + 13, "start"
+                else:
                     x, anchor = scale(value) - 13, "end"
-                    if len(ordered) == 2:
-                        x = scale(value) + 13 if scale(value) + 70 < MOBILE_W else scale(value) - 13
-                c.text(x, dots_y + 5.5, fmt(value), size=15, fill="ink", weight="700", anchor=anchor, halo=True)
+                c.text(x, dots_y + 5.5, text, size=15, fill="ink", weight="700", anchor=anchor, halo=True)
     return c.svg()
 
 

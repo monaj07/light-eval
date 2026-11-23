@@ -156,6 +156,19 @@ def run_problems(manifest, rows, keep=None, allow_errors=False):
         problems.append("cases failed for infrastructure reasons, which would count against the model: "
                         + ", ".join(f"{key} ×{count}" for key, count in sorted(errors.items()))
                         + ". Rerun, or pass --allow-errors with a --note if they are the model's own failures")
+    if options.get("thinking") == "on":
+        # Ollama flags "thinking" from the chat template, not the training: an Instruct model can
+        # carry the flag and still never reason, which would label a thinking-off result "on".
+        thought, total = defaultdict(int), defaultdict(int)
+        for row in rows:
+            if row["phase"] == "warm":
+                total[row["model"]] += 1
+                thought[row["model"]] += any((turn.get("thinking") or "").strip()
+                                             for turn in row.get("turns") or [])
+        for model, count in sorted(total.items()):
+            if thought[model] < count / 2:
+                problems.append(f"{model} produced thinking text in only {thought[model]} of {count} warm "
+                                "cases, so it doesn't really have a thinking mode")
     expected = len(manifest.get("case_metadata") or {})
     warm = defaultdict(int)
     for row in rows:

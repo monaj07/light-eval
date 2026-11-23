@@ -65,6 +65,14 @@ class RunChecksTest(unittest.TestCase):
         self.assertIn("infrastructure reasons", " ".join(publish.run_problems(self.manifest, rows)))
         self.assertEqual(publish.run_problems(self.manifest, rows, allow_errors=True), [])
 
+    def test_thinking_on_without_thinking_text_is_refused(self):
+        rows = deepcopy(self.rows)
+        for row in rows:
+            for turn in row.get("turns") or []:
+                turn["thinking"] = ""
+        self.assertIn("gemma4:e2b produced thinking text in only 0 of 65 warm cases",
+                      " ".join(publish.run_problems(self.manifest, rows)))
+
     def test_incomplete_round_is_refused(self):
         rows = [row for row in self.rows if not (row["phase"] == "warm" and row["case"] == "math-units")]
         self.assertIn("round 1 of gemma4:e2b has 64 of 65 warm cases", publish.run_problems(self.manifest, rows))

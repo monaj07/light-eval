@@ -44,7 +44,7 @@ body {
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-h1 { font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.1rem); line-height: 1.2; margin: 0 0 .5rem; letter-spacing: -.01em; }
+h1 { font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.1rem); line-height: 1.2; margin: 0 0 .5rem; letter-spacing: -.01em; text-wrap: balance; }
 h2 { font-size: 1.2rem; margin: 0 0 .25rem; }
 h3 { font-size: 1rem; margin: 0 0 .5rem; }
 p { margin: 0 0 .75rem; }
@@ -271,15 +271,11 @@ td.heat-td { padding: 3px; }
   .lb.pinned .tag { display: none; }
 }
 
-/* Overview opening: the question beside a small illustrated board. */
+/* Overview opening: the question beside an illustration of a board and a benchmark dashboard.
+   The SVG also carries its own width and height, so a stale stylesheet can't let it fill the page. */
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; align-items: center; }
-.hero-art .board { width: 250px; height: auto; display: block; }
-.hero-art .heat path { animation: rise 2.4s ease-in-out infinite; }
-.hero-art .heat path:nth-child(2) { animation-delay: .4s; }
-.hero-art .heat path:nth-child(3) { animation-delay: .8s; }
-@keyframes rise { 0%, 100% { opacity: .35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
-@media (prefers-reduced-motion: reduce) { .hero-art .heat path { animation: none; } }
+.hero-art .scene { width: 340px; height: auto; display: block; }
 @media (max-width: 760px) {
-  .hero { gap: 12px; align-items: start; }
-  .hero-art .board { width: 104px; margin-top: 4px; }
+  .hero { grid-template-columns: 1fr; gap: 10px; }
+  .hero-art .scene { width: 100%; max-width: 360px; margin: 0 auto; }
 }

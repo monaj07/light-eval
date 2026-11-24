@@ -56,7 +56,7 @@ Charts are inline SVG drawn by `app.js`, in the README's colours: blue for think
 ## Logos
 
 - **Site logo** (`site/logo.svg`, also inline in the header and used as the favicon): a processor with a gauge and rising bars inside, for models measured on the device itself, beside a two-tone "Light Eval" wordmark. Redrawn as SVG from the project's own design, so it stays sharp at 16 px.
-- **Overview illustration** (inline in `index.html`): an original drawing of a small single-board computer with an "LLM" chip and heat rising from it. It deliberately doesn't use the Raspberry Pi logo, which is a registered trademark whose use needs permission.
+- **Overview illustration** (inline in `index.html`): an original drawing of a small single-board computer running an "LLM" beside a monitor showing a benchmark dashboard (latency, temperature, memory, accuracy, tokens per second, prompt latency), with no models or numbers. It deliberately avoids the Raspberry Pi logo and other trademarks, so it needs no credit.
 - **Model makers' logos** (`site/logos/`): shown on a white badge in tables, cards and charts, since some are black on transparent. `meta.json` records where each came from: Gemma's icon from Wikimedia Commons (Apache License 2.0, cropped to the star), Qwen's from Wikimedia Commons (CC0), Liquid AI's from its own site. They belong to their makers and only identify the models; the About page says so. A family without a `logo` falls back to a coloured tile with its `mark` letter.
 
 ## Phones and accessibility

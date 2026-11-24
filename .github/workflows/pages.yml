@@ -28,6 +28,8 @@ jobs:
         run: python3 -m unittest discover -s tests
       - name: Build the site data
         run: python3 tools/build_site.py
+      - name: Version the stylesheet and script links, so a deploy is never paired with a cached older file
+        run: sed -i "s/style.css\"/style.css?v=${GITHUB_SHA::7}\"/; s/app.js\"/app.js?v=${GITHUB_SHA::7}\"/" site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

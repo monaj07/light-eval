@@ -30,6 +30,9 @@ python3 fixtures/make_fixtures.py
 # Show one case's prompt, expected answer and every model's output from a published run
 python3 tools/show_case.py docs/results/pi5-off-official json-24h-times
 
+# Build and preview the results site (GitHub Pages; docs/SITE.md). site/data/ is generated and gitignored
+python3 tools/build_site.py && python3 -m http.server -d site 8000
+
 # Publish a run (copies it into docs/results/, which is committed) and rebuild the README results
 python3 tools/publish.py add results/<name> --name <device>-<off|on>-<model>   # protocol 1-2 multi-model runs: --rounds 1-3
 python3 tools/publish.py build
@@ -58,6 +61,8 @@ There are three modules; each depends only on the ones listed before it.
   - `apply_budget_defaults()` sets context/max-tokens by thinking mode: 4096/1024 with thinking off, 10240/6144 with thinking on.
 
 `tools/publish.py` imports `summarize` and `temperature_summary` from `light_eval.py`. `build` keeps only published runs of the current `VERSION`, and rewrites the README between `<!-- results:start -->` and `<!-- results:end -->` plus the light/dark SVG charts in `docs/assets/`. Never hand-edit that part of the README. The generated section leads with an at-a-glance table and three charts (`tools/charts.py`: thinking dumbbell, per-track heatmap, thread comparison), with all detailed tables inside a collapsed `<details>` block. The accuracy-and-speed bubble chart (`svg_chart`) keeps the full 920 px width for the plot (legend in a row above it), fits both axes to the data, and places labels by scoring 16 directions per bubble and then repeatedly re-placing each label until none improves. `BubbleChartTest` enforces its rules on the published chart and a crowded synthetic one: every label inside the plot, clear of other labels and bubbles, and nearest its own bubble. After adding models, render the chart and look at it (headless Chrome renders the SVGs at full width; `qlmanage` crops them to a square). The bottom line above the markers and the findings below them are hand-written: update them when results change. The main tables and charts use `PRIMARY_THREADS` (4, the runner's default). Official runs at other thread counts appear in the thread comparison, except a model and mode measured only at another thread count (gemma4:e4b), which appears in the main results marked "2 threads only". `docs/ANALYSIS.md` is hand-written from `docs/results/pi5-off-official`, round 1: if that run is replaced or the suite version changes, update the analysis too. CI (`.github/workflows/tests.yml`) runs the tests and fails if `build` changes `README.md` or `docs/assets/`, so run `build` after publishing or after changing `VERSION`.
+
+The results site (`site/`, deployed by `.github/workflows/pages.yml`) reads `site/data/`, which `tools/build_site.py` generates from the same `entries()` and `primary_group()` as the README, so its numbers always match. `site/index.html`, `style.css`, `app.js` and `meta.json` are hand-written; the overview intro and About text live in `index.html`. After changing the site, render its pages at desktop and 390 px widths (a 390 px iframe gives a true phone viewport; headless Chrome windows have a larger minimum width) and look at them.
 
 Each run writes five files: `manifest.json` (options, hashes, model digests, server settings, swap devices), `cases.jsonl`, `blocks.jsonl`, `telemetry.jsonl` and `summary.json`.
 

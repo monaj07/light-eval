@@ -334,6 +334,27 @@ def entries():
 NO_WORKING_THINKING = {"hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M"}
 
 
+def primary_group(device_entries):
+    """Split one device's entries into the main results and the other thread counts.
+
+    The main results use PRIMARY_THREADS. An official run replaces exploratory runs of the same
+    model and thinking mode. A model and mode with official results only at another thread count
+    (gemma4:e4b, which hung the Pi and wasn't rerun) still appears, marked with threads_note,
+    rather than silently disappearing. Shared by the README and the results site."""
+    main = [entry for entry in device_entries if entry["threads"] == PRIMARY_THREADS]
+    official = {(entry["model"], entry["thinking"]) for entry in main if entry["setup"]}
+    group = [entry for entry in main if entry["setup"] or (entry["model"], entry["thinking"]) not in official]
+    fallback = {}
+    for entry in device_entries:
+        key = (entry["model"], entry["thinking"])
+        if entry["setup"] and entry["threads"] != PRIMARY_THREADS and key not in official:
+            fallback.setdefault(key, entry)["threads_note"] = f"{entry['threads']} threads only"
+    group += list(fallback.values())
+    others = [entry for entry in device_entries if entry["threads"] != PRIMARY_THREADS and entry["setup"]
+              and entry not in fallback.values()]
+    return group, others
+
+
 def display_name(model):
     """The name used everywhere in the README; full Ollama names are listed under the full results.
 
@@ -942,21 +963,7 @@ def build():
         by_device[entry["device"]].append(entry)
     ASSETS.mkdir(parents=True, exist_ok=True)
     for name in sorted(by_device, key=lambda item: (not item.startswith("Raspberry"), item)):
-        # An official run replaces exploratory runs of the same model and thinking mode.
-        # The main tables and chart use one thread count; other thread counts go to a comparison table.
-        main = [entry for entry in by_device[name] if entry["threads"] == PRIMARY_THREADS]
-        official = {(entry["model"], entry["thinking"]) for entry in main if entry["setup"]}
-        group = [entry for entry in main if entry["setup"] or (entry["model"], entry["thinking"]) not in official]
-        # A model and mode with official results only at another thread count (gemma4:e4b, which hung
-        # the Pi and wasn't rerun) still appears, clearly marked, rather than silently disappearing.
-        fallback = {}
-        for entry in by_device[name]:
-            key = (entry["model"], entry["thinking"])
-            if entry["setup"] and entry["threads"] != PRIMARY_THREADS and key not in official:
-                fallback.setdefault(key, entry)["threads_note"] = f"{entry['threads']} threads only"
-        group += list(fallback.values())
-        others = [entry for entry in by_device[name] if entry["threads"] != PRIMARY_THREADS and entry["setup"]
-                  and entry not in fallback.values()]
+        group, others = primary_group(by_device[name])
         parts += [f"### {name}", ""]
         setups = sorted({entry["setup"] for entry in group if entry["setup"]})
         for setup in setups:

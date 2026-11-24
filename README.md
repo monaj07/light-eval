@@ -8,7 +8,7 @@
 ![Suite 1.7.0](https://img.shields.io/badge/suite-1.7.0-informational.svg)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)
 
-**[Results](#results)** · **[Failure analysis](docs/ANALYSIS.md)** · **[What it measures](#what-it-measures)** · **[Quick start](#quick-start)** · **[Methodology](docs/METHODOLOGY.md)** · **[Changelog](CHANGELOG.md)**
+**[Interactive results](https://monaj07.github.io/light-eval/)** · **[Results](#results)** · **[Failure analysis](docs/ANALYSIS.md)** · **[What it measures](#what-it-measures)** · **[Quick start](#quick-start)** · **[Methodology](docs/METHODOLOGY.md)** · **[Changelog](CHANGELOG.md)**
 
 ## Why Light Eval
 

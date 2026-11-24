@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Light Eval Results</title>
+  <meta name="description" content="Which local LLM should you run on a Raspberry Pi 5 with 8 GB? Deterministic tests of accuracy, speed, memory and temperature, run on the device.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M9 22V10h3v9.5h6V22z' fill='white'/%3E%3Ccircle cx='22' cy='12' r='3' fill='%23eb6834'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#app">Skip to results</a>
+  <header class="top">
+    <div class="top-inner">
+      <a class="brand" href="#/" aria-label="Light Eval, overview">
+        <span class="brand-mark" aria-hidden="true">L</span>
+        <span class="brand-text"><strong>Light Eval</strong><small>local LLMs on a Raspberry Pi 5 (8 GB)</small></span>
+      </a>
+      <button class="theme" id="theme" type="button" aria-label="Switch light or dark theme">◐</button>
+    </div>
+    <nav class="tabs" aria-label="Pages">
+      <a href="#/" data-route="overview">Overview</a>
+      <a href="#/leaderboard" data-route="leaderboard">Leaderboard</a>
+      <a href="#/tracks" data-route="tracks">Tracks</a>
+      <a href="#/thinking" data-route="thinking">Thinking</a>
+      <a href="#/hardware" data-route="hardware">Hardware</a>
+      <a href="#/cases" data-route="cases">Cases</a>
+      <a href="#/compare" data-route="compare">Compare</a>
+      <a href="#/about" data-route="about">About</a>
+    </nav>
+  </header>
+
+  <main id="app" tabindex="-1"><p class="loading">Loading results…</p></main>
+  <div id="tip" class="tip" role="tooltip" hidden></div>
+
+  <footer class="foot">
+    <span id="foot-facts"></span>
+    <a href="https://github.com/monaj07/light-eval">Source and raw results on GitHub</a>
+  </footer>
+
+  <!-- Hand-written text. The numbers on every page come from site/data/, generated from docs/results/. -->
+  <template id="overview-intro">
+    <h1>Which local LLM should you run on a Raspberry Pi&nbsp;5?</h1>
+    <p class="lede">Every model here ran on the same 8 GB Raspberry Pi 5 through Ollama, on 65 tasks with exact,
+      deterministic answers: arithmetic, structured output, tool use, images and long context. No LLM judge.
+      Each result is averaged over its passes, and the Pi's speed, memory and temperature were recorded throughout.</p>
+  </template>
+
+  <template id="about-text">
+    <h1>About these results</h1>
+    <h2>What is measured</h2>
+    <p>Light Eval asks each model 65 questions in five tracks of 13 cases. Each track mixes easy <em>control</em>
+      cases with harder <em>challenges</em>:</p>
+    <ul>
+      <li><strong>Arithmetic</strong>: word problems with a single numeric answer.</li>
+      <li><strong>Structured</strong>: extracting typed JSON from text.</li>
+      <li><strong>Agent</strong>: calling simulated tools in the right order, with the right arguments, and reporting the result.</li>
+      <li><strong>Vision</strong>: counting and reading in synthetic images.</li>
+      <li><strong>Context</strong>: finding facts in logs of 16 to 96 records, with distractors.</li>
+    </ul>
+    <h2>How answers are scored</h2>
+    <p>Every answer is a typed JSON value compared exactly with the expected one; tool calls are checked call by call,
+      including the final state. No model grades another. Accuracy is the share of cases passed on the tracks a model
+      can attempt: a text-only model is not given 0% for vision.</p>
+    <h2>Thinking off and on</h2>
+    <p>Models that can reason before answering are run twice, with thinking off and on, each with its own token budget
+      (1,024 and 6,144 tokens per turn). Every case has a 10-minute limit. Compare models only within one mode.</p>
+    <h2>Fairness and repeatability</h2>
+    <p>Each model runs three passes in a rotating order, and the Pi cools to the same temperature band before every
+      model loads. Outputs are close but not identical between passes, so scores are averaged and each result shows
+      its range across passes.</p>
+    <h2>More</h2>
+    <p><a href="https://github.com/monaj07/light-eval/blob/main/docs/METHODOLOGY.md">Methodology</a> ·
+      <a href="https://github.com/monaj07/light-eval/blob/main/docs/ANALYSIS.md">Failure analysis</a> ·
+      <a href="https://github.com/monaj07/light-eval/blob/main/docs/OFFICIAL_RUNS.md">How the official runs were made</a> ·
+      <a href="https://github.com/monaj07/light-eval#quick-start">Run it yourself</a></p>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

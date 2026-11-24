@@ -23,3 +23,7 @@ jobs:
           git diff --exit-code README.md docs/assets
           # New, untracked chart files count too.
           test -z "$(git status --porcelain README.md docs/)" || { git status --porcelain README.md docs/; exit 1; }
+      - name: Results site builds and its script parses
+        run: |
+          python3 tools/build_site.py
+          node --check site/app.js

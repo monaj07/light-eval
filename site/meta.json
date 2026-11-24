@@ -1,0 +1,9 @@
+{
+  "about": "Model families, matched against the Ollama model name (case-insensitive regular expression). 'mark' is the letter on the logo tile; set 'logo' to an image in site/logos/ to use a maker's own logo instead (check its brand terms first).",
+  "families": [
+    {"match": "gemma", "maker": "Google", "family": "Gemma", "mark": "G", "color": "#5b6ee1", "url": "https://ai.google.dev/gemma"},
+    {"match": "qwen", "maker": "Alibaba Cloud", "family": "Qwen", "mark": "Q", "color": "#8a5cd6", "url": "https://qwenlm.github.io"},
+    {"match": "lfm", "maker": "Liquid AI", "family": "LFM", "mark": "L", "color": "#13958a", "url": "https://www.liquid.ai"}
+  ],
+  "default": {"maker": "", "family": "Other", "mark": "?", "color": "#7a7974"}
+}

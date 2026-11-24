@@ -31,8 +31,8 @@ function family(model) {
 }
 function logo(model, size = "") {
   const f = family(model);
-  const inner = f.logo ? `<img src="${esc(f.logo)}" alt="">` : esc(f.mark);
-  return `<span class="logo ${size}" style="background:${esc(f.color)}" title="${esc(f.maker || f.family)}" aria-hidden="true">${inner}</span>`;
+  if (f.logo) return `<span class="logo img ${size}" title="${esc(f.maker || f.family)}" aria-hidden="true"><img src="${esc(f.logo)}" alt=""></span>`;
+  return `<span class="logo ${size}" style="background:${esc(f.color)}" title="${esc(f.maker || f.family)}" aria-hidden="true">${esc(f.mark)}</span>`;
 }
 function isDark() {
   const set = document.documentElement.dataset.theme;
@@ -181,29 +181,84 @@ function redrawCharts() { for (const c of charts) if (document.body.contains(c.e
 let resizeTimer;
 addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawCharts, 150); });
 
+/* Label placement shared by the scatter charts: each label tries 16 directions at growing
+   distances, scored against the plot edge, other labels and other bubbles (and against sitting
+   nearer another bubble than its own). Crowded points go first, then every label is moved again,
+   given where the others ended up, until nothing improves. Labels that still collide are dropped
+   on narrow screens; their points keep their tooltips. */
+function placeLabels(items, bounds, { drop = false } = {}) {
+  const apart = (a, b, gap = 2) => a[2] + gap <= b[0] || b[2] + gap <= a[0] || a[3] + gap <= b[1] || b[3] + gap <= a[1];
+  const gapTo = (box, p) => {
+    const nx = Math.min(Math.max(p.x, box[0]), box[2]), ny = Math.min(Math.max(p.y, box[1]), box[3]);
+    return Math.hypot(nx - p.x, ny - p.y) - p.r;
+  };
+  for (const it of items) {
+    it.spots = [];
+    for (const d of [3, 10, 22, 38, 58]) {
+      for (let k = 0; k < 16; k++) {
+        const angle = Math.PI * k / 8, c = Math.cos(angle), s = Math.sin(angle);
+        const ax = it.x + (it.r + d) * c, ay = it.y + (it.r + d) * s;
+        const x0 = c > 0.38 ? ax : c < -0.38 ? ax - it.w : ax - it.w / 2;
+        const y0 = s > 0.38 ? ay : s < -0.38 ? ay - it.h : ay - it.h / 2;
+        const pref = k === 0 || k === 8 ? 0 : k === 12 ? 2 : k === 4 ? 3 : 6;
+        it.spots.push({ box: [x0, y0, x0 + it.w, y0 + it.h], base: d + pref });
+      }
+    }
+  }
+  const cost = (it, spot, others) => {
+    const b = spot.box;
+    const outside = b[0] < bounds[0] || b[2] > bounds[2] || b[1] < bounds[1] || b[3] > bounds[3];
+    const labels = others.filter((o) => !apart(b, o)).length;
+    const bubbles = items.filter((o) => o !== it && gapTo(b, o) < 2).length;
+    const own = gapTo(b, it);
+    const misleading = items.filter((o) => o !== it && gapTo(b, o) < own).length;
+    return 1000 * outside + 200 * labels + 200 * bubbles + 120 * misleading + spot.base;
+  };
+  const crowd = (it) => items.filter((o) => Math.hypot(o.x - it.x, o.y - it.y) < 90).length;
+  const chosen = new Map();
+  for (const it of [...items].sort((a, b) => crowd(b) - crowd(a))) {
+    const others = [...chosen.values()].map((s) => s.box);
+    chosen.set(it, it.spots.reduce((best, s) => (cost(it, s, others) < cost(it, best, others) ? s : best)));
+  }
+  for (let round = 0; round < 6; round++) {
+    let moved = false;
+    for (const it of items) {
+      const others = items.filter((o) => o !== it).map((o) => chosen.get(o).box);
+      const best = it.spots.reduce((b, s) => (cost(it, s, others) < cost(it, b, others) ? s : b));
+      if (cost(it, best, others) < cost(it, chosen.get(it), others)) { chosen.set(it, best); moved = true; }
+    }
+    if (!moved) break;
+  }
+  return items.map((it) => {
+    const others = items.filter((o) => o !== it).map((o) => chosen.get(o).box);
+    const spot = chosen.get(it);
+    return { it, box: spot.box, clean: cost(it, spot, others) < 200 };
+  }).filter((p) => !drop || p.clean);
+}
+
 /* ---------- chart: accuracy against time or memory ---------- */
 function scatter(el, list) {
   const W = Math.max(300, el.clientWidth), small = W < 560;
-  const H = small ? 400 : 500, m = { l: small ? 40 : 52, r: small ? 12 : 24, t: 18, b: 48 };
+  const H = small ? 440 : 540, m = { l: small ? 40 : 52, r: small ? 10 : 20, t: 16, b: 48 };
   const pw = W - m.l - m.r, ph = H - m.t - m.b;
-  const shown = list.filter((e) => !hidden[e.thinking]);
   const byTime = scatterX === "median_s";
-  const xs = list.map((e) => e[scatterX]).filter((v) => v != null);
-  const ys = list.map((e) => e.accuracy);
+  const all = list.filter((e) => e[scatterX] != null);
+  const shown = all.filter((e) => !hidden[e.thinking]);
+  const xs = all.map((e) => e[scatterX]), ys = all.map((e) => e.accuracy);
   const yLo = Math.max(0, Math.floor((Math.min(...ys) - 8) / 10) * 10), yHi = 100;
   let x;
   if (byTime) {
-    const lo = Math.log10(Math.min(...xs) / 1.6), hi = Math.log10(Math.max(...xs) * 1.6);
+    const lo = Math.log10(Math.min(...xs) / 1.5), hi = Math.log10(Math.max(...xs) * 1.5);
     x = (v) => m.l + pw * (Math.log10(v) - lo) / (hi - lo);
-    x.ticks = logTicks(10 ** lo, 10 ** hi);
+    // Narrow screens keep every other round tick, so the labels don't run together.
+    x.ticks = logTicks(10 ** lo, 10 ** hi).filter((t) => !small || [1, 3, 10, 30, 60, 180, 600, 1800].includes(t));
   } else {
-    const hi = Math.max(10.5, Math.ceil(Math.max(...xs) + 0.6));
+    const hi = Math.max(10.5, Math.ceil(Math.max(...xs) + 0.8));
     x = (v) => m.l + pw * v / hi;
     x.ticks = Array.from({ length: Math.floor(hi / 2) + 1 }, (_, i) => i * 2);
   }
   const y = (v) => m.t + ph * (yHi - v) / (yHi - yLo);
-  const maxR = small ? 15 : 22;
-  const r = (e) => (byTime && e.peak_mem_gb ? Math.max(5, maxR * Math.sqrt(e.peak_mem_gb / 10)) : small ? 6 : 8);
+  const R = small ? 11 : 13.5;
   let s = svgOpen(W, H, byTime ? "Accuracy against median time per case" : "Accuracy against peak memory");
   for (let v = yLo; v <= yHi; v += 10) {
     s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>`;
@@ -214,65 +269,42 @@ function scatter(el, list) {
     s += `<text x="${x(t)}" y="${H - m.b + 18}" text-anchor="middle" font-size="12">${byTime ? tickLabel(t) : `${t} GB`}</text>`;
   }
   if (!byTime) {
-    for (const [v, label] of [[D.device.ram_gb, "RAM"], [D.device.ram_gb + D.device.zram_gb, "RAM + zram"]]) {
-      s += `<line x1="${x(v)}" x2="${x(v)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--bad)" stroke-dasharray="4 4" opacity=".7"/>`;
-      s += `<text x="${x(v) - 4}" y="${m.t + 12}" text-anchor="end" font-size="11" style="fill:var(--bad)">${label}</text>`;
+    // RAM's label sits at the bottom and RAM + zram's at the top, so they never collide.
+    for (const [v, label, ly] of [[D.device.ram_gb, "RAM", H - m.b - 6], [D.device.ram_gb + D.device.zram_gb, "RAM + zram", m.t + 12]]) {
+      s += `<line x1="${x(v)}" x2="${x(v)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--bad)" stroke-dasharray="4 4" opacity=".6"/>`;
+      s += `<text x="${x(v) - 4}" y="${ly}" text-anchor="end" font-size="11" style="fill:var(--bad)">${label}</text>`;
     }
   }
   s += `<text x="${m.l + pw / 2}" y="${H - 8}" text-anchor="middle" font-size="12.5" style="fill:var(--ink);font-weight:600">${byTime ? "Median time per case (log scale)" : "Peak memory in use (RAM + zram)"}</text>`;
-  // Pareto frontier: no other result is both at least as accurate and lower on the x axis.
-  const pts = shown.filter((e) => e[scatterX] != null);
-  const runnable = pts.filter((e) => e.memory !== "out" && !e.flag);
-  const frontier = runnable.filter((e) => !runnable.some((o) => o !== e && o[scatterX] <= e[scatterX] && o.accuracy >= e.accuracy
-    && (o[scatterX] < e[scatterX] || o.accuracy > e.accuracy))).sort((a, b) => a[scatterX] - b[scatterX]);
-  if (frontier.length > 1) {
-    let d = "";
-    frontier.forEach((e, i) => {
-      const px = x(e[scatterX]), py = y(e.accuracy);
-      d += i ? ` H${px} V${py}` : `M${px} ${py}`;
-    });
-    s += `<path d="${d}" fill="none" stroke="var(--ink2)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".7"/>`;
-  }
-  // Thin connectors between a model's thinking-off and thinking-on results.
-  const byModel = {};
-  for (const e of pts) (byModel[e.model] ||= {})[e.thinking] = e;
-  for (const pair of Object.values(byModel)) {
-    if (pair.off && pair.on) s += `<line x1="${x(pair.off[scatterX])}" y1="${y(pair.off.accuracy)}" x2="${x(pair.on[scatterX])}" y2="${y(pair.on.accuracy)}" stroke="var(--muted)" stroke-dasharray="1 4" stroke-linecap="round" stroke-width="1.6"/>`;
-  }
-  for (const e of [...pts].sort((a, b) => r(b) - r(a))) {
-    const px = x(e[scatterX]), py = y(e.accuracy), rr = r(e);
-    const dashed = e.flag || e.memory === "out" ? ' stroke-dasharray="3 2"' : "";
+  // Points: every result the same size, drawn as its family's logo tile; thinking on adds an orange ring.
+  const items = shown.map((e) => {
+    const name = e.name, sub = e.thinking === "on" ? "thinking" : null;
+    const size = small ? 11 : 12.5;
+    const w = Math.max(name.length * size * 0.6, sub ? sub.length * (size - 1.5) * 0.58 : 0) + 4;
+    return { e, x: x(e[scatterX]), y: y(e.accuracy), r: R + (e.thinking === "on" ? 3 : 0), w, h: sub ? 27 : 15, name, sub, size };
+  });
+  for (const it of [...items].sort((a, b) => b.y - a.y)) {
+    const e = it.e, f = family(e.model), out = e.flag || e.memory === "out";
     s += `<g class="pt" tabindex="0" data-tip="${tip(entryTip(e))}" data-href="#/model/${esc(e.model_slug)}" aria-label="${esc(`${e.name}, thinking ${e.thinking}, ${Math.round(e.accuracy)}%`)}">
-      <circle cx="${px}" cy="${py}" r="${rr + 9}" fill="transparent"/>
-      <circle class="mark" cx="${px}" cy="${py}" r="${rr}" fill="var(--${e.thinking})" fill-opacity=".88" stroke="${dashed ? "var(--ink2)" : "var(--panel)"}" stroke-width="1.5"${dashed}/></g>`;
+      <circle cx="${it.x}" cy="${it.y}" r="${R + 10}" fill="transparent"/>
+      ${e.thinking === "on" ? `<circle cx="${it.x}" cy="${it.y}" r="${R + 3}" fill="none" stroke="var(--on)" stroke-width="3"/>` : ""}
+      <circle class="mark" cx="${it.x}" cy="${it.y}" r="${R}" fill="${f.logo ? "#ffffff" : esc(f.color)}" stroke="${out ? "var(--ink2)" : "var(--line)"}" stroke-width="${out ? 2 : 1.2}"${out ? ' stroke-dasharray="3 2"' : ""}/>
+      ${f.logo ? `<image href="${esc(f.logo)}" x="${it.x - R * 0.68}" y="${it.y - R * 0.68}" width="${R * 1.36}" height="${R * 1.36}" style="pointer-events:none"/>`
+        : `<text x="${it.x}" y="${it.y + (small ? 4 : 4.5)}" text-anchor="middle" font-size="${small ? 11 : 12.5}" style="fill:#fff;font-weight:800;pointer-events:none">${esc(f.mark)}</text>`}</g>`;
   }
-  // Label the frontier only; every other point is named in its tooltip. Each label tries eight
-  // directions at two distances and takes the spot clear of the plot edge, other labels and bubbles.
-  const boxes = [];
-  const circles = pts.map((e) => [x(e[scatterX]), y(e.accuracy), r(e)]);
-  const hitsCircle = (box, [cx, cy, cr]) => {
-    const nx = Math.min(Math.max(cx, box[0]), box[2]), ny = Math.min(Math.max(cy, box[1]), box[3]);
-    return (nx - cx) ** 2 + (ny - cy) ** 2 < (cr + 2) ** 2;
-  };
-  for (const e of frontier) {
-    const px = x(e[scatterX]), py = y(e.accuracy), rr = r(e);
-    const text = `${e.name} · ${Math.round(e.accuracy)}%`, w = text.length * (small ? 6.2 : 7.0);
-    const spots = [];
-    for (const d of [6, 22]) {
-      const k = rr + d, diag = (rr + d) * 0.72;
-      spots.push([px + k, py + 4, "start", d], [px - k, py + 4, "end", d], [px, py - k, "middle", d], [px, py + k + 11, "middle", d],
-        [px + diag, py - diag, "start", d + 3], [px - diag, py - diag, "end", d + 3], [px + diag, py + diag + 10, "start", d + 3], [px - diag, py + diag + 10, "end", d + 3]);
+  const placed = placeLabels(items, [m.l + 2, m.t, W - m.r, H - m.b - 2], { drop: small });
+  const halo = "paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round";
+  for (const { it, box } of placed) {
+    const nx = Math.min(Math.max(it.x, box[0]), box[2]), ny = Math.min(Math.max(it.y, box[1]), box[3]);
+    const gap = Math.hypot(nx - it.x, ny - it.y) - it.r;
+    if (gap > 9) {
+      const ux = (nx - it.x) / (gap + it.r), uy = (ny - it.y) / (gap + it.r);
+      s += `<line x1="${it.x + ux * (it.r + 2)}" y1="${it.y + uy * (it.r + 2)}" x2="${nx - ux * 2}" y2="${ny - uy * 2}" stroke="var(--muted)" stroke-width="1"/>`;
     }
-    const fit = spots.map(([lx, ly, a, d]) => {
-      const x0 = a === "start" ? lx : a === "end" ? lx - w : lx - w / 2;
-      const box = [x0, ly - 11, x0 + w, ly + 3];
-      const out = x0 < m.l || x0 + w > W - m.r || ly - 11 < m.t || ly + 3 > H - m.b;
-      const labels = boxes.filter((b) => !(box[2] < b[0] || b[2] < box[0] || box[3] < b[1] || b[3] < box[1])).length;
-      const bubbles = circles.filter((c) => hitsCircle(box, c)).length;
-      return { lx, ly, a, box, cost: 1000 * out + 100 * labels + 60 * bubbles + d };
-    }).sort((p, q) => p.cost - q.cost)[0];
-    boxes.push(fit.box);
-    s += `<text x="${fit.lx}" y="${fit.ly}" text-anchor="${fit.a}" font-size="${small ? 11 : 12.5}" style="fill:var(--ink);font-weight:600;paint-order:stroke;stroke:var(--surface);stroke-width:4px">${esc(text)}</text>`;
+    const anchor = box[2] <= it.x ? "end" : box[0] >= it.x ? "start" : "middle";
+    const tx = anchor === "end" ? box[2] - 2 : anchor === "start" ? box[0] + 2 : (box[0] + box[2]) / 2;
+    s += `<text x="${tx}" y="${box[1] + 12}" text-anchor="${anchor}" font-size="${it.size}" style="fill:var(--ink);font-weight:600;${halo}">${esc(it.name)}</text>`;
+    if (it.sub) s += `<text x="${tx}" y="${box[1] + 24.5}" text-anchor="${anchor}" font-size="${it.size - 1.5}" style="fill:var(--on);font-weight:600;${halo}">${it.sub}</text>`;
   }
   el.innerHTML = s + "</svg>";
 }
@@ -285,14 +317,15 @@ function scatterBlock(list, id) {
         <button type="button" data-x="peak_mem_gb" aria-pressed="${scatterX === "peak_mem_gb"}">Memory</button></div>
     </div>
     <div class="chart" id="${id}"></div>
-    <p class="note">Up is more accurate, left is faster (or leaner). The dashed line is the Pareto frontier: results that no other result beats on both. Bubble area shows peak memory. Hover or tap a point for details; click to open the model.</p></div>`;
+    <p class="note">Up is more accurate, left is faster (or leaner). Each point is a model, marked with its maker's logo; an orange ring and the word <em>thinking</em> mark thinking on, and a dashed outline a model that didn't fit in memory. Hover or tap a point for details; click to open the model.</p></div>`;
 }
 function mountScatter(list, id) {
   const el = document.getElementById(id), legend = document.getElementById(`${id}-legend`);
+  const families = [...new Map(list.map((e) => [family(e.model).family, family(e.model)])).values()];
   const drawLegend = () => {
-    legend.innerHTML = ["off", "on"].filter((m) => list.some((e) => e.thinking === m)).map((m) =>
-      `<button type="button" data-mode="${m}" aria-pressed="${!hidden[m]}"><i class="${m}"></i>Thinking ${m}</button>`).join("")
-      + `<span><i class="line"></i> Pareto frontier</span><span><i class="ring" style="border-style:dashed"></i> didn't fit</span>`;
+    legend.innerHTML = ["off", "on"].filter((mode) => list.some((e) => e.thinking === mode)).map((mode) =>
+      `<button type="button" data-mode="${mode}" aria-pressed="${!hidden[mode]}"><i class="${mode === "on" ? "ringed" : "plain"}"></i>Thinking ${mode}</button>`).join("")
+      + families.map((f) => `<span>${logo(f.match)}${esc(f.family)}</span>`).join("");
   };
   drawLegend();
   legend.addEventListener("click", (ev) => {

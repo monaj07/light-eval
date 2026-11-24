@@ -51,11 +51,12 @@ Charts are inline SVG drawn by `app.js`, in the README's colours: blue for think
 - **Hover or tap** any point, bar or cell for its details. A chart point shows the model and mode, accuracy with its pass range and case count, time per case, memory, peak temperature, accuracy per track and any tags. Clicking opens the model's page.
 - **The keyboard** can reach every point: Tab moves between points and shows the same tooltip.
 - Hit areas are larger than the marks, so small points in a cluster are easy to select.
-- The accuracy-against-time chart draws the Pareto frontier, the results that no other result beats on both accuracy and speed, and labels only those, naming the rest on hover. A switch shows accuracy against memory instead.
+- The accuracy chart draws every result the same size, as its maker's logo; thinking on adds an orange ring and the word *thinking* under the name. Every point is labelled beside it where it fits (on phones, a label that can't fit cleanly is left to the tooltip). A switch shows accuracy against peak memory instead of time.
 
 ## Logos
 
-Each model shows a small tile with a letter for its family (G for Gemma, Q for Qwen, L for Liquid's LFM models), so no third-party logo files are needed. To use a maker's own logo, put the image in `site/logos/`, set `logo` for that family in `meta.json`, and check the maker's brand terms first.
+- **Site logo** (`site/logo.svg`, also inline in the header and used as the favicon): a processor with a gauge inside, for models measured on the device itself. Drawn for this project.
+- **Model makers' logos** (`site/logos/`): shown on a white badge in tables, cards and charts, since some are black on transparent. `meta.json` records where each came from: Gemma's icon from Wikimedia Commons (Apache License 2.0, cropped to the star), Qwen's from Wikimedia Commons (CC0), Liquid AI's from its own site. They belong to their makers and only identify the models; the About page says so. A family without a `logo` falls back to a coloured tile with its `mark` letter.
 
 ## Phones and accessibility
 

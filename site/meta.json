@@ -1,9 +1,41 @@
 {
-  "about": "Model families, matched against the Ollama model name (case-insensitive regular expression). 'mark' is the letter on the logo tile; set 'logo' to an image in site/logos/ to use a maker's own logo instead (check its brand terms first).",
+  "about": "Model families, matched against the Ollama model name (case-insensitive regular expression). 'mark' is the letter shown when there is no logo; 'logo' is an image in site/logos/, shown on a white badge. Logos belong to their makers and only identify the models.",
   "families": [
-    {"match": "gemma", "maker": "Google", "family": "Gemma", "mark": "G", "color": "#5b6ee1", "url": "https://ai.google.dev/gemma"},
-    {"match": "qwen", "maker": "Alibaba Cloud", "family": "Qwen", "mark": "Q", "color": "#8a5cd6", "url": "https://qwenlm.github.io"},
-    {"match": "lfm", "maker": "Liquid AI", "family": "LFM", "mark": "L", "color": "#13958a", "url": "https://www.liquid.ai"}
+    {
+      "match": "gemma",
+      "maker": "Google",
+      "family": "Gemma",
+      "mark": "G",
+      "color": "#5b6ee1",
+      "url": "https://ai.google.dev/gemma",
+      "logo": "logos/gemma.png",
+      "logo_source": "https://commons.wikimedia.org/wiki/File:Gemma_icon.png (Apache License 2.0), cropped to the star"
+    },
+    {
+      "match": "qwen",
+      "maker": "Alibaba Cloud",
+      "family": "Qwen",
+      "mark": "Q",
+      "color": "#8a5cd6",
+      "url": "https://qwenlm.github.io",
+      "logo": "logos/qwen.png",
+      "logo_source": "https://commons.wikimedia.org/wiki/File:Qwen_logo.svg (CC0)"
+    },
+    {
+      "match": "lfm",
+      "maker": "Liquid AI",
+      "family": "LFM",
+      "mark": "L",
+      "color": "#13958a",
+      "url": "https://www.liquid.ai",
+      "logo": "logos/liquid.png",
+      "logo_source": "https://www.liquid.ai/icon.png (the maker's site icon)"
+    }
   ],
-  "default": {"maker": "", "family": "Other", "mark": "?", "color": "#7a7974"}
+  "default": {
+    "maker": "",
+    "family": "Other",
+    "mark": "?",
+    "color": "#7a7974"
+  }
 }

@@ -893,7 +893,9 @@ def glance_table(entries, total):
         notes = [entry["flag"]] if entry["flag"] else []
         if entry["timeouts"]:
             count = number(entry["timeouts"])
-            notes.append(f"{count} case{'' if count == '1' else 's'} hit the {limit_label(entry)} limit")
+            # Averaged over passes, a count can be fractional; say it's per pass rather than "0.7 cases".
+            per_pass = " per pass" if entry["rounds"] > 1 else ""
+            notes.append(f"{count} case{'' if count == '1' else 's'}{per_pass} hit the {limit_label(entry)} limit")
         note = "; ".join(notes)
         lines.append(f"| `{display_name(entry['model'])}`{' (' + entry['threads_note'] + ')' if entry.get('threads_note') else ''} | {entry['thinking']} | **{entry['accuracy']:.0f}%** | "
                      f"{coverage_label(entry)} | {duration(entry['median_s'])} | {short_memory(entry)} | {note} |")

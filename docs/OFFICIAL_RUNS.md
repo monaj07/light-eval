@@ -14,7 +14,7 @@ This is the protocol behind the published Raspberry Pi 5 results. It uses suite 
 
 **Why three passes.** Three passes give a timing spread and a repeatability check at a cost that stays fixed as models are added. Before protocol 3, `--cycles 1` gave one pass per model in the run (4 with four models), and only the first 3 rounds were published, which is the same schedule as `--passes 3`. Outputs are close but not identical between passes: in the official run, 74–82% of cases repeated word for word, and the pass or fail result differed between passes for 2 of 260 model–case pairs. So the scores are averaged over the passes.
 
-**Why three thinking-on passes at 4 threads, and one at 2.** A thinking-on pass takes 1–6 hours per model, so passes are spent where the main results are: the 4-thread runs, which the README's tables and charts use. The 2-thread runs only feed the thread comparison. The `lfm3` and `lfm3-vl:2b` runs follow this plan. The earlier 4-thread runs of `gemma4:e2b` and the Qwen models were single passes and are being re-run with three. In the three-pass runs so far, 69–77% of cases repeated word for word, and no case's pass or fail result changed between passes.
+**Why three thinking-on passes at 4 threads, and one at 2.** A thinking-on pass takes 1–6 hours per model, so passes are spent where the main results are: the 4-thread runs, which the README's tables and charts use. The 2-thread runs only feed the thread comparison. Every 4-thread thinking-on result now averages three passes. Between passes, 18–77% of cases repeated word for word, and the pass or fail result changed for 0 to 6 of 65 cases per model: none for the LFM models, 2 for `gemma4:e2b`, 3 for `qwen3.5:2b` and 6 for `qwen3.5:4b`.
 
 **Why thinking-on runs are warm only.** Cold and sustained measure the hardware: model load time and whether speed holds under continuous generation. They don't depend on the thinking mode, so they're measured once, with thinking off.
 
@@ -117,8 +117,8 @@ Once a model had loaded, `ps -ww -o args= -C llama-server | tr ' ' '\n' | grep -
 
 **Outcome** (see the comparison table under the [results](../README.md#results)):
 - **`gemma4:e2b` gets faster at everything:** prompt processing +67%, generation +12–15%, and 31–40% less time per case, with thinking off and on.
-- **The Qwen models generate 11–14% slower with 4 threads.** `qwen3.5:4b` still gains 66% in prompt processing, so with thinking off it is 32% faster per case, but with thinking on it is 13% slower. `qwen3.5:2b` gains nothing in prompt processing (−8 to −10%).
-- **Accuracy is unchanged with thinking off.** With thinking on, Qwen timeouts fell from 11 to 9 and from 13 to 11. That is a single pass each, within the usual variation between passes.
+- **The Qwen models generate 11–14% slower with 4 threads.** `qwen3.5:4b` still gains 66% in prompt processing, so with thinking off it is 32% faster per case, but with thinking on it is 7% slower. `qwen3.5:2b` gains nothing in prompt processing (−8 to −10%).
+- **Accuracy is unchanged with thinking off.** With thinking on, Qwen timeouts went from 11 to about 10 per pass and from 13 to about 14, within the variation between passes.
 - **Temperature rose by 3–12 °C,** to peaks of 72–78 °C, close to the roughly 80 °C throttling point, though no case throttled.
 
 **Decision.** At first the main results stayed at 2 threads. Since 2026-11-22 they use 4 threads, the runner's default, because:

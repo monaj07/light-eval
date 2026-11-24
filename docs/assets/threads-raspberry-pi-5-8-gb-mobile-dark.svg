@@ -55,8 +55,8 @@
 <circle cx="31.0" cy="613.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
 <text x="44.0" y="618.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">gemma4:e2b · thinking on</text>
 <circle cx="184.4" cy="640.0" r="8.5" fill="#1a1a19" stroke="#d95926" stroke-width="2.5"/>
-<circle cx="166.8" cy="640.0" r="8.5" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
-<text x="314.0" y="645.5" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">31% faster</text>
+<circle cx="167.7" cy="640.0" r="8.5" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
+<text x="314.0" y="645.5" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">29% faster</text>
 <circle cx="31.0" cy="675.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
 <text x="44.0" y="680.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">lfm3-vl:2b · thinking on</text>
 <circle cx="188.1" cy="702.0" r="8.5" fill="#1a1a19" stroke="#d95926" stroke-width="2.5"/>
@@ -70,11 +70,11 @@
 <circle cx="31.0" cy="799.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
 <text x="44.0" y="804.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:2b · thinking on</text>
 <circle cx="219.0" cy="826.0" r="8.5" fill="#1a1a19" stroke="#d95926" stroke-width="2.5"/>
-<circle cx="226.7" cy="826.0" r="8.5" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
-<text x="314.0" y="831.5" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">17% slower</text>
+<circle cx="227.4" cy="826.0" r="8.5" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
+<text x="314.0" y="831.5" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">19% slower</text>
 <circle cx="31.0" cy="861.0" r="7" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
 <text x="44.0" y="866.0" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">qwen3.5:4b · thinking on</text>
 <circle cx="251.0" cy="888.0" r="8.5" fill="#1a1a19" stroke="#d95926" stroke-width="2.5"/>
-<circle cx="257.1" cy="888.0" r="8.5" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
-<text x="314.0" y="893.5" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">13% slower</text>
+<circle cx="254.3" cy="888.0" r="8.5" fill="#d95926" stroke="#1a1a19" stroke-width="2"/>
+<text x="314.0" y="893.5" font-size="15" font-weight="700" text-anchor="start" fill="#f0efec" font-family="system-ui, -apple-system, Segoe UI, sans-serif">7% slower</text>
 </svg>

@@ -892,12 +892,21 @@ function render() {
   const titles = { overview: "", model: args[0] ? ` · ${D.entries.find((e) => e.model_slug === args[0])?.name ?? ""}` : "" };
   document.title = `Light Eval Results${titles[name] ?? ` · ${name[0].toUpperCase()}${name.slice(1)}`}`;
 }
+/* Count one view per page or tab (e.g. /light-eval/#/leaderboard), not per re-render. GoatCounter
+   loads asynchronously, so a view before it is ready waits for its script; it skips localhost itself. */
+function countView() {
+  const path = location.pathname + (location.hash && location.hash !== "#" ? location.hash : "#/");
+  const send = () => window.goatcounter?.count?.({ path, title: document.title });
+  if (window.goatcounter?.count) send();
+  else document.getElementById("goatcounter")?.addEventListener("load", send, { once: true });
+}
 let lastRoute = "";
 addEventListener("hashchange", () => {
   const route = location.hash.split("/")[1] || "";
   render();
   if (route !== lastRoute) { scrollTo(0, 0); app.focus({ preventScroll: true }); }
   lastRoute = route;
+  countView();   // after render, so the page title matches the route
 });
 
 /* ---------- theme ---------- */
@@ -921,4 +930,5 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if
   document.getElementById("foot-facts").textContent = `Suite ${D.suite} · protocol ${D.protocol} · updated ${D.updated}`;
   lastRoute = location.hash.split("/")[1] || "";
   render();
+  countView();
 })();

@@ -72,8 +72,44 @@ class RunChecksTest(unittest.TestCase):
         for row in rows:
             for turn in row.get("turns") or []:
                 turn["thinking"] = ""
-        self.assertIn("gemma4:e2b produced thinking text in only 0 of 65 warm supported cases",
+        self.assertIn("gemma4:e2b produced thinking text in only 0 of 65 warm cases with answers",
                       " ".join(publish.run_problems(self.manifest, rows)))
+
+    def test_failed_warmups_are_not_judged_for_thinking(self):
+        # A run whose warmups all failed is refused for that, not misdiagnosed as having no thinking mode.
+        rows = [{**row, "status": "out_of_memory", "turns": []} for row in self.rows]
+        problems = " ".join(publish.run_problems(self.manifest, rows))
+        self.assertNotIn("thinking mode", problems)
+
+    def test_thinking_text_in_a_thinking_off_run_is_refused(self):
+        manifest = deepcopy(self.manifest)
+        manifest["options"].update(thinking="off", context=4096, max_tokens=1024,
+                                   phases=["cold", "warm", "sustained"])
+        self.assertIn("although thinking was off", " ".join(publish.run_problems(manifest, self.rows)))
+
+    def test_run_without_warm_cases_is_refused(self):
+        self.assertIn("gemma4:e2b has no warm cases", publish.run_problems(self.manifest, []))
+        self.manifest["options"]["phases"] = ["cold"]
+        self.assertIn("no warm phase", " ".join(publish.run_problems(self.manifest, [])))
+
+    def test_official_runs_need_the_standard_phases(self):
+        manifest = deepcopy(self.manifest)
+        manifest["options"]["phases"] = ["warm", "sustained"]  # thinking on is warm only
+        self.assertIn("thinking-on runs use warm", " ".join(publish.run_problems(manifest, self.rows)))
+        manifest["options"]["setup"] = ""  # exploratory runs may differ, as long as they have warm
+        self.assertEqual(publish.run_problems(manifest, self.rows), [])
+
+    def test_sustain_and_seed_options_are_checked(self):
+        self.manifest["options"].update(sustain_seconds=5, seed=7)
+        problems = publish.run_problems(self.manifest, self.rows)
+        self.assertIn("--sustain-seconds 5 instead of the standard 90", problems)
+        self.assertIn("--seed 7 instead of the standard 42", problems)
+
+    def test_failed_sustained_warmup_counts_as_an_infrastructure_error(self):
+        blocks = [{"model": "gemma4:e2b", "phase": "sustained", "requests": 0,
+                   "failure": {"status": "connection_error", "reason": "reset"}}]
+        self.assertIn("gemma4:e2b: connection_error ×1",
+                      " ".join(publish.run_problems(self.manifest, self.rows, blocks=blocks)))
 
     def test_incomplete_round_is_refused(self):
         rows = [row for row in self.rows if not (row["phase"] == "warm" and row["case"] == "math-units")]
@@ -118,6 +154,17 @@ class AddTest(unittest.TestCase):
         self.assertEqual(manifest["published"]["original_rounds"], [1])
         self.assertNotIn("note", manifest["published"])
         self.assertIsNone(publish.entries()[0]["note"])
+
+    def test_published_manifest_keeps_only_allowlisted_server_settings(self):
+        manifest = json.loads((self.run / "manifest.json").read_text())
+        manifest["server_environment"] = {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_API_KEY": "secret",
+                                          "OLLAMA_HOST": "10.0.0.2", "LLAMA_ARG_API_KEY": "x",
+                                          "LLAMA_ARG_CACHE_RAM": "0"}
+        (self.run / "manifest.json").write_text(json.dumps(manifest))
+        with contextlib.redirect_stdout(io.StringIO()):
+            publish.add(self.run, "x")
+        published = json.loads((self.tmp / "published" / "x" / "manifest.json").read_text())
+        self.assertEqual(published["server_environment"], {"OLLAMA_FLASH_ATTENTION": "1", "LLAMA_ARG_CACHE_RAM": "0"})
 
     def test_entries_and_duplicates(self):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -195,12 +242,24 @@ class RunnerFailureTest(unittest.TestCase):
 
     def test_infrastructure_errors_are_counted(self):
         rows = [{"status": "pass"}, {"status": "api_error"}, {"status": "connection_error"},
-                {"status": "api_error"}, {"status": "out_of_memory"}, {"status": "timeout"}]
+                {"status": "api_error"}, {"status": "out_of_memory"}, {"status": "timeout"},
+                {"status": "context_overflow"}]
         self.assertEqual(infrastructure_errors(rows), {"api_error": 2, "connection_error": 1})
+        # A failed sustained warmup writes only a block; a failure after some requests has rows too.
+        blocks = [{"phase": "sustained", "requests": 0, "failure": {"status": "api_error"}},
+                  {"phase": "sustained", "requests": 4, "failure": {"status": "api_error"}},
+                  {"phase": "warm", "failure": {"status": "connection_error"}}]
+        self.assertEqual(infrastructure_errors(rows, blocks), {"api_error": 3, "connection_error": 1})
+
+    def test_context_overflow_is_the_models_result(self):
+        error = api_error("request (612 tokens) exceeds the available context size (256 tokens), "
+                          "try increasing it", 400)  # Ollama 0.40.17
+        self.assertEqual(error.status, "context_overflow")
 
     def test_server_environment_records_ollama_and_llama_settings(self):
         sources = ["/usr/bin/ollama serve PATH=/bin OLLAMA_FLASH_ATTENTION=1 LLAMA_ARG_CACHE_RAM=0 "
-                   "OLLAMA_KV_CACHE_TYPE=q8_0 HOME=/root"]
+                   "OLLAMA_KV_CACHE_TYPE=q8_0 HOME=/root OLLAMA_API_KEY=secret OLLAMA_HOST=0.0.0.0 "
+                   "OLLAMA_MODELS=/home/someone/models LLAMA_ARG_API_KEY=x"]
         with patch("runtime._server_environment_sources", return_value=sources):
             self.assertEqual(server_environment(), {"LLAMA_ARG_CACHE_RAM": "0", "OLLAMA_FLASH_ATTENTION": "1",
                                                     "OLLAMA_KV_CACHE_TYPE": "q8_0"})

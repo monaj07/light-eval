@@ -24,9 +24,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from cases import TRACKS, VERSION, dataset  # noqa: E402
-from light_eval import (INFRASTRUCTURE_STATUSES, apply_budget_defaults, build_parser, read_rows,  # noqa: E402
+from light_eval import (INFRASTRUCTURE_STATUSES, apply_budget_defaults, build_parser, infrastructure_errors, read_rows,  # noqa: E402
                         summarize, temperature_summary, write_json)
 import charts  # noqa: E402  (tools/charts.py)
+from runtime import recordable_setting  # noqa: E402
 
 PUBLISHED = ROOT / "docs" / "results"
 ASSETS = ROOT / "docs" / "assets"
@@ -98,7 +99,11 @@ def parse_rounds(text):
 
 # Options that change what a score or a time means. Threads may differ (that is the thread
 # comparison); everything else must match the runner's defaults for the thinking mode.
-PROTOCOL_OPTIONS = ("context", "max_tokens", "timeout", "tool_rounds", "tool_calls")
+PROTOCOL_OPTIONS = ("context", "max_tokens", "timeout", "tool_rounds", "tool_calls", "sustain_seconds",
+                    "sustain_tokens", "seed")
+# Thinking off measures load time and sustained speed as well; thinking on is warm only (see
+# docs/OFFICIAL_RUNS.md), since those measure the hardware, not the thinking mode.
+STANDARD_PHASES = {"off": {"cold", "warm", "sustained"}, "on": {"warm"}}
 
 
 def standard_options(thinking):
@@ -123,7 +128,7 @@ def parse_flags(flags, models):
     return parsed
 
 
-def run_problems(manifest, rows, keep=None, allow_errors=False):
+def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
     """Everything that would make a run's results mean something different from the published ones.
 
     Returns a list of problems; an empty list means the run can be published as it is."""
@@ -140,6 +145,14 @@ def run_problems(manifest, rows, keep=None, allow_errors=False):
         for key, value in standard_options(options["thinking"]).items():
             if key in options and options[key] != value:
                 problems.append(f"--{key.replace('_', '-')} {options[key]} instead of the standard {value}")
+        phases = set(options.get("phases") or [])
+        official = bool((options.get("setup") or "").strip())
+        if "warm" not in phases:
+            problems.append(f"phases {', '.join(sorted(phases)) or 'none'}: no warm phase, so there are no scores")
+        elif official and phases != STANDARD_PHASES[options["thinking"]]:
+            # Exploratory runs (no --setup) may be warm only; official ones follow the protocol.
+            problems.append(f"phases {', '.join(sorted(phases)) or 'none'}; thinking-{options['thinking']} runs use "
+                            f"{', '.join(sorted(STANDARD_PHASES[options['thinking']]))}")
     if str(manifest.get("server_prompt_cache_ram_mib")) != "0":
         problems.append(f"the server's LLAMA_ARG_CACHE_RAM was {manifest.get('server_prompt_cache_ram_mib')!r}, "
                         "not 0, so memory grew with every case")
@@ -149,32 +162,41 @@ def run_problems(manifest, rows, keep=None, allow_errors=False):
         if hashes.get(relative) != file_hash(path):
             problems.append(f"{relative} differs from the version this run used")
     errors = defaultdict(int)
-    for row in rows:
-        if row.get("status") in INFRASTRUCTURE_STATUSES:
-            errors[f"{row['model']}: {row['status']}"] += 1
+    for model in sorted({row["model"] for row in rows} | {block["model"] for block in blocks}):
+        # The runner's own count, per model: failed cases, plus failed sustained warmups (blocks only).
+        counted = infrastructure_errors([row for row in rows if row["model"] == model],
+                                        [block for block in blocks if block["model"] == model])
+        for status, count in counted.items():
+            errors[f"{model}: {status}"] += count
     if errors and not allow_errors:
         problems.append("cases failed for infrastructure reasons, which would count against the model: "
                         + ", ".join(f"{key} ×{count}" for key, count in sorted(errors.items()))
                         + ". Rerun, or pass --allow-errors with a --note if they are the model's own failures")
-    if options.get("thinking") == "on":
-        # Ollama flags "thinking" from the chat template, not the training: an Instruct model can
-        # carry the flag and still never reason, which would label a thinking-off result "on".
-        thought, total = defaultdict(int), defaultdict(int)
-        for row in rows:
-            if row["phase"] == "warm" and row["status"] != "unsupported":  # e.g. vision on a text model
-                total[row["model"]] += 1
-                thought[row["model"]] += any((turn.get("thinking") or "").strip()
-                                             for turn in row.get("turns") or [])
-        for model, count in sorted(total.items()):
-            if thought[model] < count / 2:
-                problems.append(f"{model} produced thinking text in only {thought[model]} of {count} warm "
-                                "supported cases, so it doesn't really have a thinking mode")
+    # Whether each model really ran in the mode its label says. Only cases with model turns count:
+    # unsupported tracks and failed warmups (out of memory, server errors) have none to judge by.
+    thought, total = defaultdict(int), defaultdict(int)
+    for row in rows:
+        if row["phase"] == "warm" and row.get("turns"):
+            total[row["model"]] += 1
+            thought[row["model"]] += any((turn.get("thinking") or "").strip() for turn in row["turns"])
+    for model, count in sorted(total.items()):
+        if options.get("thinking") == "on" and thought[model] < count / 2:
+            # Ollama flags "thinking" from the chat template, not the training: an Instruct model can
+            # carry the flag and still never reason, which would label a thinking-off result "on".
+            problems.append(f"{model} produced thinking text in only {thought[model]} of {count} warm "
+                            "cases with answers, so it doesn't really have a thinking mode")
+        if options.get("thinking") == "off" and thought[model] > 2:
+            problems.append(f"{model} produced thinking text in {thought[model]} of {count} warm cases "
+                            "although thinking was off, so this isn't a thinking-off result")
     expected = len(manifest.get("case_metadata") or {})
     warm = defaultdict(int)
     for row in rows:
         if row["phase"] == "warm":
             warm[row["model"], row["round"]] += 1
     for model in manifest.get("models", {}):
+        if not any(m == model for m, r in warm):
+            problems.append(f"{model} has no warm cases")
+            continue
         for round_num in sorted(keep or {r for m, r in warm}):
             if warm.get((model, round_num), 0) != expected:
                 problems.append(f"round {round_num} of {model} has {warm.get((model, round_num), 0)} of "
@@ -204,7 +226,8 @@ def add(run, name, rounds=None, note=None, flags=(), allow_errors=False):
             lines = [line for row, line in zip(rows, lines) if row["round"] in keep]
         files[file] = lines
     kept_rows = [json.loads(line) for line in files["cases.jsonl"]]
-    problems = run_problems(manifest, kept_rows, keep, allow_errors)
+    kept_blocks = [json.loads(line) for line in files["blocks.jsonl"]]
+    problems = run_problems(manifest, kept_rows, keep, allow_errors, kept_blocks)
     if problems:
         sys.exit(f"{run} can't be published as it is:\n" + "\n".join(f"  - {problem}" for problem in problems))
     target.mkdir(parents=True)
@@ -224,6 +247,11 @@ def add(run, name, rounds=None, note=None, flags=(), allow_errors=False):
         published["flags"] = parsed_flags
     if published:
         manifest["published"] = published
+    if manifest.get("server_environment"):
+        # Protocol 2 recorded every OLLAMA_*/LLAMA_ARG_* variable; publish only the allowlisted
+        # performance settings, so no key, host or path from the server reaches the public repo.
+        manifest["server_environment"] = {key: value for key, value in manifest["server_environment"].items()
+                                          if recordable_setting(key)}
     write_json(target / "manifest.json", manifest)
     write_json(target / "summary.json", summarize(read_rows(target / "cases.jsonl"),
                                                   read_rows(target / "blocks.jsonl")))

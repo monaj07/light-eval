@@ -700,6 +700,22 @@ function threadChart(el, pairs) {
   el.innerHTML = s + "</svg>" + `<div class="legend" style="margin-top:6px"><span><i class="ring"></i> 2 threads</span><span><i></i> 4 threads (thinking off)</span><span><i class="on"></i> 4 threads (thinking on)</span></div>`;
 }
 
+/* Words for how a case ended, from its statuses in pass order: a short tag for the dot
+   (only when every pass failed the same way) and a per-status breakdown for the tooltip. */
+const STATUS_WORDS = { pass: "passed", wrong_answer: "wrong answer", timeout: "timed out", invalid_json: "invalid JSON",
+  wrong_tool_trace: "wrong tool calls", invalid_tool_call: "invalid tool call", tool_limit: "hit the tool-call limit",
+  out_of_memory: "out of memory", context_overflow: "prompt too long", api_error: "server error", connection_error: "connection error" };
+const statusWord = (status) => STATUS_WORDS[status] || status.replace(/_/g, " ");
+function outcomeSummary(statuses) {
+  if (!statuses.length) return { short: "", detail: "" };
+  const counts = {};
+  for (const st of statuses) counts[st] = (counts[st] || 0) + 1;
+  const failures = Object.keys(counts).filter((st) => st !== "pass");
+  const short = failures.length === 1 && !counts.pass ? statusWord(failures[0]) : "";
+  const detail = Object.entries(counts).map(([st, n]) => `<dt>${esc(statusWord(st))}</dt><dd>${n} of ${statuses.length}</dd>`).join("");
+  return { short, detail };
+}
+
 async function loadCaseText() {
   if (!caseText) caseText = (await (await fetch("data/cases.json")).json()).prompts;
   return caseText;
@@ -730,14 +746,17 @@ function pageCases() {
     const c = D.cases.find((x) => x.id === d.dataset.case), prompts = await loadCaseText();
     const dots = list.filter((e) => e.case_pass[c.id] !== undefined).sort((a, b) => (b.case_pass[c.id] ?? -1) - (a.case_pass[c.id] ?? -1)).map((e) => {
       const f = e.case_pass[c.id];
+      const statuses = e.case_status?.[c.id] || [];
       const text = f == null ? "can't attempt this track" : `passed ${Math.round(f * e.passes)} of ${plural(e.passes, "pass")}`;
-      return `<span class="dot" tabindex="0" data-tip="${tip(`<h4>${logo(e.model)}${esc(e.name)}</h4><div class="muted">${modeName(e)}</div><p style="margin:6px 0 0">${text}</p>`)}" data-href="#/model/${esc(e.model_slug)}"><i style="background:${passColor(f)}"></i>${esc(e.name)} · ${e.thinking}</span>`;
+      const why = outcomeSummary(statuses);
+      return `<span class="dot" tabindex="0" data-tip="${tip(`<h4>${logo(e.model)}${esc(e.name)}</h4><div class="muted">${modeName(e)}</div><p style="margin:6px 0 0">${text}</p>${why.detail ? `<dl>${why.detail}</dl>` : ""}`)}" data-href="#/model/${esc(e.model_slug)}"><i style="background:${passColor(f)}"></i>${esc(e.name)} · ${e.thinking}${f == null ? "" : ` · ${Math.round(f * e.passes)}/${e.passes}${why.short ? ` · ${why.short}` : ""}`}</span>`;
     }).join("");
     d.querySelector(".case-body").innerHTML = `${c.image ? `<img src="data/images/${esc(c.image)}" alt="Image for ${esc(c.id)}">` : ""}
       <div><h3>Prompt</h3><pre>${esc(prompts[c.id])}</pre></div>
       <div><h3>Expected answer</h3><pre>${esc(c.expected)}</pre>${c.tools.length ? `<p class="note">Expected tool calls, in order: ${c.tools.map(esc).join(", ")}</p>` : ""}</div>
       <div><h3>Results</h3><div class="dots">${dots}</div>
-      <div class="swatches"><span><i style="background:var(--good)"></i>passed every pass</span><span><i style="background:var(--warn)"></i>some passes</span><span><i style="background:var(--bad)"></i>failed</span><span><i style="background:var(--sunk)"></i>can't attempt</span></div></div>`;
+      <div class="swatches"><span><i style="background:var(--good)"></i>passed every pass</span><span><i style="background:var(--warn)"></i>some passes</span><span><i style="background:var(--bad)"></i>failed every pass</span><span><i style="background:var(--sunk)"></i>can't attempt</span></div>
+      <p class="note">Each label ends with passes passed out of passes run and, when every pass failed the same way, how (wrong answer, timed out, …). Hover or tap for the breakdown.</p></div>`;
   }));
 }
 

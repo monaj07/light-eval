@@ -52,6 +52,13 @@ class SiteDataTest(unittest.TestCase):
                 self.assertEqual(entry["tracks"][track] is None, track not in entry["supported_tracks"])
             self.assertIn(entry["memory"], ("fits", "tight", "out"))
 
+    def test_case_statuses_match_the_pass_fractions(self):
+        for entry in self.data["entries"]:
+            for case_id, statuses in entry["case_status"].items():
+                with self.subTest(entry=entry["id"], case=case_id):
+                    self.assertEqual(len(statuses), entry["passes"])
+                    self.assertAlmostEqual(statuses.count("pass") / len(statuses), entry["case_pass"][case_id])
+
     def test_detail_files_and_images_exist(self):
         out = self.tmp / "data"
         for entry in self.data["entries"]:

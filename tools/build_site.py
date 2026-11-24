@@ -129,6 +129,9 @@ def build(out=SITE / "data"):
             "temp_mean": temperature.get("mean_cpu_c"), "temp_peak": temperature.get("peak_cpu_c"),
             "throttled_cases": temperature.get("throttled_cases"),
             "digest": (model_meta.get("digest") or "")[:12], "run": entry["run"], "case_pass": case_pass,
+            # How each supported case ended in each pass (pass, wrong_answer, timeout, ...), in pass order.
+            "case_status": {case_id: [row["status"] for row in outcomes[case_id]]
+                            for case_id in by_case if case_id in outcomes and case_id in supported},
         })
         # Per-case detail for the model page, loaded only when that page opens.
         model_files[entry["model"]]["entries"][eid] = {

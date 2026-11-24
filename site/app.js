@@ -484,17 +484,9 @@ function pageOverview() {
     <span class="mode ${e.thinking}">thinking ${e.thinking}</span>
     <span class="pick-stats"><span><b>${pct(e.accuracy)}</b>accuracy</span><span><b>${dur(e.median_s)}</b>per case</span><span><b>${gb(e.peak_mem_gb)}</b>memory</span></span>
     <span class="pick-rule">${rule}</span></a>`;
-  const models = new Set(list.map((e) => e.model)).size;
   const items = ranked(list).sort((a, b) => a.rank - b.rank || b.e.accuracy - a.e.accuracy);
   app.innerHTML = `${document.getElementById("overview-intro").innerHTML}
-    <div class="facts">
-      <span class="fact"><strong>${models}</strong> models</span>
-      <span class="fact"><strong>${list.length}</strong> results</span>
-      <span class="fact"><strong>${D.totals.cases}</strong> cases in ${D.tracks.length} tracks</span>
-      <span class="fact">up to <strong>${Math.max(...list.map((e) => e.passes))}</strong> passes each</span>
-      <span class="fact"><strong>${esc(D.device.name)}</strong>, ${D.primary_threads} threads</span>
-      <span class="fact">updated <strong>${esc(D.updated)}</strong></span>
-    </div>
+    <p class="note" style="margin-top:-4px">Updated ${esc(D.updated)}</p>
     <section class="section"><div class="section-head"><h2>Picks</h2><p>Chosen from the data by the rule under each card, among official results that fit in memory.</p></div>
       <div class="grid grid-3">${pick("Most accurate", top, "Highest accuracy.")}${pick("Fastest accurate", fast80, "Shortest time per case with at least 80% accuracy.")}${pick("Quick answers", quick, "Highest accuracy at 15 seconds per case or less.")}</div></section>
     <section class="section"><div class="section-head"><h2>Accuracy and speed</h2><p>Every result on one chart. Thinking on is more accurate but slower.</p></div>${scatterBlock(list, "ov-scatter")}</section>
@@ -507,7 +499,7 @@ function pageLeaderboard() {
   const seg = (name, options) => `<div class="seg" role="group" aria-label="${name}">${options.map(([v, l]) =>
     `<button type="button" data-f="${name}" data-v="${v}" aria-pressed="${F[name] === v}">${l}</button>`).join("")}</div>`;
   app.innerHTML = `<h1>Leaderboard</h1>
-    <p class="lede">Ranked by accuracy on the tracks each model supports, averaged over its passes. Results whose ranges across passes overlap share a rank (=). One case is 1.5 points.</p>
+    <p class="lede">${new Set(items.map((x) => x.e.model)).size} models, ${items.length} results, on ${esc(D.device.name)} with ${F.threads === "main" ? D.primary_threads : 2} CPU threads and up to ${Math.max(0, ...items.map((x) => x.e.passes))} passes each. Ranked by accuracy on the tracks each model supports, averaged over its passes. Results whose ranges across passes overlap share a rank (=). One case is 1.5 points.</p>
     <div class="controls">
       ${seg("thinking", [["all", "All"], ["off", "Thinking off"], ["on", "Thinking on"]])}
       ${seg("threads", [["main", "4 threads"], ["2", "2 threads"]])}

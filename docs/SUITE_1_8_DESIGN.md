@@ -1,6 +1,6 @@
 # Suite 1.8 and protocol 4: design
 
-Status: **agreed, 2026-11-25**. The vision track is written (staged in `suite_1_8.py`); the other tracks are not yet. The decisions taken are listed at the end.
+Status: **agreed, 2026-11-25**. The vision track (`suite_1_8.py`) and the code track (`suite_1_8_code.py`) are written and staged; the other tracks are not yet. The decisions taken are listed at the end.
 
 ## Why a new suite
 
@@ -129,6 +129,8 @@ Twenty hard tasks in four categories, each checked by running code. The subjects
 | Bug fixing | 5 | regression tests: the stated failing input now passes, and every other test still passes | a parser that mishandles unary minus; a money split whose shares don't sum exactly |
 | Execution prediction and code reasoning | 5 | exact output match; for "find an input for which `f` returns 17", the runner calls `f` on the model's input | the output of code with late-binding closures or a mutable default argument |
 | Test generation | 4 | mutation testing: the model writes test cases as data (JSON arguments and expected results); they must agree with the reference on every case and disagree with each of 5 to 8 mutants on at least one | test cases for a version-string comparator, where the mutants flip `<` and `<=` or drop the pre-release rule |
+
+The twenty cases as written: **generation** — merge touching intervals (with a 200,000-interval timed test), add business days across holidays, split an amount into exact integer shares by largest remainder, evaluate an arithmetic expression without `eval`, order tasks by dependencies with alphabetical tie-breaks (60,000 tasks, timed), and one SQL query over a small SQLite schema (each city's top paying customer in 2026, with ties); **bug fixing** — a rate limiter (window boundary and counted rejections), a tag-validating regular expression (missing anchor, and the `$`-before-newline trap), a first-occurrence binary search (logarithmic time required), a CSV field splitter (doubled quotes, open quotes) and an LRU cache (recency on get and put); **execution prediction** — late-binding closures, a mutable default argument, one iterator consumed by `zip`, and floor division and rounding with negatives, plus one **inverse** question (find an input for which a given function returns 17); **test generation** — semantic-version comparison (6 mutants), Roman numerals (5), path normalization (6) and greedy word wrapping (6).
 
 Completion, bug detection, refactoring and translation are left out: completion and translation are generation with a different prompt, fixing a bug already requires finding it, and refactoring can only be checked by judgement.
 

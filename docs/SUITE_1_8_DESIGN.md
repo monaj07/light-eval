@@ -1,6 +1,6 @@
 # Suite 1.8 and protocol 4: design
 
-Status: **agreed in outline, 2026-11-25**; cases not yet written. The decisions taken are listed at the end.
+Status: **agreed, 2026-11-25**. The vision track is written (staged in `suite_1_8.py`); the other tracks are not yet. The decisions taken are listed at the end.
 
 ## Why a new suite
 
@@ -77,21 +77,26 @@ Every case keeps suite 1.7's rules: a typed answer compared exactly (with a tole
 - **Scoring:** as now: tool use (calls, arguments, order, final state) and final answer, reported separately and together.
 - **Why it matters on the Pi:** every tool definition is part of the prompt, so a large catalogue costs prompt-reading time on every turn. The track measures whether a model picks the right tool and what a big catalogue costs in latency.
 
-### Vision: realistic images instead of shapes
-All images stay synthetic and deterministic, drawn by `fixtures/make_fixtures.py`, but they show the kinds of things people photograph or screenshot. Counting coloured shapes is retired.
+### Vision: real photos and realistic drawings
+Counting coloured shapes is retired. The track has two halves, and every question needs reading plus at least one step of reasoning: counting among distractors, following a diagram, combining values read from the image, or rejecting a near-identical decoy.
 
-| Image type | Challenge example | Hard example |
+- **Ten photographs** taken by the repository author: a restaurant receipt split with a proportional surcharge, the road a cottage is on in a park map, the cost of 600 g from a supermarket price sign, an order priced from a menu board, penguins placed by the colour of their flipper bands, a kangaroo count, which jumper wire sits closest to GPIO pin 1 on a Pi (which needs knowing where pin 1 is), a sign, a fruit tree and a television's small print. Two are multiple choice, where an open answer would be ambiguous. `fixtures/prepare_photos.py` records exactly how each was prepared from the original: rotated upright, **all metadata dropped** (the originals carry GPS locations), cropped where the needed detail would be unreadable, **faces of bystanders blurred** (shoppers, and the people in a sign's printed photo), and scaled to at most 1024 pixels on the longer side. The originals are not committed, so photos cannot be regenerated from the repository; a test checks that no committed photo carries an EXIF segment.
+- **Ten drawings** (`fixtures/suite_1_8_fixtures.py`), deterministic like suite 1.7's: each docstring works out the expected answer from the data constants that draw the image.
+
+| Image | Tier | The reasoning it needs |
 |---|---|---|
-| Receipts and invoices | the total on a receipt | the pre-tax total of only the discounted items |
-| Charts | a bar's value | the difference between two series at a given month, read from a legend |
-| Tables in images | one cell | the row matching two conditions, across merged header cells |
-| Dashboards and app screens | which toggle is on | which setting conflicts with the warning shown |
-| Diagrams | the next step in a flowchart | the end state after following branches with given inputs |
-| Floor plans and maps | which room is next to the kitchen | the shortest route through doors, in rooms passed |
-| Gauges and dials | an analogue clock's time | a gauge reading converted to another unit |
-| Signs and labels | a printed code | small or rotated text, with a similar-looking decoy |
+| Two-series line chart | challenge | compare 12 monthly pairs from a legend, count where one is higher |
+| Clock and departures board | challenge | read an analogue clock, skip a cancelled train, subtract times |
+| Grocery receipt | hard | match each promotion line to its item, add the discounted prices |
+| Flowchart | hard | follow four given readings through diamonds whose Yes and No exits change direction |
+| Floor plan | hard | shortest route through doorways, with dead ends beside the target |
+| Table with merged headers | hard | net = sales − returns per quarter, then the largest change (sales alone gives a different store) |
+| Heating dashboard | hard | two conditions, one shown only by toggle switches; a near miss at 1.4 °C |
+| Stacked bar chart | hard | largest share, not largest amount, read from stacked segments |
+| Bus timetable | hard | a weekday-only trip, an express that skips the stop, then the arrival time |
+| Parcel label, rotated 90° | challenge | the tracking number beside an order number with the last two digits swapped |
 
-Controls read one clear value from the same kinds of image.
+Multiple-choice answers are the option letter; other answers are a number, a short string or a 24-hour time, compared exactly (with a tolerance for money).
 
 ### Context
 - **Controls:** one fact in a short log.
@@ -116,30 +121,28 @@ Free-text tasks with constraints checked by rules, in the style of IFEval: numbe
 - **Scoring:** every constraint has a checker function; a case passes only if all pass. With thinking on, only the final answer is checked, never the reasoning.
 
 ### Code (new, all hard)
-Twenty hard tasks from eight categories. Each asks for one Python function or class (or, for SQL, one query) with a stated name and signature, and is checked by running hidden tests.
+Twenty hard tasks in four categories, each checked by running code. The subjects are spread across the categories so none repeats much: algorithms, parsing, dates and money, data transformation, SQL (Python's built-in `sqlite3`), regular expressions and stateful specifications.
 
-| Category | Cases | Example |
-|---|---:|---|
-| Algorithms and data structures | 4 | merge intervals with touching ends and a tie-break rule; topological order with lexical tie-breaks |
-| Parsing | 3 | evaluate arithmetic with precedence and unary minus; compare version strings with pre-release tags |
-| Bug fixing | 3 | a given function fails on stated inputs; return a corrected version |
-| Dates and money | 2 | add business days across given holidays; split an amount into shares that sum exactly, distributing the remaining cents |
-| Data transformation | 3 | group and aggregate nested records; describe the difference between two nested dictionaries in a given format |
-| SQL | 2 | a query over a small SQLite schema, run with Python's built-in `sqlite3`; rows compared exactly |
-| Regular expressions | 1 | a pattern that matches a specification, tested on lists that must and must not match |
-| Specification with state | 2 | a rate limiter or state machine with a given interface and edge cases |
+| Category | Cases | How it is checked | Example |
+|---|---:|---|---|
+| Code generation, including algorithmic problems | 6 | hidden unit tests, plus large inputs under a time limit so a brute-force answer fails | merge intervals with touching ends and a tie-break rule; add business days across given holidays |
+| Bug fixing | 5 | regression tests: the stated failing input now passes, and every other test still passes | a parser that mishandles unary minus; a money split whose shares don't sum exactly |
+| Execution prediction and code reasoning | 5 | exact output match; for "find an input for which `f` returns 17", the runner calls `f` on the model's input | the output of code with late-binding closures or a mutable default argument |
+| Test generation | 4 | mutation testing: the model's tests must pass on the reference code and fail on every one of 5 to 8 mutants | tests for a version-string comparator, where the mutants flip `<` and `<=` or drop the pre-release rule |
 
-- **Answer format:** one fenced code block. The runner takes the first `python` (or `sql`) block, or the whole answer if there is none.
+Completion, bug detection, refactoring and translation are left out: completion and translation are generation with a different prompt, fixing a bug already requires finding it, and refactoring can only be checked by judgement.
+
+- **Answer format:** one fenced code block (for execution prediction, the typed answer as in other tracks). The runner takes the first `python` (or `sql`) block, or the whole answer if there is none.
 - **Scoring:** the case passes only if every hidden test passes. The prompt shows one or two examples; the hidden tests cover the edge cases the task names. Failures are reported by kind: `wrong_answer` (a test failed), `invalid_code` (syntax error, or the named function is missing), `code_error` (an exception), `code_timeout`.
 - **Determinism:** fixed tests, no randomness, exact comparison (or a stated tolerance for floating point).
 - **Running model-written code safely:** the code runs in a separate `python3 -I` process in an empty temporary folder, with an empty environment and, on Linux, limits on CPU time (10 s), memory (512 MB), file size and process count. Before it runs, a syntax-tree check rejects imports outside a short allowlist (`math`, `itertools`, `collections`, `functools`, `re`, `heapq`, `bisect`, `datetime`, `decimal`, `fractions`, `json`, `string`, `typing`, `dataclasses`, plus `sqlite3` for SQL cases) and calls such as `open`, `exec`, `eval` and `__import__`. A syntax check is not a complete sandbox, so code cases run only on the dedicated benchmark Pi, and the methodology says so.
-- **Checking the checker:** each case ships with a reference solution that passes every test and two or three plausible wrong solutions (an off-by-one, a missed edge case) that each fail at least one. Tests enforce both, so a test set that would pass a wrong answer is caught before the suite is fixed.
+- **Checking the checker:** each generation and bug-fixing case ships with a reference solution that passes every test and two or three plausible wrong solutions (an off-by-one, a missed edge case) that each fail at least one. Each test-generation case ships with a reference test set that kills every mutant. Tests enforce all of this, so a test set that would pass a wrong answer is caught before the suite is fixed.
 - **On the Pi:** running the tests takes well under a second per case; the cost is in generation, since code answers are longer than suite 1.7's typed answers.
 
 ## Difficulty calibration
 
 1. **Write** each case with its expected answer (or reference solution and tests) and, for hard cases, the steps that make it hard.
-2. **Blind solve:** a fresh subagent that sees only the exported prompts, passages and images must answer every case correctly before it is committed, as now. Agent cases stay excluded because they need the simulator; RAG and code cases are included (a code answer counts when it passes the hidden tests).
+2. **Blind solve:** a fresh subagent that sees only the exported prompts, passages and images must answer every case correctly before it is committed, as now. A photo case the solver gets wrong is checked against the full-resolution original before deciding whether the question or the solver is at fault. Agent cases stay excluded because they need the simulator; RAG and code cases are included (a code answer counts when it passes the hidden tests).
 3. **Mac pilot:** run the full suite once on the Mac with the same model builds, thinking off and on. This takes hours instead of days.
 4. **Adjust to the targets:**
 
@@ -177,7 +180,8 @@ Add 15% for the repeatability sample and the cooling between models: about **44 
 
 ## What changes in the code and on the site
 
-- `cases.py`: the new and reworked cases, the `hard` tier, the RAG corpus generator, the instruction checkers, the code runner and its tests, and the injection flag. `VERSION = "1.8.0"`.
+- **Staging:** cases are written in `suite_1_8.py` (images in `fixtures/v1_8/`) and tested there, so suite 1.7 and its published results stay untouched until the switch; `fixtures/*.png`, which the runner hashes, does not include them.
+- `cases.py`: the new and reworked cases (moved in from `suite_1_8.py`), the `hard` tier, the RAG corpus generator, the instruction checkers, the code runner and its tests, and the injection flag. `VERSION = "1.8.0"`.
 - `fixtures/make_fixtures.py`: the new realistic images; the shape images retire with suite 1.7.
 - `light_eval.py`: protocol 4 (`--passes 1` default, the repeatability sample), larger tool catalogues in the agent loop.
 - `tools/publish.py` and `tools/build_site.py`: three tiers, eight tracks, the injection metric, Wilson intervals, the repeatability rate.
@@ -200,8 +204,10 @@ Add 15% for the repeatability sample and the cooling between models: about **44 
 | Question | Decision |
 |---|---|
 | Cases per track | 20 (160 in all) |
-| Repeatability sample | reported as a flip rate, not averaged into the score (recommended; confirm) |
+| Repeatability sample | reported as a flip rate, not averaged into the score |
 | 2-thread runs | dropped for 1.8 |
 | Code track | included now, all hard, checked by running tests |
 | Suite 1.7 on the site | kept as an archive view after the switch |
 | Rudimentary 1.7 cases | retired; every case must be a realistic task, and vision moves from shapes to realistic images |
+| Vision images | ten of the author's photos (metadata stripped, bystanders' faces blurred) and ten reasoning-heavy drawings |
+| Code categories | generation 6, bug fixing 5, execution prediction and reasoning 5, test generation by mutation testing 4 |

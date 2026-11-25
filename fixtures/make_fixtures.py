@@ -117,8 +117,14 @@ def frame():
     return image
 
 
+from suite_1_8_fixtures import SUITE_1_8  # noqa: E402  (drawings for the suite 1.8 vision track)
+
 if __name__ == "__main__":
     for name, make in (("counting", counting), ("position", position), ("chart", chart), ("receipt", receipt),
                        ("table", table), ("grid", grid), ("frame", frame)):
         make().save(HERE / f"{name}.png", optimize=True)
         print(f"wrote fixtures/{name}.png")
+    (HERE / "v1_8").mkdir(exist_ok=True)
+    for name, make in SUITE_1_8:
+        make().save(HERE / "v1_8" / f"{name}.png", optimize=True)
+        print(f"wrote fixtures/v1_8/{name}.png")

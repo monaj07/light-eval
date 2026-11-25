@@ -120,6 +120,31 @@ Free-text tasks with constraints checked by rules, in the style of IFEval: numbe
 - **Hard:** four or five constraints that interact (for example "exactly three bullets, each under twelve words, none using the letter 'z', ending with 'Done.'").
 - **Scoring:** every constraint has a checker function; a case passes only if all pass. With thinking on, only the final answer is checked, never the reasoning.
 
+The 20 cases are in `suite_1_8_instructions.py`. Every rule a check enforces is stated in the prompt, together with the terms it depends on (what counts as a bullet, a word or a paragraph). Even the controls name a fact the reply must contain, so a reply that is empty or off-topic can't pass on format alone. Each case has a sample reply that passes, plus near misses that must fail exactly the named checks. `tests/test_suite_1_8_instructions.py` also requires every check to reject at least one reply, and every check to fail, without raising an error, on garbage replies. A failed reply gets the status `failed_constraint`, with the names of the checks it failed.
+
+| Case | Tier | What it asks |
+|---|---|---|
+| SMS reminder | control | at most 160 characters, with the time and the dentist's name |
+| Hike list | control | exactly five bullets and nothing else |
+| Lowercase caption | control | no capital letters |
+| Commit message | challenge | summary of at most 50 characters, blank line, body wrapped at 72 |
+| Alt text | challenge | at most 125 characters on one line, a given value, no "Image of" opening |
+| Shopping list | challenge | ingredients from a recipe sentence, named as written, in alphabetical order |
+| Out-of-office reply | challenge | exactly three paragraphs (the sign-off included), a date and an address, no "!" |
+| Meeting agenda | challenge | three given headings in order, bullets only |
+| Listing as JSON | challenge | keys in a given order, the price converted to integer pence |
+| Library post | challenge | at most 280 characters, exactly two hashtags, no links |
+| Zero-waste tips | hard | three short bullets and a "Done." line, without the letter z, although the topic is "zero-waste" |
+| Study table | hard | a Markdown table, Monday to Friday, with hours that must add up to 17 |
+| Jacket description | hard | 40–60 words, "waterproof" exactly twice, no "very", the price, ending with a question |
+| Conventional commit | hard | a `feat(parser):` lowercase summary, two body bullets and a `Refs:` footer, in a fixed layout |
+| Inner tube as JSON | hard | key order, five steps of at most 8 words each, capitalised and without a final period, a warning about the brakes |
+| No digits | hard | a note rewritten with every number in words, the names kept, at most 30 words |
+| Delay texts | hard | two numbered messages, each fact in only one of them, both at most 160 characters |
+| Reschedule email | hard | subject, greeting, exactly two body paragraphs and sign-off in a fixed layout, no apology |
+| Shoe-shop FAQ | hard | six alternating Q/A lines, topics in a given order, answers of at most 20 words |
+| Scaled recipe | hard | amounts scaled from 4 to 6 servings, written in an exact number format |
+
 ### Code (new, all hard)
 Twenty hard tasks in four categories, each checked by running code. The subjects are spread across the categories so none repeats much: algorithms, parsing, dates and money, data transformation, SQL (Python's built-in `sqlite3`), regular expressions and stateful specifications.
 

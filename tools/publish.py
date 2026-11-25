@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from cases import TRACKS, VERSION, dataset  # noqa: E402
-from light_eval import (INFRASTRUCTURE_STATUSES, apply_budget_defaults, build_parser, infrastructure_errors, read_rows,  # noqa: E402
+from light_eval import (INFRASTRUCTURE_STATUSES, apply_budget_defaults, build_parser, hashed_paths, infrastructure_errors, read_rows,  # noqa: E402
                         summarize, temperature_summary, write_json)
 import charts  # noqa: E402  (tools/charts.py)
 from runtime import recordable_setting  # noqa: E402
@@ -157,7 +157,7 @@ def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
         problems.append(f"the server's LLAMA_ARG_CACHE_RAM was {manifest.get('server_prompt_cache_ram_mib')!r}, "
                         "not 0, so memory grew with every case")
     hashes = manifest.get("sha256", {})
-    for path in [ROOT / "cases.py", *sorted((ROOT / "fixtures").glob("*.png"))]:
+    for path in [ROOT / "cases.py", *(path for path in hashed_paths() if path.suffix == ".png")]:
         relative = str(path.relative_to(ROOT))
         if hashes.get(relative) != file_hash(path):
             problems.append(f"{relative} differs from the version this run used")

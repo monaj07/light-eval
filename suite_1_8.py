@@ -59,6 +59,8 @@ def vision_cases():
         photo("map-cottage", "park-map.jpg", "According to this map, on which road is cottage number 23? The "
               '"answer" value must be only the road name, in title case with the abbreviation as on the map, '
               'for example "Example Rd".' + JSON_STRING, "Scott Rd", "hard"),
+        # On the receipt each price sits about half a line below its item, so pairing names with the
+        # price on the same line gives 37.56; reading the layout (9 items, 9 prices, in order) is the task.
         photo("receipt-split", "restaurant-receipt.jpg", "This is our restaurant receipt. I had the Corn Cheese and "
               "the Half Original Boneless. We share the credit card surcharge in proportion to what each person "
               "ordered. How much do I owe in dollars, including my share of the surcharge, rounded to two decimal "

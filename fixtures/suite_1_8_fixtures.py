@@ -8,7 +8,10 @@ Called from make_fixtures.py, which writes the PNGs to fixtures/v1_8/.
 """
 import math
 
-from PIL import Image, ImageDraw, ImageFont
+try:  # the data constants are imported by the tests without Pillow
+    from PIL import Image, ImageDraw, ImageFont
+except ImportError:
+    Image = ImageDraw = ImageFont = None
 
 FONTS = "/System/Library/Fonts/Supplemental/"
 INK, MUTED, LINE, PAPER = "#1f2328", "#5d6670", "#d0d4d9", "#ffffff"
@@ -58,6 +61,7 @@ def visitors_lines():
     return image
 
 
+CLOCK = (10, 40)
 DEPARTURES = (("10:12", "Northport", "2", "Departed"), ("10:52", "Eastfield", "1", "On time"),
               ("11:05", "Northport", "3", "Cancelled"), ("11:20", "Northport", "2", "On time"),
               ("11:34", "Eastfield", "1", "On time"), ("11:50", "Northport", "3", "On time"))
@@ -80,7 +84,7 @@ def clock_departures():
         angle = math.radians(hour * 30 - 90)
         draw.text((cx + (radius - 38) * math.cos(angle), cy + (radius - 38) * math.sin(angle)), str(hour),
                   font=font(24, True), fill=INK, anchor="mm")
-    hours, minutes = 10, 40
+    hours, minutes = CLOCK
     for value, length, width in ((((hours % 12) + minutes / 60) * 30, 78, 9), (minutes * 6, 118, 5)):
         angle = math.radians(value - 90)
         draw.line((cx, cy, cx + length * math.cos(angle), cy + length * math.sin(angle)), fill=INK, width=width)
@@ -350,6 +354,9 @@ def bus_timetable():
     return image
 
 
+TRACKING_NUMBER, ORDER_NUMBER = "TRK-58K2-9940", "ORD-58K2-9904"
+
+
 def parcel_label():
     """Shipping label photographed sideways (rotated 90°). Tracking number TRK-58K2-9940; the order
     number ORD-58K2-9904 is a near-identical decoy, and the reference code sits beside them."""
@@ -358,7 +365,7 @@ def parcel_label():
     draw.text((24, 20), "PARCEL EXPRESS", font=font(26, True), fill=INK)
     draw.text((24, 58), "SHIP TO: R. Okafor, 22 Wattle Lane, Bendleigh 3204", font=font(15), fill=INK)
     draw.line((4, 88, 616, 88), fill=INK, width=2)
-    rows = (("ORDER NO", "ORD-58K2-9904"), ("REF", "B-2209-58K"), ("TRACKING NO", "TRK-58K2-9940"))
+    rows = (("ORDER NO", ORDER_NUMBER), ("REF", "B-2209-58K"), ("TRACKING NO", TRACKING_NUMBER))
     for index, (key, value) in enumerate(rows):
         y = 104 + index * 42
         draw.text((24, y), key, font=font(15, True), fill=MUTED)
@@ -367,7 +374,7 @@ def parcel_label():
         width = (1, 2, 3, 1, 4, 2)[(index * 7) % 6]
         x = 40 + index * 7.6
         draw.rectangle((x, 250, x + width, 350), fill=INK)
-    draw.text((310, 372), "TRK-58K2-9940", font=font(14, mono=True), fill=INK, anchor="mm")
+    draw.text((310, 372), TRACKING_NUMBER, font=font(14, mono=True), fill=INK, anchor="mm")
     rotated = label.rotate(90, expand=True)
     image, _ = canvas(560, 760, "#b98d5b")
     image.paste(rotated, (80, 70))

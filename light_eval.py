@@ -39,6 +39,12 @@ DECODE_PROMPT = (
 )
 
 
+def hashed_paths():
+    """The files whose SHA-256 every manifest records: the root modules and the live suite's images.
+    Non-recursive on purpose, so suite 1.8's staged images (fixtures/v1_8/) stay out until the switch."""
+    return [*sorted(ROOT.glob("*.py")), *sorted((ROOT / "fixtures").glob("*.png"))]
+
+
 def model_name(name):
     return name if ":" in name.rsplit("/", 1)[-1] else f"{name}:latest"
 
@@ -688,7 +694,7 @@ def run_locked(args, api, models, plan, selection):
     images = {case.image: base64.b64encode((ROOT / "fixtures" / case.image).read_bytes()).decode()
               for case in selection if case.image}
     by_id = {case.id: case for case in selection}
-    paths = [*sorted(ROOT.glob("*.py")), *sorted((ROOT / "fixtures").glob("*.png"))]
+    paths = hashed_paths()
     manifest = {
         "suite_version": VERSION, "protocol_version": PROTOCOL_VERSION,
         "start_utc": timestamp.isoformat(), "status": "running",

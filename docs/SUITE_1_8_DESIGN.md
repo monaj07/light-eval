@@ -64,11 +64,30 @@ Every case keeps suite 1.7's rules: a typed answer compared exactly (with a tole
 - **Hard:** four to six steps with distractor numbers, dates across month and leap-year boundaries, rates combined over different periods, problems where the obvious shortcut gives a wrong answer.
 - **Scoring:** exact number, with a stated tolerance for division results.
 
+**Written** (`suite_1_8_text.py`): every expected value is computed in code from the prompt's numbers, with exact fractions, and a helper refuses to truncate a result that should be whole. Money answers have a cent tolerance; counts and times have none. The hard cases include:
+- **Calendar boundaries:** a 90-day trial and daily interest across February 2028, a leap year.
+- **Shortcuts that give the wrong answer:** a round-trip average speed (24, not 25), and a currency question where the commission and fee don't affect the net cost asked for.
+- **Combined rates:** overtime against Sunday pay, and weekday against weekend electricity tariffs.
+- **A train that stops mid-journey.**
+
+**Suite 1.7 review:** discount, rate, units, rise-then-fall, work rate, overnight trip, mixture and savings survive. Each was reworded as a real situation, usually with an extra step. Bare multiplication, signed arithmetic, remainder, operator precedence and the clock-angle puzzle retire.
+
 ### Structured
 - **Controls:** a few typed fields from a realistic message.
 - **Challenges:** nested extraction, arrays in source order, `null` for missing fields.
 - **Hard:** several records with conflicting information (take the latest), values normalised to a given format (ISO dates, cents, enumerations), conditional fields ("include `discount` only if…"), schemas with enumerated values.
 - **Scoring:** exact JSON comparison, integers required where the answer is an integer.
+
+**Written:** every suite 1.7 structured case survives, reworded as a real message (a shipping note, an alert, a sprint board, a stock check), except the bare ID sort. The hard cases add:
+- the latest value of each field across an email thread;
+- dates in three formats normalised to ISO;
+- an invoice in cents, with a credit line and a computed total;
+- conditional keys;
+- an enumerated priority;
+- a UK address split into fields;
+- attendance changed by later messages;
+- recipe amounts converted to grams;
+- an itinerary with a cancelled and rebooked flight, where flight times must account for time zones.
 
 ### Agent (with large tool catalogues)
 - **Controls:** one useful call and its result.
@@ -103,6 +122,28 @@ Multiple-choice answers are the option letter; other answers are a number, a sho
 - **Challenges:** suite 1.7's long-log retrieval and revision cases.
 - **Hard:** multi-hop joins, the latest valid state over revisions, negation and exclusions, at the current maximum length.
 - **Scoring:** exact answer.
+
+**Written:** suite 1.7's relay logs were synthetic, so the whole track is new. Each case is a realistic log produced by a seeded generator in `suite_1_8_text.py`, and its answer is computed from the generated records, never typed by hand. Longer cases stay within suite 1.7's maximum prompt length.
+- **Controls:** a maintenance log, parcel locker notices and monthly meter readings.
+- **Challenges:**
+  - a snapshot ID in a long server log;
+  - the latest address among look-alike customer IDs;
+  - a reopened ticket's status;
+  - one person's spending in one category, alongside a housemate called Sami;
+  - a badge that never entered the server room (it was denied, and a look-alike badge did enter);
+  - deploys of "billing" but not "billing-worker";
+  - one sensor's maximum, beside a hotter look-alike sensor.
+- **Hard:**
+  - configuration changes with reverts;
+  - email → user → most recent ride;
+  - order → shipment part → carrier;
+  - bookings filtered by room, date and length, with cancellations;
+  - pages within a time window that were not auto-resolved;
+  - a manager's manager after reorganisations (the generator never creates a reporting loop);
+  - stock across sites with a cancelled transfer;
+  - a holds queue with cancellations and collections;
+  - a settled balance with pending transactions and reversals;
+  - the latest *approved* contract version when approvals come out of order.
 
 ### RAG (new)
 Each case gives a question and 4 to 8 short passages from a deterministic synthetic corpus (product manuals, policies, logs), each with an ID. The model answers with a JSON object `{"answer": …, "sources": [IDs]}`.

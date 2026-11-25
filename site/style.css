@@ -83,6 +83,7 @@ main:focus { outline: none; }
 /* Building blocks */
 .lede { color: var(--ink2); font-size: 1.05rem; max-width: 820px; }
 .section { margin-top: 32px; }
+.section-first { margin-top: 20px; margin-bottom: 28px; }
 .section-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .section-head p { color: var(--ink2); margin: 0; max-width: 760px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }

@@ -623,6 +623,10 @@ function pageHardware() {
   const off = primary().filter((e) => e.thinking === "off" && e.first_load_s != null);
   app.innerHTML = `<h1>Hardware</h1>
     <p class="lede">What each model asks of the Pi: memory, speed, heat, and how much the four CPU cores help.</p>
+    ${off.length ? `<section class="section section-first"><div class="section-head"><h2>Loading and sustained speed</h2><p>Thinking-off runs only: these measure the hardware, so they aren't repeated with thinking on.</p></div>
+      <div class="card table-wrap"><table class="lb"><thead><tr><th>Model</th><th class="num">First load</th><th class="num">Sustained generation</th><th class="num">Change over 90 s</th></tr></thead><tbody>
+      ${off.sort((a, b) => a.first_load_s - b.first_load_s).map((e) => `<tr><td><div class="model-cell">${logo(e.model)}<a href="#/model/${esc(e.model_slug)}">${esc(e.name)}</a></div></td><td class="num">${dur(e.first_load_s)}</td><td class="num">${num(e.sustained_tok_s)} tokens/s</td><td class="num">${e.sustained_change == null ? "—" : `${(100 * e.sustained_change).toFixed(1)}%`}</td></tr>`).join("")}
+      </tbody></table></div></section>` : ""}
     <div class="controls"><div class="seg" role="group" aria-label="Thinking mode">
       <button type="button" data-hw="off" aria-pressed="${hwMode === "off"}">Thinking off</button>
       <button type="button" data-hw="on" aria-pressed="${hwMode === "on"}">Thinking on</button></div></div>
@@ -633,11 +637,7 @@ function pageHardware() {
       <div class="card pad"><h3>Tokens per second</h3><div class="chart" id="hw-speed"></div><p class="note">Prompt processing (light) and generation (dark), medians over the warm cases.</p></div>
     </div>
     <section class="section"><div class="section-head"><h2>2 against 4 threads</h2><p>Median time per case for the same model and mode. Four threads speed up reading the prompt, but can slow down generation.</p></div>
-      <div class="card pad"><div class="chart" id="hw-threads"></div></div></section>
-    ${off.length ? `<section class="section"><div class="section-head"><h2>Loading and sustained speed</h2><p>Thinking-off runs only: these measure the hardware, so they aren't repeated with thinking on.</p></div>
-      <div class="card table-wrap"><table class="lb"><thead><tr><th>Model</th><th class="num">First load</th><th class="num">Sustained generation</th><th class="num">Change over 90 s</th></tr></thead><tbody>
-      ${off.sort((a, b) => a.first_load_s - b.first_load_s).map((e) => `<tr><td><div class="model-cell">${logo(e.model)}<a href="#/model/${esc(e.model_slug)}">${esc(e.name)}</a></div></td><td class="num">${dur(e.first_load_s)}</td><td class="num">${num(e.sustained_tok_s)} tokens/s</td><td class="num">${e.sustained_change == null ? "—" : `${(100 * e.sustained_change).toFixed(1)}%`}</td></tr>`).join("")}
-      </tbody></table></div></section>` : ""}`;
+      <div class="card pad"><div class="chart" id="hw-threads"></div></div></section>`;
   app.querySelectorAll("button[data-hw]").forEach((b) => b.addEventListener("click", () => { hwMode = b.dataset.hw; render(); }));
   const memColor = (e) => (e.memory === "out" ? "var(--bad)" : e.memory === "tight" ? "var(--warn)" : `var(--${e.thinking})`);
   const maxMem = Math.max(10.5, ...list.map((e) => e.peak_mem_gb ?? 0) );

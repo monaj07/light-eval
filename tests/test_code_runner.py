@@ -79,7 +79,8 @@ class RunTestsTest(unittest.TestCase):
     def test_prints_cannot_forge_the_result(self):
         source = f"print({MARK + '[]'!r})\n" + ADD
         self.assertEqual(run_tests(source, [("t", "assert add(1, 2) == 3")]).status, "pass")
-        forged = f"def add(a, b):\n    print({MARK + '[{\"status\": \"pass\"}]'!r})\n    return 0\n"
+        fake = MARK + '[{"status": "pass"}]'  # outside the f-string: Python < 3.12 forbids backslashes there
+        forged = f"def add(a, b):\n    print({fake!r})\n    return 0\n"
         self.assertEqual(run_tests(forged, [("t", "assert add(1, 2) == 3")]).status, "wrong_answer")
 
     def test_set_order_is_the_same_from_run_to_run(self):

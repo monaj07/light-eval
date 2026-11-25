@@ -156,7 +156,16 @@ class JailTest(unittest.TestCase):
             expected.update(home="blocked", fork="blocked", kill="blocked")
         else:
             expected.pop("tmp")  # an empty throwaway tmpfs; the real /tmp is hidden
+            expected.pop("spawn")  # on Linux the harness's process limit blocks this: see the next test
         self.assertEqual({key: seen.get(key) for key in expected}, expected, completed.stderr)
+
+    def test_the_harness_cannot_start_processes(self):
+        # Trusted source stands in for escaped code: it has the real os and subprocess modules.
+        source = ("import subprocess\ntry:\n    subprocess.run(['/bin/sh', '-c', 'true'], check=True)\n"
+                  "    spawned = 'allowed'\nexcept Exception:\n    spawned = 'blocked'\n")
+        problem, outcomes = evaluate(source, [("t", "result = spawned")], ["spawned"], untrusted=False)
+        self.assertIsNone(problem)
+        self.assertEqual(outcomes, [["value", {"s": "blocked"}]])
 
     @unittest.skipUnless(sys.platform == "darwin", "macOS: programs that would act outside the sandbox")
     def test_exec_of_other_programs_is_blocked(self):

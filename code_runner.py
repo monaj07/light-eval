@@ -426,16 +426,18 @@ def jail(folder):
                    "(allow signal (target self))")
         return ["sandbox-exec", "-p", profile], executable, folder
     if sys.platform.startswith("linux") and shutil.which("bwrap"):
-        command = ["bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc"]
+        # /proc is an empty tmpfs, not a new procfs: mounting procfs is refused in containers and some CI
+        # runners, and the host's /proc (other processes' environments) must not show through.
+        command = ["bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--tmpfs", "/proc"]
         for hidden in ("/home", "/root", "/tmp", "/var/tmp", "/var/lib", "/run", "/mnt", "/media", "/srv",
                        "/opt", "/boot"):
             if os.path.isdir(hidden):
                 command += ["--tmpfs", hidden]
         for path in sorted({base, os.path.dirname(os.path.dirname(executable))}):
             command += ["--ro-bind", path, path]  # the interpreter may live under a hidden folder
-        command += ["--bind", folder, "/work", "--chdir", "/work", "--unshare-all", "--die-with-parent",
+        command += ["--bind", folder, "/tmp/work", "--chdir", "/tmp/work", "--unshare-all", "--die-with-parent",
                     "--new-session", "--cap-drop", "ALL"]
-        return command, executable, "/work"
+        return command, executable, "/tmp/work"  # inside the jail's own empty /tmp; the root is read-only
     raise SandboxError("no OS sandbox for model-written code: on Linux install bubblewrap "
                        "(sudo apt install bubblewrap); on macOS sandbox-exec is built in")
 

@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
-from light_eval import SUITE_PROTOCOLS, read_rows, suite_module  # noqa: E402
+from light_eval import CURRENT_SUITE, SUITE_PROTOCOLS, read_rows, suite_module  # noqa: E402
 import publish  # noqa: E402
 
 SITE = ROOT / "site"
@@ -85,7 +85,7 @@ def build_all(out=SITE / "data"):
     if out.exists():
         shutil.rmtree(out)
     shown = publish.shown_suite()
-    archives = [suite for suite in publish.published_suites() if suite != shown]
+    archives = publish.archived_suites(shown)
     data = build(out, shown, archives)
     for suite in archives:
         build(out / "archive" / suite, suite, [], archive_of=shown)
@@ -209,6 +209,11 @@ def build(out, suite, archives=(), archive_of=None):
         # Set on an archive: the suite that replaced it.
         "current": ({"suite": archive_of, "version": suite_module(archive_of).VERSION}
                     if archive_of else None),
+        # Set while an older suite is shown because the current one has no official Pi results yet.
+        "next": ({"suite": CURRENT_SUITE, "version": suite_module(CURRENT_SUITE).VERSION,
+                  "cases": len(suite_module(CURRENT_SUITE).dataset()),
+                  "tracks": len(suite_module(CURRENT_SUITE).TRACKS)}
+                 if suite != CURRENT_SUITE and not archive_of else None),
         "device": {"name": pi, "setup": setups[0] if setups else None, "photos": photos,
                    "ram_gb": 7.9, "zram_gb": 2.0},
         "primary_threads": publish.PRIMARY_THREADS,

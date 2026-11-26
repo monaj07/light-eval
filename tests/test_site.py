@@ -114,6 +114,10 @@ class ArchiveTest(unittest.TestCase):
         before = site_builder.build_all(tmp / "before")
         self.assertEqual([entry["id"] for entry in archive["entries"]], [entry["id"] for entry in before["entries"]])
         self.assertTrue(all(entry["interval"] is None for entry in archive["entries"]))
+        self.assertIsNone(data["next"])
+        self.assertEqual(before["next"], {"suite": "1.8", "version": "1.8.0", "cases": 160, "tracks": 8},
+                         "before the switch, the site says suite 1.8 has replaced the suite it shows")
+        self.assertEqual(before["archives"], [])
 
 
 if __name__ == "__main__":

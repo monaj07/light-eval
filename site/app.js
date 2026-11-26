@@ -526,11 +526,12 @@ function pageLeaderboard() {
   const intervals = D.entries.some((e) => e.interval);
   const otherThreads = D.entries.some((e) => !e.primary && e.threads === 2);
   if (!otherThreads) F.threads = "main";
+  const onePass = items.every((x) => x.e.passes === 1);
   const how = intervals
-    ? "Ranked by accuracy on the tracks each model supports, from one pass. Results whose 95% intervals overlap share a rank (=)."
+    ? `Ranked by accuracy on the tracks each model supports, ${onePass ? "from one pass" : "averaged over its passes"}. Results whose 95% intervals overlap share a rank (=).`
     : `Ranked by accuracy on the tracks each model supports, averaged over its passes. Results whose ranges across passes overlap share a rank (=).`;
   app.innerHTML = `<h1>Leaderboard</h1>
-    <p class="lede">${new Set(items.map((x) => x.e.model)).size} models, ${items.length} results, on ${esc(D.device.name)} with ${F.threads === "main" ? D.primary_threads : 2} CPU threads${intervals ? "" : ` and up to ${Math.max(0, ...items.map((x) => x.e.passes))} passes each`}. ${how} One case is ${num(100 / D.totals.cases, 1)} points.</p>
+    <p class="lede">${new Set(items.map((x) => x.e.model)).size} models, ${items.length} results, on ${esc(D.device.name)} with ${F.threads === "main" ? D.primary_threads : 2} CPU threads${intervals && onePass ? "" : ` and up to ${Math.max(0, ...items.map((x) => x.e.passes))} passes each`}. ${how} One case is ${num(100 / D.totals.cases, 1)} points.</p>
     <div class="controls">
       ${seg("thinking", [["all", "All"], ["off", "Thinking off"], ["on", "Thinking on"]])}
       ${otherThreads ? seg("threads", [["main", "4 threads"], ["2", "2 threads"]]) : ""}
@@ -651,7 +652,7 @@ function pageHardware() {
   }
   pairs.sort((a, b) => a.e4.thinking.localeCompare(b.e4.thinking) || a.e4.median_s - b.e4.median_s);
   const off = primary().filter((e) => e.thinking === "off" && e.first_load_s != null);
-  app.innerHTML = `<h1>Hardware</h1>
+  app.innerHTML = `<h1>Hardware performance</h1>
     <p class="lede">What each model asks of the Pi: memory, speed and heat${pairs.length ? ", and how much the four CPU cores help" : ""}.</p>
     ${off.length ? `<section class="section section-first"><div class="section-head"><h2>Loading and sustained speed</h2><p>Thinking-off runs only: these measure the hardware, so they aren't repeated with thinking on.</p></div>
       <div class="card table-wrap"><table class="lb"><thead><tr><th>Model</th><th class="num">First load</th><th class="num">Sustained generation</th><th class="num">Change over 90 s</th></tr></thead><tbody>
@@ -919,6 +920,9 @@ function suiteBar() {
   if (MAIN) {
     bar.innerHTML = `<p>You are viewing the results of suite ${esc(D.suite)}, the previous suite. Scores can't be compared with suite ${esc(MAIN.suite)}. <a href="${esc(here)}${esc(location.hash)}">Back to suite ${esc(MAIN.suite)} →</a></p>`;
     bar.hidden = false;
+  } else if (D.next) {
+    bar.innerHTML = `<p>Suite ${esc(D.next.version)} (${D.next.cases} cases in ${D.next.tracks} tracks) has replaced suite ${esc(D.suite)}, and its official runs on the Pi are in progress. Until they are published, these are the results of suite ${esc(D.suite)}.</p>`;
+    bar.hidden = false;
   } else if (D.archives?.length) {
     bar.innerHTML = `<p>Suite ${esc(D.suite)} replaced ${D.archives.map((a) => `suite ${esc(a.version)}`).join(" and ")}. ${D.archives.map((a) => `<a href="${esc(here)}?suite=${esc(a.suite)}${esc(location.hash)}">Suite ${esc(a.version)} results →</a>`).join(" ")}</p>`;
     bar.hidden = false;
@@ -938,7 +942,7 @@ function render() {
   suiteBar();
   // Keep the current tab visible in the sideways-scrolling navigation on phones.
   document.querySelector('.tabs a[aria-current="page"]')?.scrollIntoView({ inline: "center", block: "nearest" });
-  const titles = { overview: "", model: args[0] ? ` · ${D.entries.find((e) => e.model_slug === args[0])?.name ?? ""}` : "" };
+  const titles = { overview: "", hardware: " · Hardware performance", model: args[0] ? ` · ${D.entries.find((e) => e.model_slug === args[0])?.name ?? ""}` : "" };
   document.title = `Light Eval Results${titles[name] ?? ` · ${name[0].toUpperCase()}${name.slice(1)}`}`;
 }
 /* Count one view per page or tab (e.g. /light-eval/#/leaderboard), not per re-render. GoatCounter

@@ -165,8 +165,11 @@ def heatmap(rows, columns, theme, title, per_track=13):
     """
     # Narrower cells once there are more tracks, so the chart stays near the README's width.
     many = len(columns) > 6
-    cell_w, cell_h, top = (84 if many else 104), 44, 112
     label_w = label_column([row["label"] for row in rows], 270)
+    # With more tracks, the cells shrink so the chart keeps the README's 920 px width, and the
+    # headers use short names.
+    cell_w, cell_h, top = (max(56, (920 - label_w - 30) // len(columns)) if many else 104), 44, 112
+    short = {"Arithmetic": "Arith", "Structured": "Struct", "Instructions": "Instr"} if many else {}
     width = label_w + cell_w * len(columns) + 30
     height = top + cell_h * len(rows) + 46
     better = "Darker" if theme == "light" else "Brighter"
@@ -176,8 +179,8 @@ def heatmap(rows, columns, theme, title, per_track=13):
     legend_x = c.legend_dot(legend_x, 36, c.t["off"], "thinking off")
     c.legend_dot(legend_x, 36, c.t["on"], "thinking on")
     for index, name in enumerate(columns):
-        c.text(label_w + cell_w * index + cell_w / 2, top - 14, name, size=12.5 if many else 14, fill="ink", anchor="middle",
-               weight="700")
+        c.text(label_w + cell_w * index + cell_w / 2, top - 14, short.get(name, name), size=13 if many else 14, fill="ink",
+               anchor="middle", weight="700")
     for r, row in enumerate(rows):
         y = top + cell_h * r
         c.dot(24 + 7, y + cell_h / 2, 7, c.t[row["mode"]])

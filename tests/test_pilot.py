@@ -279,6 +279,41 @@ class PilotEndToEndTest(unittest.TestCase):
             self.assertEqual(groups["warm", "agent"]["pass_rate"], 1.0)
             self.assertIsNone(groups["repeat", "agent"]["pass_rate"])
             self.assertEqual(summary["repeatability"]["alpha:latest"]["repeated_cases"], 15)
+            # What the runner writes is what publishing accepts: only the track subset (and, since the
+            # mock server can't be inspected, the prompt cache setting) stand between it and the gate.
+            sys.path.insert(0, str(ROOT / "tools"))
+            import publish
+            manifest["server_prompt_cache_ram_mib"] = "0"
+            blocks = [json.loads(line) for line in (out / "blocks.jsonl").read_text().splitlines()]
+            problems = publish.run_problems(manifest, rows, blocks=blocks)
+            self.assertEqual(len(problems), 1, problems)
+            self.assertIn("ran only some tracks", problems[0])
+
+
+class PilotWarmupFailureTest(unittest.TestCase):
+    def test_planted_instruction_cases_count_when_the_warmup_fails(self):
+        from unittest.mock import Mock, patch
+        from light_eval import WARMUP, followed_injection, run_slot
+        case = next(case for case in CASES.values() if getattr(case, "has_injection", False))
+        args = apply_suite_defaults(build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"]))
+        api, monitor = Mock(), Mock()
+        api.loaded.return_value = []
+        api.json.return_value = {"models": [{"name": "fixture:latest", "digest": "d"}]}
+        monitor.take.return_value = monitor.gate.return_value = {"t": 0}
+        monitor.stats.return_value = {"system_oom_kills": None}
+        failing = lambda *a, **k: ({"status": "out_of_memory", "reason": "runner crashed"} if a[4] is WARMUP
+                                   else {"status": "pass"})
+        records, blocks = io.StringIO(), io.StringIO()
+        with patch("light_eval.run_case", side_effect=failing), patch("sys.stdout", new_callable=io.StringIO):
+            run_slot(api, args, monitor, None, {"round": 1, "position": 1, "model": "fixture:latest",
+                                                "metadata": {"digest": "d", "capabilities": ["completion", "tools", "vision"]}},
+                     [case], {}, records, blocks)
+        row = json.loads(records.getvalue().splitlines()[0])
+        self.assertEqual((row["status"], row.get("injection")), ("out_of_memory", True))
+        self.assertFalse(followed_injection(row))
+        self.assertEqual(summarize([row], [])["injection"]["fixture:latest"], {"n": 1, "followed": 0, "passed": 0})
+        self.assertTrue(followed_injection({"status": "followed_injection"}))
+        self.assertFalse(followed_injection({"status": "followed_injection", "injection_followed": False}))
 
 
 class PilotRequestTest(unittest.TestCase):

@@ -105,6 +105,13 @@ class RunChecksTest(unittest.TestCase):
                 self.assertIn(f"{name} differs from the version this run used",
                               publish.run_problems(manifest, self.rows))
 
+    def test_official_runs_make_one_pass(self):
+        self.manifest["options"]["passes"] = 3
+        self.assertIn("--passes 3; official suite 1.8 runs make one pass (--passes 1, the default)",
+                      publish.run_problems(self.manifest, self.rows))
+        self.manifest["options"]["setup"] = ""  # exploratory runs may make more
+        self.assertEqual(publish.run_problems(self.manifest, self.rows), [])
+
     def test_official_runs_need_the_repeatability_sample(self):
         rows = [row for row in self.rows if not (row["phase"] == "repeat" and row["track"] == "code")]
         self.assertIn("round 1 of gemma4:e2b repeated 21 of the 24 cases in the repeatability sample",
@@ -275,6 +282,71 @@ class AddTest(unittest.TestCase):
         self.assertEqual((publish.published_suites(), publish.shown_suite()), (["1.8", "1.7"], "1.8"))
         self.assertEqual([entry["run"] for entry in publish.entries()], ["new"])
         self.assertEqual([entry["run"] for entry in publish.entries("1.7")], ["old"])
+        self.assertEqual(publish.archived_suites("1.8"), ["1.7"])
+
+    def test_only_an_official_pi_run_switches_the_suite(self):
+        shutil.copytree(SOURCE, self.tmp / "published" / "old")
+        manifest, rows = suite_1_8_run()
+        exploratory = deepcopy(manifest)
+        exploratory["options"]["setup"] = ""
+        write_run(self.tmp / "published" / "pi-exploratory", exploratory, rows)
+        mac = deepcopy(manifest)
+        mac.update(device_tree_model=None, platform="macOS-26.1-arm64-arm-64bit")
+        write_run(self.tmp / "published" / "mac-official", mac, rows)
+        self.assertEqual(publish.published_suites(), ["1.8", "1.7"])
+        self.assertEqual(publish.shown_suite(), "1.7", "a Mac or exploratory 1.8 run must not empty the Pi results")
+        self.assertEqual(publish.archived_suites("1.7"), [], "a newer suite is never shown as an archive")
+        write_run(self.tmp / "published" / "pi-official", manifest, rows)
+        self.assertEqual(publish.shown_suite(), "1.8")
+
+    def test_a_suite_version_bump_never_brings_the_previous_suite_back(self):
+        shutil.copytree(SOURCE, self.tmp / "published" / "old")
+        write_run(self.tmp / "published" / "new", *suite_1_8_run())
+        with patch.object(suite_1_8, "VERSION", "1.8.1"):
+            self.assertEqual(publish.shown_suite(), "1.8")
+            self.assertEqual(publish.entries(), [], "1.8.0 results retire with the bump")
+            manifest, rows = suite_1_8_run()
+            manifest["suite_version"] = "1.8.0"
+            self.assertIn("suite 1.8.0, but the current suite is 1.8.1", publish.run_problems(manifest, rows))
+
+    def build_readme(self):
+        readme, assets = self.tmp / "README.md", self.tmp / "assets"
+        assets.mkdir(exist_ok=True)
+        if not readme.exists():
+            readme.write_text(f"intro\n{publish.START}\n{publish.END}\nend\n")
+        with patch.object(publish, "README", readme), patch.object(publish, "ASSETS", assets), \
+                contextlib.redirect_stdout(io.StringIO()):
+            publish.build()
+        return readme.read_text(), {path.name: path.read_text() for path in assets.glob("*.svg")}
+
+    def test_suite_1_8_readme_build(self):
+        shutil.copytree(SOURCE, self.tmp / "published" / "old")
+        (self.tmp / "assets").mkdir()
+        (self.tmp / "assets" / "threads-raspberry-pi-5-8-gb-light.svg").write_text("<svg/>")  # a suite 1.7 chart
+        with contextlib.redirect_stdout(io.StringIO()):
+            publish.add(self.run, "new")
+        first = self.build_readme()
+        self.assertEqual(self.build_readme(), first, "build must be idempotent")
+        readme, svgs = first
+        self.assertIn("Suite 1.8.0: 160 cases (21 control, 49 challenge, 90 hard)", readme)
+        self.assertNotIn("has replaced it", readme)
+        self.assertIn("| Model | Thinking | Accuracy | 95% interval | Tracks |", readme)
+        self.assertIn("| `gemma4:e2b` | on | **100%** | 98–100% | 8/8 |", readme)
+        self.assertIn("Hard | Arithmetic | Structured | Agent | Vision | Context | RAG | Instructions | Code |", readme)
+        self.assertIn("| 0 of 10 | 0 of 24 |", readme)
+        self.assertIn("Challenge counts are out of 49 cases, hard ones out of 90, and each track out of 20.", readme)
+        self.assertNotIn("threads-raspberry-pi-5-8-gb-light.svg", svgs, "a chart no longer drawn is removed")
+        heatmap = svgs["tracks-raspberry-pi-5-8-gb-light.svg"]
+        self.assertLessEqual(int(re.search(r'width="(\d+)"', heatmap).group(1)), 920)
+        self.assertIn(">Instr<", heatmap)
+        bubbles, labels = BubbleChartTest().layout(svgs["score-vs-time-raspberry-pi-5-8-gb-light.svg"])
+        self.assertEqual((len(bubbles), [name for name, _ in labels]), (1, ["gemma4:e2b · 100%"]))
+
+    def test_suite_1_7_readme_until_the_switch(self):
+        shutil.copytree(SOURCE, self.tmp / "published" / "old")
+        readme, _ = self.build_readme()
+        self.assertIn("Suite 1.7.0: 65 cases (29 control, 36 challenge)", readme)
+        self.assertIn("Suite 1.8.0 (160 cases in 8 tracks) has replaced it", readme)
 
 
 class CoverageTest(unittest.TestCase):

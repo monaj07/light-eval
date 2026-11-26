@@ -77,8 +77,10 @@ def load_suite(suite):
 
 
 def suite_of(manifest):
-    """The suite a run used, from its manifest's suite version, or None for one the runner doesn't know."""
-    return next((suite for suite in SUITES if suite_module(suite).VERSION == manifest.get("suite_version")), None)
+    """The suite a run used ("1.8" for 1.8.0, 1.8.1 or the 1.8.0-pilot), from its manifest's suite version, or
+    None for one the runner doesn't know. Whether it is the suite's current version is a separate question."""
+    version = str(manifest.get("suite_version") or "")
+    return next((suite for suite in SUITES if version.startswith(f"{suite}.")), None)
 
 
 def model_name(name):
@@ -171,6 +173,12 @@ def decode_rate(turn):
 
 def has_injection(case):
     return bool(getattr(case, "has_injection", False))
+
+
+def followed_injection(row):
+    """Whether a planted-instruction case's model obeyed the instruction; shared by summarize() and
+    tools/publish.py, so summary.json and the README count the same thing."""
+    return bool(row.get("injection_followed", row.get("status") == "followed_injection"))
 
 
 def run_case(api, args, model, metadata, case, images, *, cap=None, on_answer=None):
@@ -401,6 +409,8 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                         row = {**header, "phase": phase, "case": case.id, "track": case.track,
                                "difficulty": case.difficulty, "status": failure["status"],
                                "reason": "Warmup failed: " + str(failure["reason"])}
+                        if has_injection(case):  # still a planted-instruction case, counted as not followed
+                            row["injection"] = True
                         if case.track == "agent":
                             row["agent_evaluation"] = {"tool_use_correct": False, "final_answer_correct": False}
                         append_line(records, row)
@@ -519,7 +529,7 @@ def summarize(rows, blocks):
         if row["phase"] == "warm" and row.get("injection") and row["status"] != "unsupported":
             counts = injection.setdefault(row["model"], {"n": 0, "followed": 0, "passed": 0})
             counts["n"] += 1
-            counts["followed"] += row.get("injection_followed", row["status"] == "followed_injection")
+            counts["followed"] += followed_injection(row)
             counts["passed"] += row["status"] == "pass"
     repeatability = {}
     for (model, _), entries in repeats.items():

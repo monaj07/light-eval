@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from light_eval import (CURRENT_SUITE, INFRASTRUCTURE_STATUSES, SUITE_PROTOCOLS, SUITES, apply_budget_defaults,  # noqa: E402
-                        build_parser, hashed_paths, infrastructure_errors, read_rows, suite_module, suite_of,
+                        build_parser, followed_injection, hashed_paths, infrastructure_errors, read_rows, suite_module, suite_of,
                         summarize, temperature_summary, write_json)
 import charts  # noqa: E402  (tools/charts.py)
 from runtime import recordable_setting  # noqa: E402
@@ -151,7 +151,7 @@ def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
     options = manifest.get("options", {})
     current = suite_module(CURRENT_SUITE).VERSION
     suite = suite_of(manifest)
-    if suite != CURRENT_SUITE:
+    if manifest.get("suite_version") != current:
         problems.append(f"suite {manifest.get('suite_version')}, but the current suite is {current}")
     # The remaining checks follow the run's own suite, so a refused run lists everything at once.
     suite = suite or CURRENT_SUITE
@@ -215,6 +215,10 @@ def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
     for row in rows:
         if row["phase"] == "warm":
             warm[row["model"], row["round"]] += 1
+    if official and suite != "1.7" and options.get("passes") != 1:
+        # Protocol 4 makes one pass; its intervals and the site's wording assume it.
+        problems.append(f"--passes {options.get('passes')}; official suite {suite} runs make one pass "
+                        "(--passes 1, the default)")
     repeated = defaultdict(set)
     for row in rows:
         if row["phase"] == "repeat":
@@ -302,20 +306,39 @@ def device(manifest):
     return manifest.get("platform") or "unknown device"
 
 
+def published_manifests():
+    return [json.loads((directory / "manifest.json").read_text())
+            for directory in sorted(PUBLISHED.iterdir() if PUBLISHED.exists() else [])]
+
+
 def published_suites():
     """The suites with published runs, current first."""
-    found = set()
-    for directory in sorted(PUBLISHED.iterdir() if PUBLISHED.exists() else []):
-        found.add(suite_of(json.loads((directory / "manifest.json").read_text())))
+    found = {suite_of(manifest) for manifest in published_manifests()}
     return [suite for suite in SUITES if suite in found]
 
 
-def shown_suite():
-    """The suite the README and the site lead with: the current one once it has published runs.
+def is_official_pi(manifest):
+    return bool((manifest.get("options", {}).get("setup") or "").strip()) and device(manifest).startswith("Raspberry")
 
-    Until then they keep showing the previous suite, so the switch never leaves them empty while
-    the new suite's official runs are still being made."""
-    return next(iter(published_suites()), CURRENT_SUITE)
+
+def shown_suite():
+    """The suite the README and the site lead with: the current one once it has an official Pi run.
+
+    Until then they keep showing the newest older suite with results, so the switch never empties
+    them, and a Mac or exploratory run of the new suite can't trigger it. Once the current suite has
+    an official Pi run of any of its versions, it stays shown: a later version bump (1.8.0 to 1.8.1)
+    retires its results ("No published runs for this suite version yet") but never brings an older
+    suite back."""
+    manifests = published_manifests()
+    if any(suite_of(manifest) == CURRENT_SUITE and is_official_pi(manifest) for manifest in manifests):
+        return CURRENT_SUITE
+    older = [suite for suite in published_suites() if SUITES.index(suite) > SUITES.index(CURRENT_SUITE)]
+    return older[0] if older else CURRENT_SUITE
+
+
+def archived_suites(shown):
+    """Older suites with published runs, kept as archive views behind the one shown."""
+    return [suite for suite in published_suites() if SUITES.index(suite) > SUITES.index(shown)]
 
 
 def wilson(passed, n, z=1.96):
@@ -336,7 +359,7 @@ def entries(suite=None):
     for directory in sorted(PUBLISHED.iterdir() if PUBLISHED.exists() else []):
         manifest = json.loads((directory / "manifest.json").read_text())
         published = manifest.get("published", {})
-        if suite_of(manifest) != suite or (
+        if manifest.get("suite_version") != suite_module(suite).VERSION or (
                 manifest.get("status") not in ("complete", "complete_with_errors") and not published.get("rounds")):
             continue
         all_rows = read_rows(directory / "cases.jsonl")
@@ -378,12 +401,13 @@ def entries(suite=None):
                 "tier_cases": {tier: sum(row["difficulty"] == tier for row in mine) / rounds for tier in TIERS},
                 # Suite 1.8 runs one pass, so it ranks by a 95% interval over the supported cases; suite
                 # 1.7 ranks by the range across its passes, as it always has.
-                "interval": wilson(passed, supported_cases) if suite != "1.7" else None,
+                # Over every attempt: with several passes, each counts as a trial.
+                "interval": wilson(passed * rounds, supported_cases * rounds) if suite != "1.7" else None,
                 "tracks": {track: sum(row["status"] == "pass" and row["track"] == track for row in mine) / rounds
                            for track in tracks},
                 # Planted-instruction cases: how many the model obeyed (averaged over passes).
                 "injection": ({"cases": len(planted) / rounds,
-                               "followed": sum(bool(row.get("injection_followed")) for row in planted) / rounds}
+                               "followed": sum(followed_injection(row) for row in planted) / rounds}
                               if planted else None),
                 # Protocol 4's repeatability sample: how many repeated cases ended differently.
                 "repeat": ({"cases": len(again),
@@ -965,7 +989,7 @@ def picture(base, alt, width=920):
     sources come first. Screens under 600 px get the one-column phone chart, which would
     otherwise be shrunk to under half size."""
     sources = []
-    if (ASSETS / f"{base}-mobile-light.svg").exists():
+    if f"{base}-mobile-light.svg" in WRITTEN:
         sources += [f'  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" '
                     f'srcset="docs/assets/{base}-mobile-dark.svg">',
                     f'  <source media="(max-width: 600px)" srcset="docs/assets/{base}-mobile-light.svg">']
@@ -975,11 +999,22 @@ def picture(base, alt, width=920):
             "</picture>", ""]
 
 
+# The chart files written by the current build; build() deletes every other SVG in docs/assets/
+# (all of them are generated), so a chart that is no longer drawn, such as the thread comparison
+# after the switch to suite 1.8, doesn't linger in the repo.
+WRITTEN = set()
+
+
+def write_svg(name, text):
+    (ASSETS / name).write_text(text)
+    WRITTEN.add(name)
+
+
 def write_chart(base, render, render_mobile=None):
     for theme in THEMES:
-        (ASSETS / f"{base}-{theme}.svg").write_text(render(theme))
+        write_svg(f"{base}-{theme}.svg", render(theme))
         if render_mobile:
-            (ASSETS / f"{base}-mobile-{theme}.svg").write_text(render_mobile(theme))
+            write_svg(f"{base}-mobile-{theme}.svg", render_mobile(theme))
     return base
 
 
@@ -1069,6 +1104,7 @@ def tier_summary(totals):
 
 
 def build():
+    WRITTEN.clear()
     suite = shown_suite()
     found = entries(suite)
     check_duplicates(found)
@@ -1155,7 +1191,7 @@ def build():
         parts += ["#### Accuracy, speed and memory", ""]
         base = f"score-vs-time-{slug_name}"
         for theme in THEMES:
-            (ASSETS / f"{base}-{theme}.svg").write_text(svg_chart(group, theme, f"Accuracy and speed on {name}"))
+            write_svg(f"{base}-{theme}.svg", svg_chart(group, theme, f"Accuracy and speed on {name}"))
         parts += picture(base, f"Cases passed against median time per case on {name}; colour shows the thinking "
                                "mode and bubble area the peak memory in use")
         for note in sorted({entry["note"] for entry in group if entry["note"]}):
@@ -1217,6 +1253,9 @@ def build():
     before, rest = text.split(START, 1)
     _, after = rest.split(END, 1)
     README.write_text(before + "\n".join(parts) + after)
+    for stale in sorted(set(path.name for path in ASSETS.glob("*.svg")) - WRITTEN):
+        (ASSETS / stale).unlink()
+        print(f"Removed {ASSETS.name}/{stale}, which no chart uses any more")
     print(f"Rebuilt README results from {len(found)} model runs")
 
 

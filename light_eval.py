@@ -27,6 +27,12 @@ PHASES = ("cold", "warm", "sustained")
 #   2: prompts are never silently truncated; the model is reloaded after any infrastructure
 #      error; tool-call parse errors are the model's failure. See CHANGELOG.md, "Protocol 2".
 PROTOCOL_VERSION = 3
+# Protocol 4 applies to suite 1.8 pilot runs (--suite 1.8) and becomes PROTOCOL_VERSION at the switch:
+# one pass plus a fixed repeatability sample, a larger tool budget, tool errors returned to the model
+# (suite 1.8's simulator), and test-running time for code answers kept out of wall_s.
+PILOT_PROTOCOL_VERSION = 4
+SUITES = ("1.7", "1.8")
+ALL_TRACKS = (*TRACKS, "rag", "instructions", "code")
 # Outcomes that come from the infrastructure, not the model's answer.
 INFRASTRUCTURE_STATUSES = ("api_error", "connection_error", "protocol_error")
 # Keep prompt-processing workspace small without shortening the context.
@@ -39,10 +45,23 @@ DECODE_PROMPT = (
 )
 
 
-def hashed_paths():
-    """The files whose SHA-256 every manifest records: the root modules and the live suite's images.
-    Non-recursive on purpose, so suite 1.8's staged images (fixtures/v1_8/) stay out until the switch."""
-    return [*sorted(ROOT.glob("*.py")), *sorted((ROOT / "fixtures").glob("*.png"))]
+def hashed_paths(suite="1.7"):
+    """The files whose SHA-256 every manifest records: the root modules and the suite's images.
+    For suite 1.7 non-recursive on purpose, so suite 1.8's staged images (fixtures/v1_8/) stay out."""
+    paths = [*sorted(ROOT.glob("*.py")), *sorted((ROOT / "fixtures").glob("*.png"))]
+    if suite == "1.8":
+        # Images only, so stray files (.DS_Store on the Mac) can't make Mac and Pi manifests differ.
+        paths += sorted(path for path in (ROOT / "fixtures" / "v1_8").rglob("*")
+                        if path.suffix in (".png", ".jpg") and not path.name.startswith("."))
+    return paths
+
+
+def load_suite(suite):
+    """(version, protocol, cases) for a suite; suite 1.8 is the staged pilot set until the switch."""
+    if suite == "1.8":
+        import suite_1_8
+        return suite_1_8.VERSION, PILOT_PROTOCOL_VERSION, suite_1_8.dataset()
+    return VERSION, PROTOCOL_VERSION, dataset()
 
 
 def model_name(name):
@@ -133,7 +152,15 @@ def decode_rate(turn):
     return tokens * 1e9 / duration if tokens and duration else None
 
 
-def run_case(api, args, model, metadata, case, images, *, cap=None):
+def has_injection(case):
+    return bool(getattr(case, "has_injection", False))
+
+
+def run_case(api, args, model, metadata, case, images, *, cap=None, on_answer=None):
+    """One case. `on_answer` is called when the final answer arrives, before any scoring, so the
+    caller can take telemetry for the answer alone (suite 1.8 code answers run tests after it)."""
+    if args.tool_rounds is None or args.tool_calls is None:
+        raise ValueError("runner options need apply_budget_defaults() before run_case")
     options = dict(INFERENCE_OPTIONS, num_ctx=args.context, num_thread=args.threads, temperature=0,
                    num_predict=cap or args.max_tokens, seed=args.seed)
     if args.cpu_only or platform.system() != "Darwin":
@@ -145,8 +172,9 @@ def run_case(api, args, model, metadata, case, images, *, cap=None):
     # Send the case prompt unchanged: any extra text (such as an ID) can be
     # mistaken for task input by some models.
     user_message = {"role": "user", "content": case.prompt}
-    if case.image:
-        user_message["images"] = [images[case.image]]
+    image = getattr(case, "image", None)
+    if image:
+        user_message["images"] = [images[image]]
     body = {"model": model, "messages": [user_message], "options": options,
             "keep_alive": "1h", "stream": True}
     schema = case.response_schema
@@ -159,10 +187,12 @@ def run_case(api, args, model, metadata, case, images, *, cap=None):
     if metadata["thinking_requested"] is not None:
         body["think"] = metadata["thinking_requested"]
     trace, turns = [], []
-    state = {"indicator": case.initial_state}
+    # Suite 1.8 agent cases bring their own world and simulator; suite 1.7's is a single indicator.
+    state = case.new_state() if hasattr(case, "new_state") else {"indicator": getattr(case, "initial_state", None)}
     started = time.monotonic()
     deadline = started + args.timeout
     status, reason = "protocol_error", None
+    answered = None
     tool_response_observed = False
     final_answer_complete = False
 
@@ -205,9 +235,17 @@ def run_case(api, args, model, metadata, case, images, *, cap=None):
                     if turn["tool_calls"]:
                         raise BenchError("Unexpected tool call during final answer", "invalid_tool_call")
                     final_answer_complete = True
-                status = "complete" if case.track == "performance" else score(
-                    case, turn["content"], trace, state
-                )
+                staged = hasattr(case, "score_reply")  # suite 1.8: scores itself, maybe slowly (code)
+                if staged:
+                    answered = time.monotonic()
+                    if on_answer:
+                        on_answer()
+                if case.track == "performance":
+                    status = "complete"
+                elif hasattr(case, "score_reply"):
+                    status = case.score_reply(turn["content"], trace, state)
+                else:
+                    status = score(case, turn["content"], trace, state)
                 break
             if case.track != "agent":
                 raise BenchError("Unexpected tool call", "invalid_tool_call")
@@ -222,7 +260,8 @@ def run_case(api, args, model, metadata, case, images, *, cap=None):
                     values = call["function"]["arguments"]
                     if isinstance(values, str):
                         values = parse_json(values)
-                    result = dispatch(name, values, state)
+                    result = (case.call_tool(name, values, state) if hasattr(case, "call_tool")
+                              else dispatch(name, values, state))
                 except (ValueError, KeyError, TypeError, OverflowError, RecursionError) as exc:
                     raise BenchError(f"Invalid tool call: {exc}", "invalid_tool_call") from exc
                 trace.append({"name": name, "arguments": values, "result": result})
@@ -232,16 +271,30 @@ def run_case(api, args, model, metadata, case, images, *, cap=None):
                 body["messages"].append(message)
     except BenchError as exc:
         status, reason = exc.status, str(exc)
+    finished = time.monotonic()
     result = {"status": status, "reason": reason, "response_schema": schema,
-            "wall_s": time.monotonic() - started,
+            # Suite 1.8: time to the final answer, with scoring (running a code answer's tests) in
+            # scoring_s. Suite 1.7 keeps protocol 3's wall_s, which includes its sub-millisecond scoring.
+            "wall_s": (answered or finished) - started,
             "ttft_s": turns[0]["first_output_s"] if turns else None,
             "first_text_s": turns[0]["first_text_s"] if turns else None,
             "generated_tokens": sum(turn.get("metrics", {}).get("eval_count", 0) for turn in turns),
-            "turns": turns, "tool_trace": trace, "final_state": state}
+            "turns": turns, "tool_trace": trace,
+            "final_state": case.snapshot(state) if hasattr(case, "snapshot") else state}
+    if answered is not None:
+        result["scoring_s"] = finished - answered
+    if answered is not None and hasattr(case, "evaluation"):
+        result.update(case.evaluation(turns[-1]["content"]))
+    if has_injection(case):
+        # Counted from the trace or reply whatever the status, so a model that obeys the planted
+        # instruction and then times out or runs out of tool calls still counts as having followed it.
+        result["injection_followed"] = bool(case.injection_followed(turns[-1]["content"] if turns else "", trace))
     if case.track == "agent":
+        tool_status = (case.score_tool_use(trace, state) if hasattr(case, "score_tool_use")
+                       else score_tools(case, trace, state))
         result["agent_evaluation"] = {
             "tool_use_correct": (tool_response_observed and status not in {"invalid_tool_call", "tool_limit"}
-                                 and score_tools(case, trace, state) == "pass"),
+                                 and tool_status == "pass"),
             "final_answer_correct": final_answer_complete and score_answer(case, turns[-1]["content"]) == "pass",
         }
     return result
@@ -252,7 +305,7 @@ def append_line(handle, record):
     handle.flush()
 
 
-def run_slot(api, args, monitor, band, identity, candidates, images, records, blocks):
+def run_slot(api, args, monitor, band, identity, candidates, images, records, blocks, repeats=()):
     model = identity["model"]
     metadata = identity["metadata"]
     header = {key: value for key, value in identity.items() if key != "metadata"}
@@ -264,12 +317,17 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
 
     def measured(case, phase, cap=None, start=None):
         start = start or monitor.take()
-        record = run_case(api, args, model, metadata, case, images, cap=cap)
-        env = monitor.stats(start)
+        at_answer = {}
+        record = run_case(api, args, model, metadata, case, images, cap=cap,
+                          on_answer=lambda: at_answer.setdefault("environment", monitor.stats(start)))
+        # Suite 1.8: temperatures and memory up to the answer, not while a code answer's tests run.
+        env = at_answer.get("environment") or monitor.stats(start)
         if env["system_oom_kills"] and record["status"] in {"api_error", "connection_error", "timeout"}:
             record["status"] = "out_of_memory"
         row = {**header, "phase": phase, "case": case.id, "track": case.track, "difficulty": case.difficulty,
                "environment": env, **record}
+        if has_injection(case):
+            row["injection"] = True
         append_line(records, row)
         return row
 
@@ -308,11 +366,13 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
             started = time.monotonic()
             resident, failure, warmups = None, None, 0
             needs_load = True
-            for case in candidates:
+            # Protocol 4: after the scored cases, the same load repeats a fixed sample once more. Scores
+            # come from the "warm" rows only; the "repeat" rows measure how often an outcome flips.
+            for case, phase in [(case, "warm") for case in candidates] + [(case, "repeat") for case in repeats]:
                 unsupported = ((case.track == "agent" and "tools" not in metadata["capabilities"])
                                or (case.track == "vision" and "vision" not in metadata["capabilities"]))
                 if unsupported:
-                    measured(case, "warm")
+                    measured(case, phase)
                     continue
                 if needs_load or ensure_residency() is None:
                     api.unload(model)
@@ -321,7 +381,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                     warmups += 1
                     needs_load = False
                     if failure:
-                        row = {**header, "phase": "warm", "case": case.id, "track": case.track,
+                        row = {**header, "phase": phase, "case": case.id, "track": case.track,
                                "difficulty": case.difficulty, "status": failure["status"],
                                "reason": "Warmup failed: " + str(failure["reason"])}
                         if case.track == "agent":
@@ -329,7 +389,7 @@ def run_slot(api, args, monitor, band, identity, candidates, images, records, bl
                         append_line(records, row)
                         needs_load = True
                         continue
-                row = measured(case, "warm", start=monitor.take())
+                row = measured(case, phase, start=monitor.take())
                 if row["status"] == "out_of_memory" or row["status"] in INFRASTRUCTURE_STATUSES:
                     # The runner may have crashed, and /api/ps can still list it, so force a fresh
                     # load and warmup outside the next case's timing.
@@ -369,10 +429,10 @@ def summarize(rows, blocks):
     groups, repeats = defaultdict(list), defaultdict(list)
     for row in rows:
         track = row["track"]
-        if track == "context":
+        if track == "context" and row["case"].split("-")[1] in ("short", "long"):  # suite 1.7's log sizes
             track = "context-" + row["case"].split("-")[1]
         groups[row["model"], row["phase"], track].append(row)
-        if row["phase"] == "warm" and row["status"] != "unsupported":
+        if row["phase"] in ("warm", "repeat") and row["status"] != "unsupported":
             repeats[row["model"], row["case"]].append(row)
     results = []
     for (model, phase, track), entries in sorted(groups.items()):
@@ -429,7 +489,21 @@ def summarize(rows, blocks):
                     "n": supported, "tool_use_passed": tools_passed, "tool_use_pass_rate": tools_passed / supported,
                     "final_answer_passed": answers_passed, "final_answer_pass_rate": answers_passed / supported,
                 }
+        if track == "rag":
+            evaluated = [row["rag_evaluation"] for row in entries if "rag_evaluation" in row]
+            group["rag_metrics"] = None
+            if phase == "warm" and evaluated:
+                group["rag_metrics"] = {
+                    "n": len(entries), "answer_passed": sum(check["answer_correct"] for check in evaluated),
+                    "sources_passed": sum(check["sources_correct"] for check in evaluated)}
         results.append(group)
+    injection = {}
+    for row in rows:
+        if row["phase"] == "warm" and row.get("injection") and row["status"] != "unsupported":
+            counts = injection.setdefault(row["model"], {"n": 0, "followed": 0, "passed": 0})
+            counts["n"] += 1
+            counts["followed"] += row.get("injection_followed", row["status"] == "followed_injection")
+            counts["passed"] += row["status"] == "pass"
     repeatability = {}
     for (model, _), entries in repeats.items():
         if len(entries) < 2:
@@ -457,8 +531,11 @@ def summarize(rows, blocks):
                           "first_third_decode_tok_s": spread(rates[:span]) if len(rates) >= 3 else None,
                           "last_third_decode_tok_s": spread(rates[-span:]) if len(rates) >= 3 else None,
                           "environment": block["environment"]})
-    return {"groups": results, "repeatability": repeatability, "sustained": sustained,
-            "temperature": temperature_summary(rows)}
+    summary = {"groups": results, "repeatability": repeatability, "sustained": sustained,
+               "temperature": temperature_summary(rows)}
+    if injection:
+        summary["injection"] = injection
+    return summary
 
 
 def temperature_summary(rows):
@@ -558,10 +635,17 @@ def print_summary(summary):
                                 f", {checks['final_answer_passed']}/{checks['n']} exact answers")
         timing = f", median {latency['median']:.2f}s" if latency else ""
         levels = row.get("by_difficulty", {})
-        if row["pass_rate"] is not None and "control" in levels and "challenge" in levels:
+        if row["pass_rate"] is not None and (len(levels) > 1 or "hard" in levels):
             score_label += ", " + ", ".join(
-                f"{level} {levels[level]['passed']}/{levels[level]['supported']}" for level in ("control", "challenge"))
+                f"{level} {levels[level]['passed']}/{levels[level]['supported']}"
+                for level in ("control", "challenge", "hard") if level in levels)
+        if row.get("rag_metrics"):
+            checks = row["rag_metrics"]
+            score_label += f", {checks['answer_passed']}/{checks['n']} answers, {checks['sources_passed']}/{checks['n']} sources"
         print(f"{row['model']} {row['phase']}/{row['track']} ({n} cases{score_label}{timing}) {status}")
+    for model, counts in summary.get("injection", {}).items():
+        print(f"{model} planted instructions: followed {counts['followed']} of {counts['n']}, "
+              f"passed {counts['passed']}")
     print_temperatures(summary.get("temperature", []))
     for block in summary["sustained"]:
         if block["failure"]:
@@ -596,10 +680,13 @@ def build_parser():
     run.add_argument("--models", nargs="+", required=True)
     run.add_argument("--port", type=int, default=11434, help="loopback Ollama port")
     run.add_argument("--out", type=Path, help="new output directory")
-    run.add_argument("--tracks", choices=TRACKS, nargs="+", default=TRACKS)
+    run.add_argument("--suite", choices=SUITES, default="1.7",
+                     help="1.7 (current) or 1.8 (staged pilot, protocol 4; not publishable)")
+    run.add_argument("--tracks", choices=ALL_TRACKS, nargs="+", help="default: every track of the suite")
     run.add_argument("--phases", choices=PHASES, nargs="+", default=PHASES)
-    run.add_argument("--passes", type=int, default=3,
-                     help="times every model runs the cases (default: 3), whatever the number of models")
+    run.add_argument("--passes", type=int,
+                     help="times every model runs the cases (default: 3 for suite 1.7, 1 for suite 1.8), "
+                          "whatever the number of models")
     # Removed in protocol 3; kept only to explain the replacement instead of a bare "unrecognized argument".
     run.add_argument("--cycles", help=argparse.SUPPRESS)
     run.add_argument("--seed", type=int, default=42)
@@ -611,8 +698,8 @@ def build_parser():
     run.add_argument("--thinking", choices=("off", "on", "default"), default="off",
                      help="off or on requests that mode; default leaves the model's own default")
     run.add_argument("--timeout", type=float, default=600, help="per-case deadline in seconds (default: 600)")
-    run.add_argument("--tool-rounds", type=int, default=6)
-    run.add_argument("--tool-calls", type=int, default=8)
+    run.add_argument("--tool-rounds", type=int, help="default: 6 for suite 1.7, 12 for suite 1.8")
+    run.add_argument("--tool-calls", type=int, help="default: 8 for suite 1.7, 16 for suite 1.8")
     run.add_argument("--sustain-seconds", type=float, default=90)
     run.add_argument("--sustain-tokens", type=int, default=128)
     run.add_argument("--sample-seconds", type=float, default=1)
@@ -627,8 +714,19 @@ def build_parser():
     return parser
 
 
+def apply_suite_defaults(args):
+    """Suite 1.8 (protocol 4) runs one pass plus a repeatability sample, and its agent cases make more
+    tool calls than suite 1.7's."""
+    pilot = getattr(args, "suite", "1.7") == "1.8"
+    for key, standard, protocol_4 in (("passes", 3, 1), ("tool_rounds", 6, 12), ("tool_calls", 8, 16)):
+        if getattr(args, key, None) is None:
+            setattr(args, key, protocol_4 if pilot else standard)
+    return args
+
+
 def apply_budget_defaults(args):
     """Thinking needs room for its reasoning tokens as well as the answer."""
+    apply_suite_defaults(args)
     thinking_on = args.thinking == "on"
     if args.context is None:
         args.context = 10240 if thinking_on else 4096
@@ -656,16 +754,33 @@ def run_benchmark(args, parser):
     models = [model_name(name) for name in args.models]
     if len(set(models)) != len(models):
         parser.error("model names must be distinct")
+    version, protocol, suite_cases = load_suite(args.suite)
+    suite_tracks = TRACKS if args.suite == "1.7" else ALL_TRACKS
+    args.tracks = list(args.tracks or suite_tracks)
+    if not set(args.tracks) <= set(suite_tracks):
+        parser.error(f"suite {args.suite} has no {sorted(set(args.tracks) - set(suite_tracks))} track")
     order = list(rounds(models, args.passes, args.seed))
-    selection = [case for case in dataset() if case.track in args.tracks]
+    selection = [case for case in suite_cases if case.track in args.tracks]
+    repeats = []
+    if args.suite == "1.8":
+        import suite_1_8
+        repeats = suite_1_8.repeat_sample(selection)
     plan = []
     for round_num, model_order in enumerate(order, 1):
         cases = selection[:]
         random.Random(f"{args.seed}:cases:{round_num}").shuffle(cases)
         plan.append({"models": model_order, "cases": [case.id for case in cases]})
+        if repeats:
+            plan[-1]["repeat"] = [case.id for case in repeats]
     if args.plan:
         print(json.dumps(plan, indent=2))
         return 0
+    if "code" in args.tracks:
+        from code_runner import SandboxError, check_jail
+        try:
+            check_jail()
+        except SandboxError as exc:
+            parser.error(f"the code track needs an OS sandbox: {exc}")
 
     api = Ollama(args.port)
     lock_path = Path(tempfile.gettempdir()) / f"light-eval-{os.getuid()}-{args.port}.lock"
@@ -674,11 +789,11 @@ def run_benchmark(args, parser):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise BenchError("A Light Eval run already holds this Ollama port.") from exc
-        return run_locked(args, api, models, plan, selection)
+        return run_locked(args, api, models, plan, selection, version, protocol)
 
 
-def run_locked(args, api, models, plan, selection):
-    version = api.json("version").get("version")
+def run_locked(args, api, models, plan, selection, version=VERSION, protocol=PROTOCOL_VERSION):
+    ollama_version = api.json("version").get("version")
     # llama-server keeps up to 8 GiB of earlier prompts in RAM by default. Cases are
     # independent, so the cache only costs memory; disable it on the Ollama server.
     cache_ram = server_setting("LLAMA_ARG_CACHE_RAM")
@@ -692,13 +807,13 @@ def run_locked(args, api, models, plan, selection):
     out = args.out or Path("results") / timestamp.strftime("%Y%m%dT%H%M%S%fZ")
     out.mkdir(parents=True, exist_ok=False)
     images = {case.image: base64.b64encode((ROOT / "fixtures" / case.image).read_bytes()).decode()
-              for case in selection if case.image}
+              for case in selection if getattr(case, "image", None)}
     by_id = {case.id: case for case in selection}
-    paths = hashed_paths()
+    paths = hashed_paths(args.suite)
     manifest = {
-        "suite_version": VERSION, "protocol_version": PROTOCOL_VERSION,
+        "suite_version": version, "protocol_version": protocol,
         "start_utc": timestamp.isoformat(), "status": "running",
-        "ollama_version": version, "python": platform.python_version(), "platform": platform.platform(),
+        "ollama_version": ollama_version, "python": platform.python_version(), "platform": platform.platform(),
         "device_tree_model": read_text("/proc/device-tree/model"), "os_release": read_text("/etc/os-release"),
         "cpu_governor": read_text("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"),
         "memory_page_bytes": os.sysconf("SC_PAGE_SIZE"), "swap_devices": read_text("/proc/swaps"),
@@ -714,13 +829,16 @@ def run_locked(args, api, models, plan, selection):
         "sustained_prompt_cache": "one repeated prompt reference; native prefix reuse allowed",
         "response_schemas": {case.id: case.response_schema for case in selection},
         "case_metadata": {case.id: {"track": case.track, "difficulty": case.difficulty,
-                                    "tools": list(case.tool_names) if case.track == "agent" else []}
+                                    "tools": list(case.tool_names) if case.track == "agent" else [],
+                                    **({"injection": has_injection(case)} if args.suite == "1.8" else {})}
                           for case in selection},
         "agent_finalization": "native tool loop, then one schema-constrained answer without tools; "
                               "all turns share the case deadline and contribute to metrics",
         "agent_scoring": "tool-use success checks required calls, arguments, order and final state; "
                          "exact final-answer success is reported separately; end-to-end requires both",
-        "options": {key: value for key, value in vars(args).items() if key != "out"},
+        # Suite 1.7 manifests keep protocol 3's options; "suite" is recorded only for the pilot.
+        "options": {key: value for key, value in vars(args).items()
+                    if key != "out" and not (key == "suite" and value == "1.7")},
         "inference_options": {**INFERENCE_OPTIONS,
                               "device": "cpu" if args.cpu_only or platform.system() != "Darwin" else "ollama-auto"},
         "models": metadata, "plan": plan, "sha256": {str(path.relative_to(ROOT)): file_hash(path) for path in paths},
@@ -742,9 +860,10 @@ def run_locked(args, api, models, plan, selection):
             write_json(out / "manifest.json", manifest)
             for round_num, row in enumerate(plan, 1):
                 candidates = [by_id[key] for key in row["cases"]]
+                repeats = [by_id[key] for key in row.get("repeat", ())]
                 for position, model in enumerate(row["models"], 1):
                     identity = {"round": round_num, "position": position, "model": model, "metadata": metadata[model]}
-                    run_slot(api, args, monitor, band, identity, candidates, images, records, blocks)
+                    run_slot(api, args, monitor, band, identity, candidates, images, records, blocks, repeats)
         errors = infrastructure_errors(read_rows(out / "cases.jsonl"), read_rows(out / "blocks.jsonl"))
         manifest["status"] = "complete_with_errors" if errors else "complete"
         if errors:

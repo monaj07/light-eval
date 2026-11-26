@@ -4,6 +4,28 @@ Each run records the suite version in `manifest.json`. Scores are comparable onl
 
 Since protocol 2, runs also record `protocol_version`: how runs are made, separately from the suite version, which covers cases and scoring. A protocol change can alter timings or how failures are classified without changing any case, so it no longer needs a new suite version, which would retire every published result.
 
+## Protocol 4, suite 1.8 pilot (unreleased)
+
+Suite 1.7 runs are unchanged and still record protocol 3; `build` produces the same README and charts. `--suite 1.8` runs the 160 staged suite 1.8 cases as a pilot, recording suite `1.8.0-pilot` and protocol 4. `tools/publish.py add` refuses these runs, because their suite isn't the current one. Protocol 4 becomes the default when suite 1.8 replaces 1.7.
+
+- **One pass plus a repeatability sample.** By default, every model runs the cases once (`--passes 1`). Then, with the model still loaded, it repeats a fixed 24-case sample, one case per tier and track (three hard ones for code), chosen by a fixed seed so every run repeats the same cases. Scores come from the first attempt only. The repeated rows have the phase `repeat`, and `summary.json` reports how many of them changed outcome.
+- **New case types:**
+  - instructions: free text checked by rules, with no JSON format;
+  - RAG: answer and sources, with `null` allowed in every case's format;
+  - code: model code is tested in the OS jail, and test generation is data;
+  - agent: suite 1.8's own simulator.
+
+  Each case type scores itself. Records add `failed_checks`, `rag_evaluation` and `scoring_s`, and planted-instruction cases are flagged `injection`.
+- **Agent tool budget:** 12 rounds and 16 calls by default (suite 1.7: 6 and 8), since hard cases need up to 8 calls plus retries. Malformed tool calls return an error result to the model, as real tools do, instead of ending the case.
+- **`wall_s` stops at the final answer.** Running a code answer's tests is recorded separately as `scoring_s`, and the case's temperatures and memory are taken at the answer too, so a slow test run doesn't count against it. `scoring_s` has no deadline of its own: each jailed test process has its own limit, so a test-generation case, which runs the reference and every mutant, can take a minute or more.
+- **Tool errors instead of crashes.** A tool result that isn't finite (a division by 1e-300, say) becomes an error result for the model. Before this fix, writing such a result to `cases.jsonl` would have aborted the run.
+- **Planted instructions are counted from what the model did.** Each row records `injection_followed` from the tool trace or the reply, whatever the final status, so a model that obeys the instruction and then times out or runs out of tool calls is still counted.
+- **Suite 1.7 records keep protocol 3's shape:** the new fields (`scoring_s`, `injection`, `options.suite`) are written only for pilot runs.
+- **`--plan` needs no sandbox,** and the manifest hashes only the staged images (`.png` and `.jpg`), never stray files such as `.DS_Store`.
+- **The code track needs an OS sandbox.** The runner checks for one before starting and refuses to start without it (on Linux, `sudo apt install bubblewrap`).
+- **`summary.json` adds** a per-model `injection` count (planted-instruction cases, followed and passed) and `rag_metrics` (answers and sources) for the RAG track. The printed summary shows the hard tier.
+- `manifest.json` hashes the staged images (`fixtures/v1_8/`) and records whether each case has a planted instruction.
+
 ## Protocol 3 (2026-11-23)
 
 Cases and scoring are unchanged (suite 1.7.0).

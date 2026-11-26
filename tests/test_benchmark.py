@@ -19,7 +19,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from cases import ROOT, Case, dataset, dispatch, score, score_tools
-from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, build_parser, inspect_models, print_summary, rounds, run_benchmark, run_case, run_locked, run_slot, summarize, temperature_summary
+from light_eval import COLD, DECODE_PROMPT, WARMUP, apply_budget_defaults, apply_suite_defaults, build_parser, inspect_models, print_summary, rounds, run_benchmark, run_case, run_locked, run_slot, summarize, temperature_summary
 from runtime import BenchError, Ollama, Telemetry, mac_memory, mac_total_memory_kib, range_stats, server_setting
 
 CASES = {case.prompt: case for case in dataset()}
@@ -116,9 +116,14 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
 
+def run_args(argv):
+    """Runner options as run_benchmark sees them after its suite defaults (passes, tool budgets)."""
+    return apply_suite_defaults(build_parser().parse_args(argv))
+
+
 class BenchmarkTest(unittest.TestCase):
     def scripted_case(self, case, replies, *options):
-        args = build_parser().parse_args(["run", "--models", "fixture", *options])
+        args = run_args(["run", "--models", "fixture", *options])
         api = Mock()
         requests = []
         responses = iter(replies)
@@ -357,7 +362,7 @@ class BenchmarkTest(unittest.TestCase):
         for case in cases:
             if case.image:
                 self.assertTrue((ROOT / "fixtures" / case.image).is_file(), case.image)
-        args = build_parser().parse_args(["run", "--models", "fixture"])
+        args = run_args(["run", "--models", "fixture"])
         for case in cases:
             if case.track != "agent":
                 continue
@@ -793,7 +798,7 @@ class BenchmarkTest(unittest.TestCase):
 
     def test_warm_cases_share_one_load(self):
         candidates = dataset()
-        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm", "--no-thermal-gate"])
+        args = run_args(["run", "--models", "fixture", "--phases", "warm", "--no-thermal-gate"])
         api, monitor = Mock(), Mock()
         metadata = {"digest": "fixture-digest", "capabilities": ["completion", "tools", "vision"]}
         resident = {"digest": "fixture-digest"}
@@ -836,7 +841,7 @@ class BenchmarkTest(unittest.TestCase):
 
     def test_failed_warmup_fails_only_its_own_case(self):
         candidates = [case for case in dataset() if case.track == "arithmetic"][:2]
-        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
+        args = run_args(["run", "--models", "fixture", "--phases", "warm"])
         api, monitor = Mock(), Mock()
         metadata = {"digest": "fixture-digest", "capabilities": ["completion"]}
         live, warmups = [], []
@@ -867,7 +872,7 @@ class BenchmarkTest(unittest.TestCase):
 
     def test_out_of_memory_forces_reload_despite_stale_residency(self):
         candidates = [case for case in dataset() if case.track == "arithmetic"][:3]
-        args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
+        args = run_args(["run", "--models", "fixture", "--phases", "warm"])
         api, monitor = Mock(), Mock()
         metadata = {"digest": "fixture-digest", "capabilities": ["completion"]}
         live, events = [], []
@@ -899,7 +904,7 @@ class BenchmarkTest(unittest.TestCase):
         for status, reloads in (("api_error", True), ("connection_error", True), ("protocol_error", True),
                                 ("context_overflow", False)):
             with self.subTest(status=status):
-                args = build_parser().parse_args(["run", "--models", "fixture", "--phases", "warm"])
+                args = run_args(["run", "--models", "fixture", "--phases", "warm"])
                 api, monitor = Mock(), Mock()
                 live, events = [], []
                 api.loaded.side_effect = lambda: live[:]
@@ -930,13 +935,13 @@ class BenchmarkTest(unittest.TestCase):
         plan = [{"models": ["fixture:latest"], "cases": [case.id for case in selection]}]
         for kind in ("case", "sustained warmup"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
-                args = build_parser().parse_args(["run", "--models", "fixture", "--no-thermal-gate",
+                args = run_args(["run", "--models", "fixture", "--no-thermal-gate",
                                                   "--out", str(Path(tmp) / "run")])
                 api = Mock()
                 api.json.return_value = {"version": "test"}
                 api.loaded.return_value = []
 
-                def slot(api, args, monitor, band, identity, candidates, images, records, blocks):
+                def slot(api, args, monitor, band, identity, candidates, images, records, blocks, repeats=()):
                     base = {"model": identity["model"], "round": identity["round"], "position": 1}
                     for index, case in enumerate(candidates):
                         status = "api_error" if kind == "case" and index == 0 else "pass"

@@ -107,9 +107,8 @@ STANDARD_PHASES = {"off": {"cold", "warm", "sustained"}, "on": {"warm"}}
 
 
 def standard_options(thinking):
-    args = build_parser().parse_args(["run", "--models", "model", "--thinking", thinking])
-    return {key: getattr(args, key) for key in PROTOCOL_OPTIONS if hasattr(args, key)} | {
-        key: getattr(apply_budget_defaults(args), key) for key in ("context", "max_tokens")}
+    args = apply_budget_defaults(build_parser().parse_args(["run", "--models", "model", "--thinking", thinking]))
+    return {key: getattr(args, key) for key in PROTOCOL_OPTIONS if hasattr(args, key)}
 
 
 def file_hash(path):

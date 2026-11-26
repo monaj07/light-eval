@@ -35,6 +35,14 @@ class InstructionCase:
     misses: tuple = ()  # (reply, frozenset of check names it fails)
     json: bool = False  # the reply must be one JSON object (a surrounding code fence is tolerated)
     track: str = "instructions"
+    image = None
+    response_schema = None  # free text: the format is part of what the case tests
+
+    def score_reply(self, content, trace=(), state=None):
+        return score_instructions(self, content)
+
+    def evaluation(self, content):
+        return {"failed_checks": failed_checks(self, content)}
 
 
 # Text helpers. Lines keep their order; trailing spaces never count against a reply.

@@ -48,6 +48,25 @@ class CodeCase:
     imports: frozenset = ALLOWED_IMPORTS
     track: str = "code"
     difficulty: str = "hard"
+    image = None
+
+    @property
+    def response_schema(self):
+        """The reply's JSON shape by kind, never by value; code answers are free text with a code block."""
+        if self.kind == "predict":
+            answer = {"type": "string"}
+        elif self.kind == "inverse":
+            answer = {"type": "integer"}
+        elif self.kind == "testgen":
+            return {"type": "object", "properties": {"tests": {"type": "array"}}, "required": ["tests"],
+                    "additionalProperties": False}
+        else:
+            return None
+        return {"type": "object", "properties": {"answer": answer}, "required": ["answer"],
+                "additionalProperties": False}
+
+    def score_reply(self, content, trace=(), state=None):
+        return score_code(self, content)
 
 
 def local(source, code):

@@ -85,3 +85,35 @@ def vision_cases():
                 "If you take the first bus you can, at what time do you arrive at Central Station? The "
                 '"answer" value must be a 24-hour "HH:MM" time.' + JSON_STRING, "14:55", "hard"),
     ]
+
+
+TRACKS = ("arithmetic", "structured", "agent", "vision", "context", "rag", "instructions", "code")
+VERSION = "1.8.0-pilot"  # becomes 1.8.0, in cases.py, at the switch
+
+
+def dataset():
+    """All 160 staged cases, in track order, for pilot runs (`light_eval.py run --suite 1.8`)."""
+    from suite_1_8_agent import AGENT_CASES
+    from suite_1_8_code import CODE_CASES
+    from suite_1_8_instructions import INSTRUCTION_CASES
+    from suite_1_8_rag import RAG_CASES
+    from suite_1_8_text import ARITHMETIC_CASES, CONTEXT_CASES, STRUCTURED_CASES
+    by_track = {"arithmetic": ARITHMETIC_CASES, "structured": STRUCTURED_CASES, "agent": AGENT_CASES,
+                "vision": vision_cases(), "context": CONTEXT_CASES, "rag": RAG_CASES,
+                "instructions": INSTRUCTION_CASES, "code": CODE_CASES}
+    return [case for track in TRACKS for case in by_track[track]]
+
+
+def repeat_sample(cases):
+    """Protocol 4's repeatability sample: 3 cases per track, one per tier (three hard ones for code),
+    chosen by a fixed seed so every run repeats the same 24 cases."""
+    import random
+    chosen = []
+    for track in TRACKS:
+        pool = sorted((case for case in cases if case.track == track), key=lambda case: case.id)
+        tiers = ("hard", "hard", "hard") if track == "code" else ("control", "challenge", "hard")
+        for index, tier in enumerate(tiers):
+            options = [case for case in pool if case.difficulty == tier and case not in chosen]
+            if options:
+                chosen.append(random.Random(f"repeat:{track}:{index}").choice(options))
+    return chosen

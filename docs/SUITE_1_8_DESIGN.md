@@ -328,6 +328,9 @@ Add 15% for the repeatability sample and the cooling between models: about **44 
 
 ## Rollout
 
+**Status (2026-11-26):** steps 1 to 3 are done; all 160 cases are written and blind-solved. Step 5's runner part is in place for pilots: `light_eval.py run --suite 1.8` runs protocol 4, as described in `CHANGELOG.md`. The publishing and site changes come with the switch.
+
+
 1. Agree this design.
 2. Review the suite 1.7 cases and retire the rudimentary ones.
 3. Write the cases track by track, each through the blind solve, with tests; the code runner and its safety checks come first, since the code track depends on them.

@@ -49,6 +49,17 @@ class RagTrackTest(unittest.TestCase):
                 self.assertEqual(score_rag(case, f"```json\n{reply(case.answer, reversed(case.sources))}\n```"),
                                  "pass")
 
+    def test_ids_copied_with_their_brackets_still_count(self):
+        for case in RAG_CASES:
+            if case.sources:
+                with self.subTest(case=case.id):
+                    bracketed = [f"[{pid}]" for pid in case.sources]
+                    self.assertEqual(score_rag(case, reply(case.answer, bracketed)), "pass")
+                    self.assertEqual(score_rag(case, reply(case.answer, bracketed + [case.sources[0]])),
+                                     "wrong_sources", "a passage cited twice, once with brackets")
+                    self.assertEqual(score_rag(case, reply(case.answer, [f"[[{case.sources[0]}]]"]
+                                                           + list(case.sources[1:]))), "wrong_sources")
+
     def test_mistakes(self):
         for case in RAG_CASES:
             ids = [pid for pid, _ in case.passages]

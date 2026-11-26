@@ -4,9 +4,16 @@ Each run records the suite version in `manifest.json`. Scores are comparable onl
 
 Since protocol 2, runs also record `protocol_version`: how runs are made, separately from the suite version, which covers cases and scoring. A protocol change can alter timings or how failures are classified without changing any case, so it no longer needs a new suite version, which would retire every published result.
 
-## Protocol 4, suite 1.8 pilot (unreleased)
+## Suite 1.8.0 and protocol 4 (2026-11-26)
 
-Suite 1.7 runs are unchanged and still record protocol 3; `build` produces the same README and charts. `--suite 1.8` runs the 160 staged suite 1.8 cases as a pilot, recording suite `1.8.0-pilot` and protocol 4. `tools/publish.py add` refuses these runs, because their suite isn't the current one. Protocol 4 becomes the default when suite 1.8 replaces 1.7.
+Suite 1.8.0 replaces suite 1.7.0 as the runner's default: 160 cases in eight tracks of 20 (arithmetic, structured, agent, vision, context, and the new RAG, instructions and code tracks), each with control, challenge and hard tiers. The cases, and why each 1.7 case was kept, reworked or retired, are in [`docs/SUITE_1_8_DESIGN.md`](docs/SUITE_1_8_DESIGN.md). Suite 1.8 runs record protocol 4.
+
+- **Only suite 1.8 runs can be published.** `tools/publish.py add` refuses suite 1.7 runs, runs from the pilot (`1.8.0-pilot`, made before the calibration below), runs with another protocol, and runs whose suite 1.8 case files (`suite_1_8*.py`, `code_runner.py`, `cases.py`, the images in `fixtures/v1_8/`) differ from today's.
+- **Suite 1.7 can still be run** with `--suite 1.7`, which takes protocol 3's path unchanged and records protocol 3, so its published results stay reproducible.
+- **The README and the site keep showing suite 1.7 until suite 1.8 has published runs**, then switch to it on their own. The note above the README results says so meanwhile. After the switch, the site keeps suite 1.7's results as an archive view (`?suite=1.7`, built into `site/data/archive/1.7/`), labelled as the previous suite.
+- **Results for suite 1.8 show:** a hard-tier column; a 95% Wilson interval for each accuracy, which also sets the ties in the site's ranking (suite 1.7 keeps its ranges across passes); how many planted instructions each model followed; and how many cases of the repeatability sample changed outcome. The heatmaps gain the three new tracks.
+
+The rest of this entry describes protocol 4, which was first written for pilot runs of the staged cases:
 
 - **One pass plus a repeatability sample.** By default, every model runs the cases once (`--passes 1`). Then, with the model still loaded, it repeats a fixed 24-case sample, one case per tier and track (three hard ones for code), chosen by a fixed seed so every run repeats the same cases. Scores come from the first attempt only. The repeated rows have the phase `repeat`, and `summary.json` reports how many of them changed outcome.
 - **New case types:**

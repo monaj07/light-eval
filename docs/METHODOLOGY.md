@@ -2,6 +2,8 @@
 
 This document describes how Light Eval runs and scores models. The [README](../README.md) has the quick start and the results; [CHANGELOG.md](../CHANGELOG.md) has the suite version history.
 
+> **Suite 1.8 is now the runner's default.** The track descriptions, case counts and pass schedule below are suite 1.7's (protocol 3), whose results the README still shows. Suite 1.8's eight tracks, three tiers, scoring and protocol 4 (one pass plus a repeatability sample) are described in [SUITE_1_8_DESIGN.md](SUITE_1_8_DESIGN.md) and [CHANGELOG.md](../CHANGELOG.md); this page will be rewritten for suite 1.8 when its results are published. The server setup, phases and telemetry are the same for both.
+
 ## Server setup
 
 In the warm phase, the script loads the model and runs one short warmup, then runs every warm case on that load. Loading and warmup are outside the measured case timings. This needs the server's prompt cache disabled (see Prompt cache below). With the default 8 GiB cache, every distinct case prompt stays in RAM: on a 16 GB Mac, `qwen3.5:4b` grew from 5.4 GB to 11.3 GB over 45 cases and swapped out 6.7 GB. With `LLAMA_ARG_CACHE_RAM=0`, one load of `qwen3.5:4b` ran all 58 cases of suite 1.5 with the runner flat at 3.5–4.6 GB, both with thinking off and over 51 minutes with thinking on, with no swap writes during the thinking-on run. After an out-of-memory error or a failed warmup, the next case gets a fresh load.

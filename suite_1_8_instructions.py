@@ -1,4 +1,4 @@
-"""Suite 1.8 instructions track (docs/SUITE_1_8_DESIGN.md), staged outside the live suite like suite_1_8.py.
+"""Suite 1.8 instructions track (docs/SUITE_1_8_DESIGN.md), collected by suite_1_8.py.
 
 Each case is a realistic writing task with constraints that a rule can check, in the style of IFEval. A
 case passes only if every check passes. Every check corresponds to a rule stated in the prompt, with the

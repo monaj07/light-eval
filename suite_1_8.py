@@ -1,9 +1,9 @@
-"""Suite 1.8 cases written so far (docs/SUITE_1_8_DESIGN.md), staged outside the live suite.
+"""Suite 1.8 (docs/SUITE_1_8_DESIGN.md), the runner's current suite: 160 cases in eight tracks.
 
-These cases are not part of `cases.dataset()` yet: adding them there would change suite 1.7,
-whose published results must stay comparable. When every 1.8 track is written and calibrated,
-they move into `cases.py` and `VERSION` becomes 1.8.0. Images live in fixtures/v1_8/, which the
-runner's fixture hashing (fixtures/*.png) does not include while 1.7 is current.
+This module holds the vision cases, the track order, VERSION, dataset() and the repeatability
+sample; the other tracks are in suite_1_8_text.py, suite_1_8_agent.py, suite_1_8_rag.py,
+suite_1_8_instructions.py and suite_1_8_code.py. Suite 1.7, the previous suite, stays in cases.py
+unchanged, so its published results stay reproducible. Images live in fixtures/v1_8/.
 
 Vision: ten photographs taken by the repository author (fixtures/v1_8/photos/, prepared by
 fixtures/prepare_photos.py) and ten drawings (fixtures/suite_1_8_fixtures.py, whose docstrings
@@ -88,11 +88,11 @@ def vision_cases():
 
 
 TRACKS = ("arithmetic", "structured", "agent", "vision", "context", "rag", "instructions", "code")
-VERSION = "1.8.0-pilot"  # becomes 1.8.0, in cases.py, at the switch
+VERSION = "1.8.0"
 
 
 def dataset():
-    """All 160 staged cases, in track order, for pilot runs (`light_eval.py run --suite 1.8`)."""
+    """All 160 cases, in track order."""
     from suite_1_8_agent import AGENT_CASES
     from suite_1_8_code import CODE_CASES
     from suite_1_8_instructions import INSTRUCTION_CASES

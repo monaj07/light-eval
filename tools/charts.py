@@ -158,12 +158,14 @@ def dumbbell(rows, theme, title):
     return c.svg()
 
 
-def heatmap(rows, columns, theme, title):
+def heatmap(rows, columns, theme, title, per_track=13):
     """Rows of models and modes, columns of tracks; each cell is shaded by the share passed.
 
     rows: [{"label", "mode", "values": [percent per column]}]
     """
-    cell_w, cell_h, top = 104, 44, 112
+    # Narrower cells once there are more tracks, so the chart stays near the README's width.
+    many = len(columns) > 6
+    cell_w, cell_h, top = (84 if many else 104), 44, 112
     label_w = label_column([row["label"] for row in rows], 270)
     width = label_w + cell_w * len(columns) + 30
     height = top + cell_h * len(rows) + 46
@@ -174,7 +176,8 @@ def heatmap(rows, columns, theme, title):
     legend_x = c.legend_dot(legend_x, 36, c.t["off"], "thinking off")
     c.legend_dot(legend_x, 36, c.t["on"], "thinking on")
     for index, name in enumerate(columns):
-        c.text(label_w + cell_w * index + cell_w / 2, top - 14, name, size=14, fill="ink", anchor="middle", weight="700")
+        c.text(label_w + cell_w * index + cell_w / 2, top - 14, name, size=12.5 if many else 14, fill="ink", anchor="middle",
+               weight="700")
     for r, row in enumerate(rows):
         y = top + cell_h * r
         c.dot(24 + 7, y + cell_h / 2, 7, c.t[row["mode"]])
@@ -200,7 +203,7 @@ def heatmap(rows, columns, theme, title):
     # The overall column is set apart by a gap line.
     x = label_w + cell_w * (len(columns) - 1)
     c.line(x, top - 4, x, top + cell_h * len(rows), stroke="ink2", width=1.5)
-    c.text(24, height - 16, "Each track has 13 cases. n/a: the model can't attempt that track (for example, "
+    c.text(24, height - 16, f"Each track has {per_track} cases. n/a: the model can't attempt that track (for example, "
            "no vision). The last column covers the tracks each model supports.", size=12)
     return c.svg()
 
@@ -332,7 +335,10 @@ def dumbbell_mobile(rows, theme, title):
 
 def heatmap_mobile(rows, columns, theme, title):
     """One block per model: its name, then a row of cells, one per track."""
-    short = {"Arithmetic": "Arith", "Structured": "Struct", "Context": "Ctx"}
+    short = {"Arithmetic": "Arith", "Structured": "Struct", "Context": "Ctx", "Instructions": "Instr"}
+    if len(columns) > 6:
+        short["Vision"] = "Vis"
+    small = len(columns) > 6  # suite 1.8's nine columns need smaller text to fit a phone
     cell_w = (MOBILE_W - 48) / len(columns)
     block_h, top = 70, 150
     height = top + block_h * len(rows) + 70
@@ -340,7 +346,7 @@ def heatmap_mobile(rows, columns, theme, title):
     c = _mobile_canvas(theme, height, title, ["Share of each track's cases passed.", f"{better} cells are better."])
     _mobile_legend(c, 112, [(c.t["off"], "thinking off", False), (c.t["on"], "thinking on", False)])
     for index, name in enumerate(columns):
-        c.text(24 + cell_w * index + cell_w / 2, top - 6, short.get(name, name), size=14, fill="ink",
+        c.text(24 + cell_w * index + cell_w / 2, top - 6, short.get(name, name), size=12.5 if small else 14, fill="ink",
                anchor="middle", weight="700")
     ramp = BLUES if c.t is THEMES["light"] else BLUES[::-1][2:]
     for r, row in enumerate(rows):
@@ -357,7 +363,7 @@ def heatmap_mobile(rows, columns, theme, title):
                 continue
             fill = ramp[min(len(ramp) - 1, round(value / 100 * (len(ramp) - 1)))]
             c.parts.append(f'<rect x="{x + 2:.1f}" y="{cy}" width="{cell_w - 4:.1f}" height="30" rx="5" fill="{fill}"/>')
-            c.text(x + cell_w / 2, cy + 20.5, f"{value:.0f}%", size=14.5, anchor="middle",
+            c.text(x + cell_w / 2, cy + 20.5, f"{value:.0f}%", size=12.5 if small else 14.5, anchor="middle",
                    weight="700", color="#ffffff" if luminance(fill) < 0.3 else "#0b0b0b")
     c.text(24, height - 40, "n/a: the model can't attempt that track.", size=13.5)
     c.text(24, height - 20, "All: the tracks each model supports.", size=13.5)

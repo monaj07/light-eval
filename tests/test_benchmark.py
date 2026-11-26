@@ -117,8 +117,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run_args(argv):
-    """Runner options as run_benchmark sees them after its suite defaults (passes, tool budgets)."""
-    return apply_suite_defaults(build_parser().parse_args(argv))
+    """Suite 1.7 runner options as run_benchmark sees them after its suite defaults (passes, tool budgets).
+    These tests cover suite 1.7, the previous suite, which takes protocol 3's path; tests/test_pilot.py
+    covers suite 1.8."""
+    return apply_suite_defaults(build_parser().parse_args([*argv, *(["--suite", "1.7"] if "--suite" not in argv else [])]))
 
 
 class BenchmarkTest(unittest.TestCase):
@@ -639,7 +641,7 @@ class BenchmarkTest(unittest.TestCase):
         self.assertIn("--cycles was replaced by --passes", stderr.getvalue())
         plan = io.StringIO()
         with contextlib.redirect_stdout(plan):
-            run_benchmark(parser.parse_args(["run", "--models", "a", "b", "c", "d", "--plan"]), parser)
+            run_benchmark(parser.parse_args(["run", "--models", "a", "b", "c", "d", "--plan", "--suite", "1.7"]), parser)
         self.assertEqual(len(json.loads(plan.getvalue())), 3)
 
     def test_typed_scoring(self):
@@ -1000,7 +1002,7 @@ class BenchmarkTest(unittest.TestCase):
                     Ollama(int(port)).json("slow", timeout=.05)
                 self.assertEqual(caught.exception.status, "timeout")
                 out = Path(tmp) / "eval"
-                command = [sys.executable, str(ROOT / "light_eval.py"), "run", "--models", "alpha", "beta",
+                command = [sys.executable, str(ROOT / "light_eval.py"), "run", "--suite", "1.7", "--models", "alpha", "beta",
                            "--port", port, "--passes", "2", "--no-thermal-gate", "--cpu-only", "--sustain-seconds", ".025", "--out", str(out)]
                 result = subprocess.run(command, capture_output=True, text=True, timeout=25, check=False)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

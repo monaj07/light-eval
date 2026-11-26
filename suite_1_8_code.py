@@ -1,4 +1,4 @@
-"""Suite 1.8 code track (docs/SUITE_1_8_DESIGN.md), staged outside the live suite like suite_1_8.py.
+"""Suite 1.8 code track (docs/SUITE_1_8_DESIGN.md), collected by suite_1_8.py.
 
 Twenty hard cases in four kinds:
 

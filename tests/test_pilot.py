@@ -15,7 +15,7 @@ from dataclasses import fields, replace
 
 import suite_1_8
 from code_runner import SandboxError, check_jail
-from light_eval import ALL_TRACKS, build_parser, hashed_paths, run_benchmark, summarize
+from light_eval import ALL_TRACKS, apply_suite_defaults, build_parser, hashed_paths, run_benchmark, summarize
 from suite_1_8_agent import concrete_value
 from test_benchmark import BenchmarkTest, Handler, run_args
 
@@ -55,26 +55,27 @@ class PilotPlanTest(unittest.TestCase):
         self.assertEqual({case.track for case in repeated}, set(ALL_TRACKS))
 
     def test_suite_1_7_plan_is_unchanged(self):
-        rounds = plan()
+        rounds = plan("--suite", "1.7")
         self.assertEqual(len(rounds), 3)
         self.assertNotIn("repeat", rounds[0])
         self.assertEqual(len(rounds[0]["cases"]), 65)
 
     def test_defaults_by_suite(self):
-        args = run_args(["run", "--models", "a", "--suite", "1.8"])
-        self.assertEqual((args.passes, args.tool_rounds, args.tool_calls), (1, 12, 16))
+        args = apply_suite_defaults(build_parser().parse_args(["run", "--models", "a"]))
+        self.assertEqual((args.suite, args.passes, args.tool_rounds, args.tool_calls), ("1.8", 1, 12, 16),
+                         "suite 1.8 is the default")
         args = run_args(["run", "--models", "a"])
         self.assertEqual((args.passes, args.tool_rounds, args.tool_calls), (3, 6, 8))
 
     def test_tracks_must_belong_to_the_suite(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-            plan("--tracks", "rag")
+            plan("--suite", "1.7", "--tracks", "rag")
         self.assertEqual(len(plan("--suite", "1.8", "--tracks", "rag", "instructions")[0]["cases"]), 40)
 
     def test_staged_images_are_hashed_only_for_suite_1_8(self):
         staged = [path for path in hashed_paths("1.8") if "v1_8" in path.parts]
         self.assertGreaterEqual(len(staged), 20)
-        self.assertFalse(any("v1_8" in path.parts for path in hashed_paths()))
+        self.assertFalse(any("v1_8" in path.parts for path in hashed_paths("1.7")))
 
 
 class PilotRunCaseTest(unittest.TestCase):
@@ -263,7 +264,7 @@ class PilotEndToEndTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             manifest = json.loads((out / "manifest.json").read_text())
             self.assertEqual((manifest["status"], manifest["suite_version"], manifest["protocol_version"]),
-                             ("complete", "1.8.0-pilot", 4))
+                             ("complete", "1.8.0", 4))
             self.assertIn("fixtures/v1_8/photos/kangaroos.jpg", manifest["sha256"])
             self.assertTrue(manifest["case_metadata"]["agent-frost-injection"]["injection"])
             rows = [json.loads(line) for line in (out / "cases.jsonl").read_text().splitlines()]

@@ -5,6 +5,8 @@
 const app = document.getElementById("app");
 const tipBox = document.getElementById("tip");
 let D = null, M = null;               // data and model-family metadata
+let MAIN = null;                      // the main site.json, when an archived suite is shown
+let BASE = "data/";                   // where the shown suite's data lives (data/archive/<suite>/ for an archive)
 let caseText = null;                  // full prompts, loaded by the Cases page
 const modelDetail = {};               // per-model case detail, loaded by model pages
 const charts = [];                    // {el, draw} for charts redrawn on resize
@@ -24,7 +26,12 @@ const num = (v, d = 1) => (v == null ? "—" : v.toFixed(d));
 const plural = (n, word) => `${n} ${n === 1 ? word : word.endsWith("s") ? `${word}es` : `${word}s`}`;
 const modeName = (e) => `Thinking ${e.thinking}`;
 const trackName = (id) => D.tracks.find((t) => t.id === id)?.name ?? id;
-const shortTrack = { arithmetic: "Arith", structured: "Struct", agent: "Agent", vision: "Vision", context: "Context" };
+const shortTrack = { arithmetic: "Arith", structured: "Struct", agent: "Agent", vision: "Vision", context: "Context",
+  rag: "RAG", instructions: "Instr", code: "Code" };
+const tierName = (tier) => tier[0].toUpperCase() + tier.slice(1);
+const hasTier = (tier) => D.tiers.includes(tier);
+const perTrack = () => D.tracks[0]?.cases ?? 0;
+const count = (v) => num(v, v % 1 ? 1 : 0);
 
 function family(model) {
   return M.families.find((f) => new RegExp(f.match, "i").test(model)) || M.default;
@@ -66,9 +73,25 @@ function tags(e, { mode = false } = {}) {
   if (!e.official) out.push(`<span class="tag">exploratory</span>`);
   return out.join("");
 }
+/* How far a result's accuracy could move: its 95% interval when the suite reports one (suite 1.8,
+   one pass), otherwise its range across passes. Ranks tie when these overlap. */
 function range(e) {
+  if (e.interval) {
+    const [lo, hi] = e.interval;
+    return { lo, hi, label: "95% interval", text: `${Math.round(lo)}–${Math.round(hi)}%` };
+  }
   const lo = Math.min(...e.pass_accuracy), hi = Math.max(...e.pass_accuracy);
-  return { lo, hi, text: e.passes > 1 ? (Math.round(lo) === Math.round(hi) ? `${Math.round(lo)}% in every pass` : `${Math.round(lo)}–${Math.round(hi)}%`) : "one pass" };
+  return { lo, hi, label: "Across passes", text: e.passes > 1 ? (Math.round(lo) === Math.round(hi) ? `${Math.round(lo)}% in every pass` : `${Math.round(lo)}–${Math.round(hi)}%`) : "one pass" };
+}
+function tierRows(e) {
+  return D.tiers.filter((t) => t !== "control").map((t) => `<dt>${tierName(t)}</dt><dd>${pct(e[`${t}_accuracy`])}</dd>`).join("");
+}
+function extraRows(e) {
+  return (e.injection ? `<dt>Planted instructions followed</dt><dd>${count(e.injection.followed)} of ${count(e.injection.cases)}</dd>` : "")
+    + (e.repeat ? `<dt>Repeats that changed</dt><dd>${e.repeat.changed} of ${e.repeat.cases}</dd>` : "");
+}
+function splitRows(sp) {
+  return D.tiers.map((t) => `<dt>${tierName(t)}</dt><dd>${count(sp[t].passed)} of ${sp[t].total}</dd>`).join("");
 }
 function memText(e) {
   if (e.peak_mem_gb == null) return "—";
@@ -87,8 +110,8 @@ function entryTip(e) {
   return `<h4>${logo(e.model)}${esc(e.name)}</h4>
     <div class="muted">${modeName(e)} · ${e.threads} threads · ${plural(e.passes, "pass")}</div>
     <dl><dt>Accuracy</dt><dd><b>${pct(e.accuracy)}</b> (${num(e.score, e.score % 1 ? 1 : 0)} of ${e.supported_cases} cases)</dd>
-    <dt>Across passes</dt><dd>${r.text}</dd>
-    <dt>Challenges</dt><dd>${pct(e.challenge_accuracy)}</dd>
+    <dt>${r.label}</dt><dd>${r.text}</dd>
+    ${tierRows(e)}${extraRows(e)}
     <dt>Time per case</dt><dd>${dur(e.median_s)}</dd>
     <dt>Peak memory</dt><dd>${memText(e)}</dd>
     <dt>Peak CPU</dt><dd>${e.temp_peak == null ? "—" : `${e.temp_peak.toFixed(0)} °C`}</dd>
@@ -150,7 +173,7 @@ addEventListener("scroll", () => { if (lastPointer !== "touch") hideTip(); }, { 
 const primary = () => D.entries.filter((e) => e.primary);
 function ranked(list) {
   return list.map((e) => ({
-    e, rank: 1 + list.filter((o) => o !== e && Math.min(...o.pass_accuracy) > Math.max(...e.pass_accuracy) + 1e-9).length,
+    e, rank: 1 + list.filter((o) => o !== e && range(o).lo > range(e).hi + 1e-9).length,
   }));
 }
 function filtered() {
@@ -166,7 +189,7 @@ function trackSplit(e, track) {
     const set = ids.filter((c) => c.difficulty === kind);
     return { passed: set.reduce((s, c) => s + (e.case_pass[c.id] ?? 0), 0), total: set.length };
   };
-  return { control: part("control"), challenge: part("challenge") };
+  return Object.fromEntries(D.tiers.map((t) => [t, part(t)]));
 }
 
 /* ---------- small SVG helpers ---------- */
@@ -410,7 +433,7 @@ function rankCell(rank, list) {
 }
 function accCell(e) {
   const r = range(e);
-  const spread = e.passes > 1 && r.hi - r.lo > 0.01 ? `<s style="left:${r.lo}%;width:${r.hi - r.lo}%"></s>` : "";
+  const spread = (e.interval || e.passes > 1) && r.hi - r.lo > 0.01 ? `<s style="left:${r.lo}%;width:${r.hi - r.lo}%"></s>` : "";
   return `<div class="acc"><b>${pct(e.accuracy)}</b><span class="accbar ${e.thinking}"><i style="width:${e.accuracy}%"></i>${spread}</span></div>`;
 }
 function trackCells(e) {
@@ -418,15 +441,16 @@ function trackCells(e) {
     const v = e.tracks[t.id];
     if (v == null) return `<td class="heat-td"><div class="heat na">n/a</div></td>`;
     const sp = trackSplit(e, t.id);
-    return `<td class="heat-td"><div class="heat" style="${heat(v)}" tabindex="0" data-tip="${tip(`<h4>${esc(e.name)} · ${t.name}</h4><div class="muted">${modeName(e)}</div><dl><dt>Accuracy</dt><dd>${pct(v)}</dd><dt>Control</dt><dd>${num(sp.control.passed, sp.control.passed % 1 ? 1 : 0)} of ${sp.control.total}</dd><dt>Challenge</dt><dd>${num(sp.challenge.passed, sp.challenge.passed % 1 ? 1 : 0)} of ${sp.challenge.total}</dd></dl>`)}">${Math.round(v)}</div></td>`;
+    return `<td class="heat-td"><div class="heat" style="${heat(v)}" tabindex="0" data-tip="${tip(`<h4>${esc(e.name)} · ${t.name}</h4><div class="muted">${modeName(e)}</div><dl><dt>Accuracy</dt><dd>${pct(v)}</dd>${splitRows(sp)}</dl>`)}">${Math.round(v)}</div></td>`;
   }).join("");
 }
-const COLUMNS = [
+const columns = () => [
   { key: "rank", label: "Rank", num: true },
   { key: "name", label: "Model" },
   { key: "accuracy", label: "Accuracy" },
   { key: "challenge_accuracy", label: "Challenges", num: true },
-  ...["arithmetic", "structured", "agent", "vision", "context"].map((t) => ({ key: `track:${t}`, label: shortTrack[t], num: true })),
+  ...(hasTier("hard") ? [{ key: "hard_accuracy", label: "Hard", num: true }] : []),
+  ...D.tracks.map((t) => ({ key: `track:${t.id}`, label: shortTrack[t.id] ?? t.name, num: true })),
   { key: "median_s", label: "Time / case", num: true },
   { key: "peak_mem_gb", label: "Memory", num: true },
   { key: "temp_peak", label: "Peak °C", num: true },
@@ -440,7 +464,7 @@ function sortValue(item, key) {
 }
 function leaderboardTable(items, { limit = null, sortable = true } = {}) {
   const rows = limit ? items.slice(0, limit) : items;
-  const head = COLUMNS.map((c) => {
+  const head = columns().map((c) => {
     const active = sortable && c.key === sortKey;
     const label = sortable ? `<button type="button" data-sort="${c.key}">${c.label}${active ? (sortDir < 0 ? " ↓" : " ↑") : ""}</button>` : c.label;
     return `<th class="${c.num ? "num" : ""}"${active ? ` aria-sort="${sortDir < 0 ? "descending" : "ascending"}"` : ""}>${label}</th>`;
@@ -450,6 +474,7 @@ function leaderboardTable(items, { limit = null, sortable = true } = {}) {
     <td><div class="model-cell">${logo(e.model)}<div><a href="#/model/${esc(e.model_slug)}" data-tip="${tip(entryTip(e))}">${esc(e.name)}</a><div>${tags(e, { mode: true })}</div></div></div></td>
     <td>${accCell(e)}</td>
     <td class="num">${pct(e.challenge_accuracy)}</td>
+    ${hasTier("hard") ? `<td class="num">${pct(e.hard_accuracy)}</td>` : ""}
     ${trackCells(e)}
     <td class="num">${dur(e.median_s)}</td>
     <td class="num"><span class="mem ${e.memory || ""}">${gb(e.peak_mem_gb)}</span></td>
@@ -458,7 +483,7 @@ function leaderboardTable(items, { limit = null, sortable = true } = {}) {
   const cards = rows.map(({ e, rank }) => `<div class="card lb-card">
     <div class="lb-card-head"><span class="r">${rank}</span>${logo(e.model)}<div><a href="#/model/${esc(e.model_slug)}">${esc(e.name)}</a><div>${tags(e, { mode: true })}</div></div></div>
     ${accCell(e)}
-    <div class="lb-card-stats"><div>Time / case<b>${dur(e.median_s)}</b></div><div>Memory<b class="mem ${e.memory || ""}">${gb(e.peak_mem_gb)}</b></div><div>Challenges<b>${pct(e.challenge_accuracy)}</b></div></div>
+    <div class="lb-card-stats"><div>Time / case<b>${dur(e.median_s)}</b></div><div>Memory<b class="mem ${e.memory || ""}">${gb(e.peak_mem_gb)}</b></div><div>${hasTier("hard") ? `Hard<b>${pct(e.hard_accuracy)}</b>` : `Challenges<b>${pct(e.challenge_accuracy)}</b>`}</div></div>
     <div class="minitracks">${D.tracks.map((t) => { const v = e.tracks[t.id]; return v == null ? `<div class="heat na">${shortTrack[t.id]}<small>n/a</small></div>` : `<div class="heat" style="${heat(v)}">${shortTrack[t.id]}<small>${Math.round(v)}%</small></div>`; }).join("")}</div>
   </div>`).join("");
   return `<div class="table-wrap responsive card"><table class="lb"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div><div class="cards">${cards}</div>`;
@@ -498,16 +523,22 @@ function pageLeaderboard() {
   const items = sortItems(ranked(filtered()));
   const seg = (name, options) => `<div class="seg" role="group" aria-label="${name}">${options.map(([v, l]) =>
     `<button type="button" data-f="${name}" data-v="${v}" aria-pressed="${F[name] === v}">${l}</button>`).join("")}</div>`;
+  const intervals = D.entries.some((e) => e.interval);
+  const otherThreads = D.entries.some((e) => !e.primary && e.threads === 2);
+  if (!otherThreads) F.threads = "main";
+  const how = intervals
+    ? "Ranked by accuracy on the tracks each model supports, from one pass. Results whose 95% intervals overlap share a rank (=)."
+    : `Ranked by accuracy on the tracks each model supports, averaged over its passes. Results whose ranges across passes overlap share a rank (=).`;
   app.innerHTML = `<h1>Leaderboard</h1>
-    <p class="lede">${new Set(items.map((x) => x.e.model)).size} models, ${items.length} results, on ${esc(D.device.name)} with ${F.threads === "main" ? D.primary_threads : 2} CPU threads and up to ${Math.max(0, ...items.map((x) => x.e.passes))} passes each. Ranked by accuracy on the tracks each model supports, averaged over its passes. Results whose ranges across passes overlap share a rank (=). One case is 1.5 points.</p>
+    <p class="lede">${new Set(items.map((x) => x.e.model)).size} models, ${items.length} results, on ${esc(D.device.name)} with ${F.threads === "main" ? D.primary_threads : 2} CPU threads${intervals ? "" : ` and up to ${Math.max(0, ...items.map((x) => x.e.passes))} passes each`}. ${how} One case is ${num(100 / D.totals.cases, 1)} points.</p>
     <div class="controls">
       ${seg("thinking", [["all", "All"], ["off", "Thinking off"], ["on", "Thinking on"]])}
-      ${seg("threads", [["main", "4 threads"], ["2", "2 threads"]])}
+      ${otherThreads ? seg("threads", [["main", "4 threads"], ["2", "2 threads"]]) : ""}
       <label class="check"><input type="checkbox" id="fits" ${F.fits ? "checked" : ""}> Fits in 8 GB</label>
       <input class="search" id="q" type="search" placeholder="Search models" value="${esc(F.q)}" aria-label="Search models">
     </div>
     <div id="lb">${items.length ? leaderboardTable(items) : `<p class="empty">No results match these filters.</p>`}</div>
-    <p class="note">Track cells show the share of that track's 13 cases passed; hover for control and challenge counts. The bar marks the range across passes where it isn't a single value. ${F.threads === "main" ? "The 4-thread view includes gemma4:e4b at 2 threads, the only thread count it was run at." : "2-thread runs: thinking on is a single pass."}</p>`;
+    <p class="note">Track cells show the share of that track's ${perTrack()} cases passed; hover for the counts in each tier. ${intervals ? "The bar marks the 95% interval: how far the accuracy could move by chance with this many cases." : "The bar marks the range across passes where it isn't a single value."} ${!otherThreads ? "" : F.threads === "main" ? "The 4-thread view includes gemma4:e4b at 2 threads, the only thread count it was run at." : "2-thread runs: thinking on is a single pass."}</p>`;
   app.querySelectorAll("button[data-f]").forEach((b) => b.addEventListener("click", () => { F[b.dataset.f] = b.dataset.v; render(); }));
   document.getElementById("fits").addEventListener("change", (ev) => { F.fits = ev.target.checked; render(); });
   const q = document.getElementById("q");
@@ -533,13 +564,12 @@ function pageTracks(track) {
     `<button type="button" role="tab" data-track="${id}" aria-pressed="${(track || "") === id}">${name}</button>`).join("")}</div>`;
   let body;
   if (!track) {
-    const head = `<tr><th>Model</th>${D.tracks.map((t) => `<th class="num">${t.name}</th>`).join("")}<th class="num">Control</th><th class="num">Challenge</th><th class="num">All</th></tr>`;
+    const head = `<tr><th>Model</th>${D.tracks.map((t) => `<th class="num">${t.name}</th>`).join("")}${D.tiers.map((t) => `<th class="num">${tierName(t)}</th>`).join("")}<th class="num">All</th></tr>`;
     const rows = list.map((e) => `<tr><td><div class="model-cell">${logo(e.model)}<div><a href="#/model/${esc(e.model_slug)}">${esc(e.name)}</a><div>${tags(e, { mode: true })}</div></div></div></td>${trackCells(e)}
-      <td class="heat-td"><div class="heat" style="${heat(e.control_accuracy)}">${Math.round(e.control_accuracy)}</div></td>
-      <td class="heat-td"><div class="heat" style="${heat(e.challenge_accuracy)}">${Math.round(e.challenge_accuracy)}</div></td>
+      ${D.tiers.map((t) => `<td class="heat-td"><div class="heat" style="${heat(e[`${t}_accuracy`])}">${Math.round(e[`${t}_accuracy`])}</div></td>`).join("")}
       <td class="heat-td"><div class="heat" style="${heat(e.accuracy)}">${Math.round(e.accuracy)}</div></td></tr>`).join("");
     body = `<div class="card table-wrap"><table class="lb pinned"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
-      <p class="note">Share of cases passed, in percent; stronger colour is better. Control cases are the easy baseline in each track, challenges the hard ones. n/a: the model can't attempt that track.</p>`;
+      <p class="note">Share of cases passed, in percent; stronger colour is better. Control cases are the easy baseline in each track, ${hasTier("hard") ? "challenges are harder, and hard cases are meant to stretch the best models" : "challenges the hard ones"}. n/a: the model can't attempt that track.</p>`;
   } else {
     const t = D.tracks.find((x) => x.id === track);
     const able = list.filter((e) => e.tracks[track] != null).sort((a, b) => b.tracks[track] - a.tracks[track] || a.median_s - b.median_s);
@@ -558,7 +588,7 @@ function pageTracks(track) {
       const sp = trackSplit(e, track);
       return { label: entryLabel(e), end: e.tracks[track], value: `${Math.round(e.tracks[track])}%`, href: `#/model/${e.model_slug}`,
         segs: [{ from: 0, to: e.tracks[track], color: `var(--${e.thinking})` }],
-        tip: `<h4>${logo(e.model)}${esc(e.name)}</h4><div class="muted">${modeName(e)}</div><dl><dt>${t.name}</dt><dd>${pct(e.tracks[track])}</dd><dt>Control</dt><dd>${num(sp.control.passed, sp.control.passed % 1 ? 1 : 0)} of ${sp.control.total}</dd><dt>Challenge</dt><dd>${num(sp.challenge.passed, sp.challenge.passed % 1 ? 1 : 0)} of ${sp.challenge.total}</dd></dl>` };
+        tip: `<h4>${logo(e.model)}${esc(e.name)}</h4><div class="muted">${modeName(e)}</div><dl><dt>${t.name}</dt><dd>${pct(e.tracks[track])}</dd>${splitRows(sp)}</dl>` };
     }), { min: 0, max: 100, ticks: [0, 25, 50, 75, 100], tick: (v) => `${v}%`, title: `${t.name} accuracy` }));
     bindTabs();
     return;
@@ -622,7 +652,7 @@ function pageHardware() {
   pairs.sort((a, b) => a.e4.thinking.localeCompare(b.e4.thinking) || a.e4.median_s - b.e4.median_s);
   const off = primary().filter((e) => e.thinking === "off" && e.first_load_s != null);
   app.innerHTML = `<h1>Hardware</h1>
-    <p class="lede">What each model asks of the Pi: memory, speed, heat, and how much the four CPU cores help.</p>
+    <p class="lede">What each model asks of the Pi: memory, speed and heat${pairs.length ? ", and how much the four CPU cores help" : ""}.</p>
     ${off.length ? `<section class="section section-first"><div class="section-head"><h2>Loading and sustained speed</h2><p>Thinking-off runs only: these measure the hardware, so they aren't repeated with thinking on.</p></div>
       <div class="card table-wrap"><table class="lb"><thead><tr><th>Model</th><th class="num">First load</th><th class="num">Sustained generation</th><th class="num">Change over 90 s</th></tr></thead><tbody>
       ${off.sort((a, b) => a.first_load_s - b.first_load_s).map((e) => `<tr><td><div class="model-cell">${logo(e.model)}<a href="#/model/${esc(e.model_slug)}">${esc(e.name)}</a></div></td><td class="num">${dur(e.first_load_s)}</td><td class="num">${num(e.sustained_tok_s)} tokens/s</td><td class="num">${e.sustained_change == null ? "—" : `${(100 * e.sustained_change).toFixed(1)}%`}</td></tr>`).join("")}
@@ -636,8 +666,8 @@ function pageHardware() {
       <div class="card pad"><h3>Where each case's time goes</h3><div class="chart" id="hw-split"></div><p class="note">Median per case: reading the prompt (prompt processing) and writing the answer (generation, including thinking).</p></div>
       <div class="card pad"><h3>Tokens per second</h3><div class="chart" id="hw-speed"></div><p class="note">Prompt processing (light) and generation (dark), medians over the warm cases.</p></div>
     </div>
-    <section class="section"><div class="section-head"><h2>2 against 4 threads</h2><p>Median time per case for the same model and mode. Four threads speed up reading the prompt, but can slow down generation.</p></div>
-      <div class="card pad"><div class="chart" id="hw-threads"></div></div></section>`;
+    ${pairs.length ? `<section class="section"><div class="section-head"><h2>2 against 4 threads</h2><p>Median time per case for the same model and mode. Four threads speed up reading the prompt, but can slow down generation.</p></div>
+      <div class="card pad"><div class="chart" id="hw-threads"></div></div></section>` : ""}`;
   app.querySelectorAll("button[data-hw]").forEach((b) => b.addEventListener("click", () => { hwMode = b.dataset.hw; render(); }));
   const memColor = (e) => (e.memory === "out" ? "var(--bad)" : e.memory === "tight" ? "var(--warn)" : `var(--${e.thinking})`);
   const maxMem = Math.max(10.5, ...list.map((e) => e.peak_mem_gb ?? 0) );
@@ -667,7 +697,7 @@ function pageHardware() {
     segs: [{ from: 0, to: e.prefill_tok_s, color: `color-mix(in srgb, var(--${e.thinking}) 40%, var(--panel))` }, { from: 0, to: e.decode_tok_s, color: `var(--${e.thinking})` }],
     tip: `<h4>${logo(e.model)}${esc(e.name)}</h4><div class="muted">${modeName(e)}</div><dl><dt>Prompt processing</dt><dd>${num(e.prefill_tok_s)} tokens/s</dd><dt>Generation</dt><dd>${num(e.decode_tok_s)} tokens/s</dd></dl>`,
   })), { min: 0, max: maxSpeed * 1.05, ticks: niceTicks(maxSpeed), tick: (v) => `${v}`, title: "Tokens per second" }));
-  addChart(document.getElementById("hw-threads"), (el) => threadChart(el, pairs));
+  if (pairs.length) addChart(document.getElementById("hw-threads"), (el) => threadChart(el, pairs));
 }
 function niceTicks(max) {
   const step = [1, 2, 5, 10, 20, 25, 50, 100, 200].find((s) => max / s <= 6) || 500;
@@ -717,7 +747,7 @@ function outcomeSummary(statuses) {
 }
 
 async function loadCaseText() {
-  if (!caseText) caseText = (await (await fetch("data/cases.json")).json()).prompts;
+  if (!caseText) caseText = (await (await fetch(`${BASE}cases.json`)).json()).prompts;
   return caseText;
 }
 const caseF = { track: "all", difficulty: "all", order: "hard" };
@@ -732,10 +762,10 @@ function pageCases() {
   app.innerHTML = `<h1>Cases</h1>
     <p class="lede">All ${D.totals.cases} cases, with how many results passed each. Open a case for its prompt, the expected answer and every model's outcome.</p>
     <div class="controls">${select("track", [["all", "All tracks"], ...D.tracks.map((t) => [t.id, t.name])])}
-      ${select("difficulty", [["all", "Control and challenge"], ["control", "Control"], ["challenge", "Challenge"]])}
+      ${select("difficulty", [["all", "Every tier"], ...D.tiers.map((t) => [t, tierName(t)])])}
       ${select("order", [["hard", "Hardest first"], ["easy", "Easiest first"], ["id", "By name"]])}</div>
     <div class="card pad" style="padding-top:4px">${cases.map(({ c, rate }) => `<details class="case-row" data-case="${esc(c.id)}">
-      <summary><span class="case-title"><code>${esc(c.id)}</code><span class="tag">${trackName(c.track)}</span><span class="tag">${c.difficulty}</span><br>${esc(c.title)}</span>
+      <summary><span class="case-title"><code>${esc(c.id)}</code><span class="tag">${trackName(c.track)}</span><span class="tag">${c.difficulty}</span>${c.injection ? `<span class="tag warn">planted instruction</span>` : ""}<br>${esc(c.title)}</span>
       <span class="passrate"><span class="accbar" style="flex:1"><i style="width:${100 * (rate ?? 0)}%;background:${passColor(rate)}"></i></span><b>${pct(100 * (rate ?? 0))}</b></span></summary>
       <div class="case-body"></div></details>`).join("")}</div>
     <p class="note">Pass rate: the share of the ${list.length} main results (averaged over their passes) that passed the case, among those that can attempt its track.</p>`;
@@ -751,9 +781,9 @@ function pageCases() {
       const why = outcomeSummary(statuses);
       return `<span class="dot" tabindex="0" data-tip="${tip(`<h4>${logo(e.model)}${esc(e.name)}</h4><div class="muted">${modeName(e)}</div><p style="margin:6px 0 0">${text}</p>${why.detail ? `<dl>${why.detail}</dl>` : ""}`)}" data-href="#/model/${esc(e.model_slug)}"><i style="background:${passColor(f)}"></i>${esc(e.name)} · ${e.thinking}${f == null ? "" : ` · ${Math.round(f * e.passes)}/${e.passes}${why.short ? ` · ${why.short}` : ""}`}</span>`;
     }).join("");
-    d.querySelector(".case-body").innerHTML = `${c.image ? `<img src="data/images/${esc(c.image)}" alt="Image for ${esc(c.id)}">` : ""}
+    d.querySelector(".case-body").innerHTML = `${c.image ? `<img src="${BASE}images/${esc(c.image)}" alt="Image for ${esc(c.id)}">` : ""}
       <div><h3>Prompt</h3><pre>${esc(prompts[c.id])}</pre></div>
-      <div><h3>Expected answer</h3><pre>${esc(c.expected)}</pre>${c.tools.length ? `<p class="note">Expected tool calls, in order: ${c.tools.map(esc).join(", ")}</p>` : ""}</div>
+      <div><h3>Expected answer</h3><pre>${esc(c.expected)}</pre>${c.tools.length ? `<p class="note">${c.track === "agent" && D.suite_key !== "1.7" ? "Tools a correct solution uses" : "Expected tool calls, in order"}: ${c.tools.map(esc).join(", ")}</p>` : ""}</div>
       <div><h3>Results</h3><div class="dots">${dots}</div>
       <div class="swatches"><span><i style="background:var(--good)"></i>passed every pass</span><span><i style="background:var(--warn)"></i>some passes</span><span><i style="background:var(--bad)"></i>failed every pass</span><span><i style="background:var(--sunk)"></i>can't attempt</span></div>
       <p class="note">Each label ends with passes passed out of passes run and, when every pass failed the same way, how (wrong answer, timed out, …). Hover or tap for the breakdown.</p></div>`;
@@ -766,9 +796,11 @@ async function pageModel(slug) {
   const e0 = list[0], fam = family(e0.model);
   const cards = list.map((e) => `<div class="card pad">
     <div class="section-head" style="margin-bottom:8px"><h3 style="margin:0"><span class="mode ${e.thinking}">Thinking ${e.thinking}</span> · ${e.threads} threads</h3><span class="note" style="margin:0">${plural(e.passes, "pass")}</span></div>
-    <div class="kv"><div><small>Accuracy</small><b>${pct(e.accuracy)}</b></div><div><small>Across passes</small><b>${range(e).text}</b></div><div><small>Challenges</small><b>${pct(e.challenge_accuracy)}</b></div>
+    <div class="kv"><div><small>Accuracy</small><b>${pct(e.accuracy)}</b></div><div><small>${range(e).label}</small><b>${range(e).text}</b></div>${D.tiers.filter((t) => t !== "control").map((t) => `<div><small>${tierName(t)}</small><b>${pct(e[`${t}_accuracy`])}</b></div>`).join("")}
       <div><small>Time per case</small><b>${dur(e.median_s)}</b></div><div><small>Peak memory</small><b class="mem ${e.memory || ""}">${gb(e.peak_mem_gb)}</b></div><div><small>Peak CPU</small><b>${num(e.temp_peak, 0)} °C</b></div>
-      <div><small>Timeouts</small><b>${num(e.timeouts, e.timeouts % 1 ? 1 : 0)}</b></div><div><small>Generation</small><b>${num(e.decode_tok_s)} tok/s</b></div></div>
+      <div><small>Timeouts</small><b>${num(e.timeouts, e.timeouts % 1 ? 1 : 0)}</b></div><div><small>Generation</small><b>${num(e.decode_tok_s)} tok/s</b></div>
+      ${e.injection ? `<div><small>Planted instructions followed</small><b>${count(e.injection.followed)} of ${count(e.injection.cases)}</b></div>` : ""}
+      ${e.repeat ? `<div><small>Repeats that changed</small><b>${e.repeat.changed} of ${e.repeat.cases}</b></div>` : ""}</div>
     ${e.flag || e.threads_note ? `<div style="margin-top:8px">${tags(e)}</div>` : ""}</div>`).join("");
   app.innerHTML = `<div class="model-head">${logo(e0.model, "lg")}<div><h1>${esc(e0.name)}</h1>
       <div class="note" style="margin:0">${esc(fam.maker)}${fam.family ? ` · ${esc(fam.family)} family` : ""} · <code>ollama pull ${esc(e0.model)}</code> · digest <code>${esc(e0.digest)}</code></div>
@@ -790,7 +822,7 @@ async function pageModel(slug) {
   });
   let detail = modelDetail[slug];
   if (!detail) {
-    try { detail = modelDetail[slug] = await (await fetch(`data/models/${slug}.json`)).json(); } catch { detail = null; }
+    try { detail = modelDetail[slug] = await (await fetch(`${BASE}models/${slug}.json`)).json(); } catch { detail = null; }
   }
   if (!document.getElementById("m-grid")) return;   // navigated away while loading
   if (detail) document.getElementById("m-grid").innerHTML = list.map((e) => caseGrid(e, detail.entries[e.id])).join("") + gridLegend();
@@ -823,7 +855,7 @@ function caseGrid(e, per) {
   }).join("");
   return `<div class="casegrid-row"><span><span class="mode ${e.thinking}">${e.thinking}</span> · ${e.threads}t</span><div class="casegrid">${cells}</div></div>`;
 }
-const gridLegend = () => `<div class="swatches">${D.tracks.map((t) => t.name).join(" · ")} (13 each, left to right, top to bottom)
+const gridLegend = () => `<div class="swatches">${D.tracks.map((t) => t.name).join(" · ")} (${perTrack()} each, left to right, top to bottom)
   <span><i style="background:var(--good)"></i>passed every pass</span><span><i style="background:var(--warn)"></i>some passes</span><span><i style="background:var(--bad)"></i>failed</span></div>`;
 
 function pageCompare(aId, bId) {
@@ -858,23 +890,39 @@ function pageCompare(aId, bId) {
     <div class="vs"><label>Result A<br><select id="ca">${option(a)}</select></label><span class="mid">vs</span><label>Result B<br><select id="cb">${option(b)}</select></label></div>
     <section class="section grid grid-2">
       <div class="card table-wrap"><table class="lb"><thead><tr><th>Metric</th><th class="num">${logo(a.model)} A</th><th class="num">${logo(b.model)} B</th><th class="num">B − A</th></tr></thead><tbody>
-        ${metric("Accuracy", a.accuracy, b.accuracy, pts, "high")}${metric("Challenges", a.challenge_accuracy, b.challenge_accuracy, pts, "high")}
+        ${metric("Accuracy", a.accuracy, b.accuracy, pts, "high")}${D.tiers.filter((t) => t !== "control").map((t) => metric(tierName(t), a[`${t}_accuracy`], b[`${t}_accuracy`], pts, "high")).join("")}
         ${D.tracks.map((t) => metric(t.name, a.tracks[t.id], b.tracks[t.id], pts, "high")).join("")}
         ${metric("Time per case", a.median_s, b.median_s, sec, "low")}${metric("Peak memory", a.peak_mem_gb, b.peak_mem_gb, mem, "low")}
         ${metric("Peak CPU", a.temp_peak, b.temp_peak, deg, "low")}${metric("Timeouts", a.timeouts, b.timeouts, cnt, "low")}</tbody></table></div>
       <div class="card pad"><h3>Case by case</h3>
         <div class="swatches" style="margin:0 0 10px"><span><i style="background:var(--good)"></i>both pass: ${both}</span><span><i style="background:var(--off)"></i>only A: ${onlyA}</span><span><i style="background:var(--on)"></i>only B: ${onlyB}</span><span><i style="background:var(--bad)"></i>neither: ${neither}</span></div>
-        <div class="casegrid">${cells}</div><p class="note">A case counts as passed when it passed in at least half of a result's passes. ${D.tracks.map((t) => t.name).join(" · ")}, 13 cases each.</p></div></section>`;
+        <div class="casegrid">${cells}</div><p class="note">A case counts as passed when it passed in at least half of a result's passes. ${D.tracks.map((t) => t.name).join(" · ")}, ${perTrack()} cases each.</p></div></section>`;
   const go = () => { location.hash = `#/compare/${document.getElementById("ca").value}/${document.getElementById("cb").value}`; };
   document.getElementById("ca").addEventListener("change", go);
   document.getElementById("cb").addEventListener("change", go);
 }
 
 function pageAbout() {
-  app.innerHTML = `<div class="prose">${document.getElementById("about-text").innerHTML}
+  const about = document.getElementById(`about-text-${D.suite_key}`) || document.getElementById("about-text");
+  app.innerHTML = `<div class="prose">${about.innerHTML}
     <h2>The hardware</h2><p>${esc(D.device.setup || D.device.name)}</p>
     <div class="photos">${D.device.photos.map((p) => `<img src="${esc(p.src)}" alt="${esc(p.alt)}" loading="lazy">`).join("")}</div>
     <p class="note">Suite ${esc(D.suite)} · protocol ${esc(D.protocol)} · data updated ${esc(D.updated)}</p></div>`;
+}
+
+/* The suite switch: a link to the previous suite's results from the current one, and a banner on
+   the archive that says it isn't current. Shown above every page. */
+function suiteBar() {
+  const bar = document.getElementById("suite-bar");
+  if (!bar) return;
+  const here = location.pathname;
+  if (MAIN) {
+    bar.innerHTML = `<p>You are viewing the results of suite ${esc(D.suite)}, the previous suite. Scores can't be compared with suite ${esc(MAIN.suite)}. <a href="${esc(here)}${esc(location.hash)}">Back to suite ${esc(MAIN.suite)} →</a></p>`;
+    bar.hidden = false;
+  } else if (D.archives?.length) {
+    bar.innerHTML = `<p>Suite ${esc(D.suite)} replaced ${D.archives.map((a) => `suite ${esc(a.version)}`).join(" and ")}. ${D.archives.map((a) => `<a href="${esc(here)}?suite=${esc(a.suite)}${esc(location.hash)}">Suite ${esc(a.version)} results →</a>`).join(" ")}</p>`;
+    bar.hidden = false;
+  } else bar.hidden = true;
 }
 
 /* ---------- routing ---------- */
@@ -887,6 +935,7 @@ function render() {
   const pages = { overview: pageOverview, leaderboard: pageLeaderboard, tracks: () => pageTracks(args[0]), thinking: pageThinking,
     hardware: pageHardware, cases: pageCases, compare: () => pageCompare(args[0], args[1]), about: pageAbout, model: () => pageModel(args[0]) };
   (pages[name] || pageOverview)();
+  suiteBar();
   // Keep the current tab visible in the sideways-scrolling navigation on phones.
   document.querySelector('.tabs a[aria-current="page"]')?.scrollIntoView({ inline: "center", block: "nearest" });
   const titles = { overview: "", model: args[0] ? ` · ${D.entries.find((e) => e.model_slug === args[0])?.name ?? ""}` : "" };
@@ -923,6 +972,13 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if
 (async function start() {
   try {
     [D, M] = await Promise.all([fetch("data/site.json").then((r) => r.json()), fetch("meta.json").then((r) => r.json())]);
+    // ?suite=1.7 shows an archived suite's results, if this build has them.
+    const wanted = new URLSearchParams(location.search).get("suite");
+    const archive = D.archives?.find((a) => a.suite === wanted);
+    if (archive) {
+      MAIN = D; BASE = archive.path;
+      D = await fetch(`${BASE}site.json`).then((r) => r.json());
+    }
   } catch (error) {
     app.innerHTML = `<p class="empty">Couldn't load the results data. Run <code>python3 tools/build_site.py</code> and serve the <code>site/</code> folder over HTTP.</p>`;
     return;

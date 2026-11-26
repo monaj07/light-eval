@@ -26,12 +26,17 @@ PHASES = ("cold", "warm", "sustained")
 #   (not recorded): runs before 2026-11-22.
 #   2: prompts are never silently truncated; the model is reloaded after any infrastructure
 #      error; tool-call parse errors are the model's failure. See CHANGELOG.md, "Protocol 2".
-PROTOCOL_VERSION = 3
-# Protocol 4 applies to suite 1.8 pilot runs (--suite 1.8) and becomes PROTOCOL_VERSION at the switch:
-# one pass plus a fixed repeatability sample, a larger tool budget, tool errors returned to the model
-# (suite 1.8's simulator), and test-running time for code answers kept out of wall_s.
-PILOT_PROTOCOL_VERSION = 4
-SUITES = ("1.7", "1.8")
+#   3: --passes replaces --cycles.
+#   4: suite 1.8: one pass plus a fixed repeatability sample, a larger tool budget, tool errors
+#      returned to the model (suite 1.8's simulator), and test-running time for code answers kept
+#      out of wall_s. Suite 1.7 runs still take protocol 3's path and record 3.
+PROTOCOL_VERSION = 4
+# The suites the runner knows, current first. Suite 1.7 (cases.py) is the previous suite: it can
+# still be run, and its published results stay on the site's archive view, but only the current
+# suite can be published.
+CURRENT_SUITE = "1.8"
+SUITES = ("1.8", "1.7")
+SUITE_PROTOCOLS = {"1.8": PROTOCOL_VERSION, "1.7": 3}
 ALL_TRACKS = (*TRACKS, "rag", "instructions", "code")
 # Outcomes that come from the infrastructure, not the model's answer.
 INFRASTRUCTURE_STATUSES = ("api_error", "connection_error", "protocol_error")
@@ -45,9 +50,9 @@ DECODE_PROMPT = (
 )
 
 
-def hashed_paths(suite="1.7"):
+def hashed_paths(suite=CURRENT_SUITE):
     """The files whose SHA-256 every manifest records: the root modules and the suite's images.
-    For suite 1.7 non-recursive on purpose, so suite 1.8's staged images (fixtures/v1_8/) stay out."""
+    For suite 1.7 non-recursive on purpose, so suite 1.8's images (fixtures/v1_8/) stay out."""
     paths = [*sorted(ROOT.glob("*.py")), *sorted((ROOT / "fixtures").glob("*.png"))]
     if suite == "1.8":
         # Images only, so stray files (.DS_Store on the Mac) can't make Mac and Pi manifests differ.
@@ -56,12 +61,24 @@ def hashed_paths(suite="1.7"):
     return paths
 
 
-def load_suite(suite):
-    """(version, protocol, cases) for a suite; suite 1.8 is the staged pilot set until the switch."""
+def suite_module(suite):
+    """The module that defines a suite's VERSION, TRACKS and dataset()."""
     if suite == "1.8":
         import suite_1_8
-        return suite_1_8.VERSION, PILOT_PROTOCOL_VERSION, suite_1_8.dataset()
-    return VERSION, PROTOCOL_VERSION, dataset()
+        return suite_1_8
+    import cases
+    return cases
+
+
+def load_suite(suite):
+    """(version, protocol, cases) for a suite."""
+    module = suite_module(suite)
+    return module.VERSION, SUITE_PROTOCOLS[suite], module.dataset()
+
+
+def suite_of(manifest):
+    """The suite a run used, from its manifest's suite version, or None for one the runner doesn't know."""
+    return next((suite for suite in SUITES if suite_module(suite).VERSION == manifest.get("suite_version")), None)
 
 
 def model_name(name):
@@ -680,8 +697,8 @@ def build_parser():
     run.add_argument("--models", nargs="+", required=True)
     run.add_argument("--port", type=int, default=11434, help="loopback Ollama port")
     run.add_argument("--out", type=Path, help="new output directory")
-    run.add_argument("--suite", choices=SUITES, default="1.7",
-                     help="1.7 (current) or 1.8 (staged pilot, protocol 4; not publishable)")
+    run.add_argument("--suite", choices=SUITES, default=CURRENT_SUITE,
+                     help="1.8 (current, protocol 4) or 1.7 (previous, protocol 3; can no longer be published)")
     run.add_argument("--tracks", choices=ALL_TRACKS, nargs="+", help="default: every track of the suite")
     run.add_argument("--phases", choices=PHASES, nargs="+", default=PHASES)
     run.add_argument("--passes", type=int,
@@ -717,10 +734,10 @@ def build_parser():
 def apply_suite_defaults(args):
     """Suite 1.8 (protocol 4) runs one pass plus a repeatability sample, and its agent cases make more
     tool calls than suite 1.7's."""
-    pilot = getattr(args, "suite", "1.7") == "1.8"
-    for key, standard, protocol_4 in (("passes", 3, 1), ("tool_rounds", 6, 12), ("tool_calls", 8, 16)):
+    previous = getattr(args, "suite", CURRENT_SUITE) == "1.7"
+    for key, protocol_3, protocol_4 in (("passes", 3, 1), ("tool_rounds", 6, 12), ("tool_calls", 8, 16)):
         if getattr(args, key, None) is None:
-            setattr(args, key, protocol_4 if pilot else standard)
+            setattr(args, key, protocol_3 if previous else protocol_4)
     return args
 
 
@@ -754,8 +771,8 @@ def run_benchmark(args, parser):
     models = [model_name(name) for name in args.models]
     if len(set(models)) != len(models):
         parser.error("model names must be distinct")
-    version, protocol, suite_cases = load_suite(args.suite)
-    suite_tracks = TRACKS if args.suite == "1.7" else ALL_TRACKS
+    _, _, suite_cases = load_suite(args.suite)
+    suite_tracks = suite_module(args.suite).TRACKS
     args.tracks = list(args.tracks or suite_tracks)
     if not set(args.tracks) <= set(suite_tracks):
         parser.error(f"suite {args.suite} has no {sorted(set(args.tracks) - set(suite_tracks))} track")
@@ -789,10 +806,11 @@ def run_benchmark(args, parser):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise BenchError("A Light Eval run already holds this Ollama port.") from exc
-        return run_locked(args, api, models, plan, selection, version, protocol)
+        return run_locked(args, api, models, plan, selection)
 
 
-def run_locked(args, api, models, plan, selection, version=VERSION, protocol=PROTOCOL_VERSION):
+def run_locked(args, api, models, plan, selection):
+    version, protocol = suite_module(args.suite).VERSION, SUITE_PROTOCOLS[args.suite]
     ollama_version = api.json("version").get("version")
     # llama-server keeps up to 8 GiB of earlier prompts in RAM by default. Cases are
     # independent, so the cache only costs memory; disable it on the Ollama server.
@@ -836,7 +854,7 @@ def run_locked(args, api, models, plan, selection, version=VERSION, protocol=PRO
                               "all turns share the case deadline and contribute to metrics",
         "agent_scoring": "tool-use success checks required calls, arguments, order and final state; "
                          "exact final-answer success is reported separately; end-to-end requires both",
-        # Suite 1.7 manifests keep protocol 3's options; "suite" is recorded only for the pilot.
+        # Suite 1.7 manifests keep protocol 3's options; "suite" is recorded only for suite 1.8.
         "options": {key: value for key, value in vars(args).items()
                     if key != "out" and not (key == "suite" and value == "1.7")},
         "inference_options": {**INFERENCE_OPTIONS,

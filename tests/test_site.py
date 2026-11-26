@@ -18,7 +18,7 @@ class SiteDataTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp())
-        cls.data = site_builder.build(cls.tmp / "data")
+        cls.data = site_builder.build_all(cls.tmp / "data")
 
     @classmethod
     def tearDownClass(cls):
@@ -83,6 +83,37 @@ class SiteDataTest(unittest.TestCase):
         self.assertEqual(site_builder.case_title('What is 173 × 29? Return only a JSON object with one key "answer".'),
                          "What is 173 × 29?")
         self.assertEqual(site_builder.case_title("Use the log to find X.\n\nlog line 1\nlog line 2"), "Use the log to find X.")
+
+
+
+class ArchiveTest(unittest.TestCase):
+    """Once suite 1.8 has published runs, the site leads with them and keeps suite 1.7 as an archive."""
+
+    def test_current_suite_with_an_archive(self):
+        from unittest.mock import patch
+        from test_publish import suite_1_8_run, write_run
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        published = tmp / "published"
+        shutil.copytree(publish.PUBLISHED, published)
+        manifest, rows = suite_1_8_run()
+        manifest["device_tree_model"] = "Raspberry Pi 5 Model B Rev 1.1"
+        write_run(published / "pi5-on-gemma4-e2b-1.8", manifest, rows)
+        with patch.object(publish, "PUBLISHED", published):
+            data = site_builder.build_all(tmp / "data")
+        self.assertEqual((data["suite"], data["protocol"], data["tiers"]), ("1.8.0", 4, ["control", "challenge", "hard"]))
+        self.assertEqual(len(data["tracks"]), 8)
+        self.assertEqual(data["archives"], [{"suite": "1.7", "version": "1.7.0", "path": "data/archive/1.7/"}])
+        entry = data["entries"][0]
+        self.assertEqual((entry["injection"], entry["repeat"]), ({"cases": 10, "followed": 0}, {"cases": 24, "changed": 0}))
+        self.assertIsNotNone(entry["hard_accuracy"])
+        self.assertTrue((tmp / "data" / "images" / "v1_8" / "photos" / "kangaroos.jpg").exists())
+        archive = json.loads((tmp / "data" / "archive" / "1.7" / "site.json").read_text())
+        self.assertEqual((archive["suite"], archive["current"]["version"], archive["archives"]), ("1.7.0", "1.8.0", []))
+        # The archive holds exactly what the site showed for suite 1.7 before the switch.
+        before = site_builder.build_all(tmp / "before")
+        self.assertEqual([entry["id"] for entry in archive["entries"]], [entry["id"] for entry in before["entries"]])
+        self.assertTrue(all(entry["interval"] is None for entry in archive["entries"]))
 
 
 if __name__ == "__main__":

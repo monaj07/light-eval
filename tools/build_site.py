@@ -18,8 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
-from cases import TRACKS, VERSION, dataset  # noqa: E402
-from light_eval import PROTOCOL_VERSION, read_rows  # noqa: E402
+from light_eval import SUITE_PROTOCOLS, read_rows, suite_module  # noqa: E402
 import publish  # noqa: E402
 
 SITE = ROOT / "site"
@@ -59,9 +58,44 @@ def run_rows(run):
     return read_rows(publish.PUBLISHED / run / "cases.jsonl")
 
 
-def build(out=SITE / "data"):
-    found = publish.entries()
+def expected(case):
+    """What a case counts as correct, as shown on its page."""
+    if case.track == "instructions":
+        return "Rules checked: " + "; ".join(check.name for check in case.checks)
+    if case.track == "rag":
+        return json.dumps({"answer": case.answer, "sources": list(case.sources)}, ensure_ascii=False)
+    if case.track == "code":
+        if case.kind in ("predict", "inverse"):
+            return json.dumps(case.answer, ensure_ascii=False)
+        if case.kind == "testgen":
+            return "Tests that pass on the correct function and fail on every planted bug"
+        return f"Code that passes {len(case.tests)} hidden tests: " + ", ".join(test[0] for test in case.tests)
+    return json.dumps(case.answer, ensure_ascii=False)
+
+
+def expected_tools(case):
+    if getattr(case, "reference", None) and case.track == "agent":  # suite 1.8: the reference solution
+        return list(dict.fromkeys(name for name, _ in case.reference))
+    return [name for name, _ in case.calls] if getattr(case, "calls", None) else []
+
+
+def build_all(out=SITE / "data"):
+    """The shown suite in site/data/, and every other suite with published runs as an archive in
+    site/data/archive/<suite>/, which the site offers as the previous suite's results."""
+    if out.exists():
+        shutil.rmtree(out)
+    shown = publish.shown_suite()
+    archives = [suite for suite in publish.published_suites() if suite != shown]
+    data = build(out, shown, archives)
+    for suite in archives:
+        build(out / "archive" / suite, suite, [], archive_of=shown)
+    return data
+
+
+def build(out, suite, archives=(), archive_of=None):
+    found = publish.entries(suite)
     publish.check_duplicates(found)
+    tracks = publish.tracks_of(suite)
     by_device = defaultdict(list)
     for entry in found:
         by_device[entry["device"]].append(entry)
@@ -72,7 +106,7 @@ def build(out=SITE / "data"):
     primary_ids = {entry_id(entry) for entry in group}
     shown = group + [entry for entry in others if entry_id(entry) not in primary_ids]
 
-    cases = dataset()
+    cases = suite_module(suite).dataset()
     by_case = {case.id: case for case in cases}
     manifests, rows_by_run = {}, {}
     for entry in shown:
@@ -103,7 +137,7 @@ def build(out=SITE / "data"):
                                if case_id in outcomes and case_id in supported else None)
                      for case_id in by_case}
         difficulty = {kind: [case_id for case_id in supported if by_case[case_id].difficulty == kind]
-                      for kind in ("control", "challenge")}
+                      for kind in publish.TIERS}
         model_meta = manifest["models"].get(entry["model"], {})
         temperature = entry["temperature"] or {}
         site_entries.append({
@@ -112,12 +146,13 @@ def build(out=SITE / "data"):
             "threads": entry["threads"], "primary": eid in primary_ids, "official": bool(entry["setup"]),
             "threads_note": entry.get("threads_note"), "flag": entry["flag"], "note": entry["note"],
             "passes": len(passes), "accuracy": entry["accuracy"], "pass_accuracy": pass_accuracy,
+            "interval": entry["interval"], "injection": entry["injection"], "repeat": entry["repeat"],
             "text_accuracy": entry["text_accuracy"],
             **{f"{kind}_accuracy": (100 * sum(case_pass[case_id] or 0 for case_id in ids) / len(ids) if ids else None)
                for kind, ids in difficulty.items()},
             "score": entry["score"], "supported_cases": len(supported),
             "tracks": {track: (100 * entry["tracks"][track] / entry["track_cases"][track]
-                               if track in entry["supported_tracks"] else None) for track in TRACKS},
+                               if track in entry["supported_tracks"] else None) for track in tracks},
             "supported_tracks": entry["supported_tracks"], "capabilities": entry["capabilities"],
             "timeouts": entry["timeouts"], "timeout_s": entry["timeout_s"],
             "median_s": entry["median_s"], "read_s": entry.get("read_s"), "write_s": entry.get("write_s"),
@@ -148,11 +183,12 @@ def build(out=SITE / "data"):
     case_list = []
     for case in cases:
         if case.image:
+            (out / "images" / case.image).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(ROOT / "fixtures" / case.image, out / "images" / case.image)
         case_list.append({"id": case.id, "track": case.track, "difficulty": case.difficulty,
                           "title": case_title(case.prompt), "image": case.image,
-                          "expected": json.dumps(case.answer, ensure_ascii=False),
-                          "tools": [name for name, _ in case.calls] if case.calls else []})
+                          "expected": expected(case), "tools": expected_tools(case),
+                          "injection": bool(getattr(case, "has_injection", False))})
     (out / "cases.json").write_text(json.dumps(
         {"prompts": {case.id: case.prompt for case in cases}}, ensure_ascii=False, separators=(",", ":")))
 
@@ -165,13 +201,22 @@ def build(out=SITE / "data"):
     setups = sorted({entry["setup"] for entry in group if entry["setup"]})
     updated = max((manifest.get("start_utc") or "") for manifest in manifests.values())
     data = {
-        "suite": VERSION, "protocol": PROTOCOL_VERSION, "updated": updated[:10],
+        "suite": suite_module(suite).VERSION, "suite_key": suite, "protocol": SUITE_PROTOCOLS[suite],
+        "updated": updated[:10],
+        # The other suites' results, kept as archive views (data/archive/<suite>/site.json).
+        "archives": [{"suite": key, "version": suite_module(key).VERSION, "path": f"data/archive/{key}/"}
+                     for key in archives],
+        # Set on an archive: the suite that replaced it.
+        "current": ({"suite": archive_of, "version": suite_module(archive_of).VERSION}
+                    if archive_of else None),
         "device": {"name": pi, "setup": setups[0] if setups else None, "photos": photos,
                    "ram_gb": 7.9, "zram_gb": 2.0},
         "primary_threads": publish.PRIMARY_THREADS,
         "tracks": [{"id": track, "name": publish.TRACK_NAMES[track],
-                    "cases": sum(case.track == track for case in cases)} for track in TRACKS],
-        "totals": {"cases": len(cases), "challenge": sum(case.difficulty == "challenge" for case in cases)},
+                    "cases": sum(case.track == track for case in cases)} for track in tracks],
+        "tiers": [tier for tier in publish.TIERS if any(case.difficulty == tier for case in cases)],
+        "totals": {"cases": len(cases), **{tier: sum(case.difficulty == tier for case in cases)
+                                           for tier in publish.TIERS}},
         "cases": case_list, "entries": site_entries,
     }
     (out / "site.json").write_text(json.dumps(data, ensure_ascii=False, indent=1))
@@ -179,5 +224,5 @@ def build(out=SITE / "data"):
 
 
 if __name__ == "__main__":
-    data = build()
+    data = build_all()
     print(f"Wrote site/data/ with {len(data['entries'])} results and {len(data['cases'])} cases")

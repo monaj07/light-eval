@@ -1,6 +1,6 @@
 # Suite 1.8 and protocol 4: design
 
-Status: **agreed, 2026-11-25**. The vision track (`suite_1_8.py`) and the code track (`suite_1_8_code.py`) are written and staged; the other tracks are not yet. The decisions taken are listed at the end.
+Status: **agreed 2026-11-25; the runner's default since 2026-11-26.** All eight tracks are written, blind-solved and calibrated on the Mac pilot. The decisions taken are listed at the end.
 
 ## Why a new suite
 
@@ -317,8 +317,8 @@ Add 15% for the repeatability sample and the cooling between models: about **44 
 
 ## What changes in the code and on the site
 
-- **Staging:** cases are written in `suite_1_8.py` (images in `fixtures/v1_8/`) and tested there, so suite 1.7 and its published results stay untouched until the switch; `fixtures/*.png`, which the runner hashes, does not include them.
-- `cases.py`: the new and reworked cases (moved in from `suite_1_8.py`), the `hard` tier, the RAG corpus generator, the instruction checkers, the code runner and its tests, and the injection flag. `VERSION = "1.8.0"`.
+- **Separate modules:** the cases live in `suite_1_8.py` and its track modules (images in `fixtures/v1_8/`), not in `cases.py`, so suite 1.7 and its published results stay untouched and reproducible with `--suite 1.7`; suite 1.7 manifests don't hash suite 1.8's images.
+- `suite_1_8*.py` and `code_runner.py`: the new and reworked cases, the `hard` tier, the RAG passages, the instruction checkers, the code runner and its tests, and the injection flag. `suite_1_8.VERSION = "1.8.0"`.
 - `fixtures/make_fixtures.py`: the new realistic images; the shape images retire with suite 1.7.
 - `light_eval.py`: protocol 4 (`--passes 1` default, the repeatability sample), larger tool catalogues in the agent loop.
 - `tools/publish.py` and `tools/build_site.py`: three tiers, eight tracks, the injection metric, Wilson intervals, the repeatability rate.
@@ -328,7 +328,7 @@ Add 15% for the repeatability sample and the cooling between models: about **44 
 
 ## Rollout
 
-**Status (2026-11-26):** steps 1 to 3 are done; all 160 cases are written and blind-solved. Step 5's runner part is in place for pilots: `light_eval.py run --suite 1.8` runs protocol 4, as described in `CHANGELOG.md`. The publishing and site changes come with the switch.
+**Status (2026-11-26):** steps 1 to 5 are done. All 160 cases are written and blind-solved; the Mac pilot (`lfm3-vl:2b`, both modes: 60 and 107 of 160) led to the calibration in `CHANGELOG.md`; suite 1.8.0 and protocol 4 are the runner's default, and publishing and the site support them. The README and site switch to suite 1.8 when its first run is published (step 7), keeping suite 1.7 as an archive view. Next: the rehearsal and official runs on the Pi (step 6, commands in `docs/OFFICIAL_RUNS.md`).
 
 
 1. Agree this design.

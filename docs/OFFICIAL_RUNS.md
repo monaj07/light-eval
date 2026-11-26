@@ -1,8 +1,45 @@
 # Official runs
 
-This is the protocol behind the published Raspberry Pi 5 results. It uses suite 1.7.0 and these models: `qwen3.5:2b`, `qwen3.5:4b`, `gemma4:e2b` and `gemma4:e4b`.
+## Suite 1.8 (protocol 4)
 
-## Plan
+Suite 1.8.0 is the runner's default. Its official runs follow the setup below (the same band, `--setup` text, tmux and checks), with these differences from suite 1.7's:
+
+- **One pass, then the repeatability sample.** Each model runs the 160 cases once (`--passes 1`, the default), then repeats a fixed sample of 24 cases. `tools/publish.py add` refuses an official run without the sample.
+- **No 2-thread runs.** Every run uses the default 4 threads.
+- **The code track needs a sandbox.** Install it on the Pi once with `sudo apt install bubblewrap`; the runner refuses to start without it.
+- **Models:** thinking off for `qwen3.5:2b`, `qwen3.5:4b`, `gemma4:e2b`, `lfm3`, `lfm3-vl:2b`, `lfm3-omni:2b` and `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M`; thinking on for the five with a working thinking mode. `gemma4:e4b` is left out, since it hung the Pi with suite 1.7's shorter prompts.
+
+Rehearsal first: two models, every phase, two tracks including code, to check the sandbox, the gates and the repeat sample before committing a night to it. Don't publish it.
+
+```bash
+python3 light_eval.py run --models lfm3-vl:2b gemma4:e2b --tracks arithmetic code --sustain-seconds 20 \
+  --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/rehearsal_v1_8
+```
+
+Thinking off: every model in one run, all phases (about 9 hours).
+
+```bash
+python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b lfm3 lfm3-vl:2b lfm3-omni:2b \
+  hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M \
+  --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/pi_v1_8_off_all
+```
+
+Thinking on: one model per run, warm phase only (3 to 15 hours per model, about 44 in all).
+
+```bash
+for model in lfm3-vl:2b lfm3 gemma4:e2b qwen3.5:2b qwen3.5:4b; do
+  python3 light_eval.py run --models "$model" --phases warm --thinking on \
+    --temp-min 30 --temp-max 50 --setup "$SETUP" --out "results/pi_v1_8_on_${model//[:.]/_}"
+done
+```
+
+The README and the site keep showing suite 1.7 until the first suite 1.8 run is published, then switch to suite 1.8 and keep suite 1.7 as an archive view on the site.
+
+## Suite 1.7 (protocol 3)
+
+The rest of this page is the protocol behind the suite 1.7 results. It uses suite 1.7.0 (`--suite 1.7`) and these models: `qwen3.5:2b`, `qwen3.5:4b`, `gemma4:e2b` and `gemma4:e4b`.
+
+### Plan
 
 | | Thinking off | Thinking on |
 |---|---|---|
@@ -20,7 +57,7 @@ This is the protocol behind the published Raspberry Pi 5 results. It uses suite 
 
 **`gemma4:e4b` is not run with thinking on.** In the official thinking-off run, it filled RAM and zram in every pass. In its fourth pass the Pi hung and rebooted, which also ended the run. Thinking on uses a 2.5× larger context, so it would almost certainly hang the Pi again.
 
-## Setup
+### Setup
 
 Every official run uses the same temperature band, 30–50 °C:
 - Before each model loads (and before the sustained phase), the runner waits up to 15 minutes (`--cooldown`, default 900 s) for the CPU to cool into the band.
@@ -65,9 +102,9 @@ SETUP="Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
    - Install tmux if needed: `sudo apt install tmux`.
    - Start a session with `tmux new -s bench`. Detach with `Ctrl-b d`, and reattach later with `tmux attach -t bench`.
 
-## Commands
+### Commands
 
-Run these from `~/light-eval` inside the tmux session, after setting `SETUP` in that same shell. These are the commands of the first official runs, at 2 threads, written for protocol 3: the original runs used `--cycles 1`, which `--passes` replaced (thinking off: `--cycles 1` with four models gave 4 rounds, of which the first 3 are published; thinking on: one pass). The runner's default is now 4 threads, so `--threads 2` is written out below to reproduce them; leave it out for 4-thread runs.
+Run these from `~/light-eval` inside the tmux session, after setting `SETUP` in that same shell. These are the commands of the first official runs, at 2 threads, written for protocol 3: the original runs used `--cycles 1`, which `--passes` replaced (thinking off: `--cycles 1` with four models gave 4 rounds, of which the first 3 are published; thinking on: one pass). The runner's default is now 4 threads, so `--threads 2` is written out below to reproduce them; leave it out for 4-thread runs. Since suite 1.8 became the default, reproducing any of these also needs `--suite 1.7`.
 
 **Rehearsal first (about 10–15 minutes).** It runs every phase and the gates between two models on the arithmetic track only, to check the whole chain before committing a night to it:
 

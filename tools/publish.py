@@ -7,8 +7,8 @@
 
   python3 tools/publish.py build
       Rebuild the README section between the results markers, and the
-      light/dark charts in docs/assets/, from every published run of the
-      current suite version.
+      light/dark charts in docs/assets/, from the published runs of the
+      current suite, or of the previous suite until the current one has any.
 
 Standard library only, like the runner.
 """
@@ -23,8 +23,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from cases import TRACKS, VERSION, dataset  # noqa: E402
-from light_eval import (INFRASTRUCTURE_STATUSES, apply_budget_defaults, build_parser, hashed_paths, infrastructure_errors, read_rows,  # noqa: E402
+from light_eval import (CURRENT_SUITE, INFRASTRUCTURE_STATUSES, SUITE_PROTOCOLS, SUITES, apply_budget_defaults,  # noqa: E402
+                        build_parser, hashed_paths, infrastructure_errors, read_rows, suite_module, suite_of,
                         summarize, temperature_summary, write_json)
 import charts  # noqa: E402  (tools/charts.py)
 from runtime import recordable_setting  # noqa: E402
@@ -34,7 +34,9 @@ ASSETS = ROOT / "docs" / "assets"
 README = ROOT / "README.md"
 START, END = "<!-- results:start -->", "<!-- results:end -->"
 TRACK_NAMES = {"arithmetic": "Arithmetic", "structured": "Structured", "agent": "Agent",
-               "vision": "Vision", "context": "Context"}
+               "vision": "Vision", "context": "Context", "rag": "RAG", "instructions": "Instructions",
+               "code": "Code"}
+TIERS = ("control", "challenge", "hard")
 
 # Chart tokens: validated two-slot categorical palette (thinking off, thinking on)
 # plus chrome, for each colour scheme.
@@ -46,8 +48,8 @@ HARDWARE_PHOTOS = (
 )
 # Thread count used by the main results; runs with other thread counts feed the comparison table.
 PRIMARY_THREADS = 4
-# Tracks every model can attempt; vision needs the vision capability.
-TEXT_TRACKS = ("arithmetic", "structured", "agent", "context")
+# Tracks that need images; "text accuracy" covers every other track.
+IMAGE_TRACKS = ("vision",)
 THREADS_NOTE = (
     "Each pair compares an official run at the main thread count with one at the other, for the same model and "
     "thinking mode; everything else is identical. Each cell reads from {low} threads to {high} (\"19.5 → 11.8 s\"), with the "
@@ -60,7 +62,7 @@ THREADS_NOTE = (
 SPEED_NOTE = (
     "Prompt processing is how fast a model reads its input, and it is limited by computation; generation is how "
     "fast it writes, and it is limited mostly by memory bandwidth. These runs use all 4 of the Pi's cores "
-    "(`--threads 4`). \"In cases\" is generation during the 65 cases, "
+    "(`--threads 4`). \"In cases\" is generation during the {cases} cases, "
     "whose answers are short JSON; \"sustained\" is 90 seconds of continuous free prose. The Gemma builds include a "
     "small draft model for speculative decoding, which likely explains why they generate faster on short, "
     "predictable JSON than on prose."
@@ -106,9 +108,23 @@ PROTOCOL_OPTIONS = ("context", "max_tokens", "timeout", "tool_rounds", "tool_cal
 STANDARD_PHASES = {"off": {"cold", "warm", "sustained"}, "on": {"warm"}}
 
 
-def standard_options(thinking):
-    args = apply_budget_defaults(build_parser().parse_args(["run", "--models", "model", "--thinking", thinking]))
+def standard_options(thinking, suite=CURRENT_SUITE):
+    args = apply_budget_defaults(build_parser().parse_args(["run", "--models", "model", "--thinking", thinking,
+                                                            "--suite", suite]))
     return {key: getattr(args, key) for key in PROTOCOL_OPTIONS if hasattr(args, key)}
+
+
+def tracks_of(suite):
+    return tuple(suite_module(suite).TRACKS)
+
+
+def case_files(suite):
+    """The files that define a suite's cases and scoring, whose hashes a published run must match.
+    The runner's own code (light_eval.py, runtime.py) is covered by the protocol version instead."""
+    if suite == "1.7":
+        return [ROOT / "cases.py", *(path for path in hashed_paths("1.7") if path.suffix == ".png")]
+    return [ROOT / "cases.py", ROOT / "code_runner.py", *sorted(ROOT.glob("suite_1_8*.py")),
+            *(path for path in hashed_paths(suite) if "v1_8" in path.parts)]
 
 
 def file_hash(path):
@@ -133,15 +149,22 @@ def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
     Returns a list of problems; an empty list means the run can be published as it is."""
     problems = []
     options = manifest.get("options", {})
-    if manifest.get("suite_version") != VERSION:
-        problems.append(f"suite {manifest.get('suite_version')}, but the current suite is {VERSION}")
-    if list(options.get("tracks") or []) != list(TRACKS):
+    current = suite_module(CURRENT_SUITE).VERSION
+    suite = suite_of(manifest)
+    if suite != CURRENT_SUITE:
+        problems.append(f"suite {manifest.get('suite_version')}, but the current suite is {current}")
+    # The remaining checks follow the run's own suite, so a refused run lists everything at once.
+    suite = suite or CURRENT_SUITE
+    if suite == CURRENT_SUITE and manifest.get("protocol_version") != SUITE_PROTOCOLS[suite]:
+        problems.append(f"protocol {manifest.get('protocol_version')}, but suite {suite} runs use protocol "
+                        f"{SUITE_PROTOCOLS[suite]}")
+    if list(options.get("tracks") or []) != list(tracks_of(suite)):
         problems.append(f"ran only some tracks ({', '.join(options.get('tracks') or [])}); a published run "
                         "needs every track, or a missing track reads as a missing capability")
     if options.get("thinking") not in ("off", "on"):
         problems.append(f"thinking {options.get('thinking')!r}; published runs set it explicitly, off or on")
     else:
-        for key, value in standard_options(options["thinking"]).items():
+        for key, value in standard_options(options["thinking"], suite).items():
             if key in options and options[key] != value:
                 problems.append(f"--{key.replace('_', '-')} {options[key]} instead of the standard {value}")
         phases = set(options.get("phases") or [])
@@ -156,7 +179,7 @@ def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
         problems.append(f"the server's LLAMA_ARG_CACHE_RAM was {manifest.get('server_prompt_cache_ram_mib')!r}, "
                         "not 0, so memory grew with every case")
     hashes = manifest.get("sha256", {})
-    for path in [ROOT / "cases.py", *(path for path in hashed_paths() if path.suffix == ".png")]:
+    for path in case_files(suite):
         relative = str(path.relative_to(ROOT))
         if hashes.get(relative) != file_hash(path):
             problems.append(f"{relative} differs from the version this run used")
@@ -192,6 +215,11 @@ def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
     for row in rows:
         if row["phase"] == "warm":
             warm[row["model"], row["round"]] += 1
+    repeated = defaultdict(set)
+    for row in rows:
+        if row["phase"] == "repeat":
+            repeated[row["model"], row["round"]].add(row["case"])
+    official = bool((options.get("setup") or "").strip())
     for model in manifest.get("models", {}):
         if not any(m == model for m, r in warm):
             problems.append(f"{model} has no warm cases")
@@ -200,6 +228,12 @@ def run_problems(manifest, rows, keep=None, allow_errors=False, blocks=()):
             if warm.get((model, round_num), 0) != expected:
                 problems.append(f"round {round_num} of {model} has {warm.get((model, round_num), 0)} of "
                                 f"{expected} warm cases")
+            plan = manifest.get("plan") or []
+            sample = set(plan[round_num - 1].get("repeat", ())) if 0 < round_num <= len(plan) else set()
+            if official and suite != "1.7" and (not sample or repeated[model, round_num] != sample):
+                # Protocol 4 reports how often outcomes change on a repeat; an official run needs it.
+                problems.append(f"round {round_num} of {model} repeated {len(repeated[model, round_num])} of the "
+                                f"{len(sample)} cases in the repeatability sample")
     return problems
 
 
@@ -268,17 +302,46 @@ def device(manifest):
     return manifest.get("platform") or "unknown device"
 
 
-def entries():
-    """One entry per published run and model, for the current suite version."""
+def published_suites():
+    """The suites with published runs, current first."""
+    found = set()
+    for directory in sorted(PUBLISHED.iterdir() if PUBLISHED.exists() else []):
+        found.add(suite_of(json.loads((directory / "manifest.json").read_text())))
+    return [suite for suite in SUITES if suite in found]
+
+
+def shown_suite():
+    """The suite the README and the site lead with: the current one once it has published runs.
+
+    Until then they keep showing the previous suite, so the switch never leaves them empty while
+    the new suite's official runs are still being made."""
+    return next(iter(published_suites()), CURRENT_SUITE)
+
+
+def wilson(passed, n, z=1.96):
+    """95% Wilson score interval for passed of n cases, in percent."""
+    if not n:
+        return None
+    p = passed / n
+    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return [100 * max(0.0, centre - half), 100 * min(1.0, centre + half)]
+
+
+def entries(suite=None):
+    """One entry per published run and model, for one suite (by default the one shown)."""
+    suite = suite or shown_suite()
+    tracks = tracks_of(suite)
     found = []
     for directory in sorted(PUBLISHED.iterdir() if PUBLISHED.exists() else []):
         manifest = json.loads((directory / "manifest.json").read_text())
         published = manifest.get("published", {})
-        if manifest.get("suite_version") != VERSION or (
+        if suite_of(manifest) != suite or (
                 manifest.get("status") not in ("complete", "complete_with_errors") and not published.get("rounds")):
             continue
         all_rows = read_rows(directory / "cases.jsonl")
         rows = [row for row in all_rows if row["phase"] == "warm"]
+        repeats = [row for row in all_rows if row["phase"] == "repeat"]
         blocks = [block for block in read_rows(directory / "blocks.jsonl") if block["phase"] == "warm"]
         temperatures = combined_temperatures(temperature_summary(rows))
         for model in sorted({row["model"] for row in rows}):
@@ -292,8 +355,16 @@ def entries():
                 continue
             capabilities = manifest["models"].get(model, {}).get("capabilities")
             envs = [block["environment"] for block in blocks if block["model"] == model]
+            covered = coverage(mine, rounds, capabilities, tracks)
+            first = {(row["case"], row["round"]): row["status"] for row in mine}
+            again = [row for row in repeats if row["model"] == model and row["status"] != "unsupported"]
+            planted = [row for row in mine if (manifest.get("case_metadata") or {}).get(row["case"], {}).get("injection")]
+            supported_cases = sum(covered["track_cases"][track] for track in covered["supported_tracks"])
+            passed = sum(row["status"] == "pass" and row["track"] in covered["supported_tracks"]
+                         for row in mine) / rounds
             found.append({
-                "run": directory.name, "device": device(manifest), "model": model,
+                "run": directory.name, "suite": suite, "all_tracks": tracks, "device": device(manifest),
+                "model": model,
                 "thinking": manifest["options"]["thinking"],
                 # Official runs record the hardware setup (--setup); everything else is exploratory.
                 "setup": (manifest["options"].get("setup") or "").strip(),
@@ -302,11 +373,25 @@ def entries():
                 "score": sum(row["status"] == "pass" for row in mine) / rounds,
                 "challenge": sum(row["status"] == "pass" and row["difficulty"] == "challenge"
                                  for row in mine) / rounds,
+                "tiers": {tier: sum(row["status"] == "pass" and row["difficulty"] == tier for row in mine) / rounds
+                          for tier in TIERS},
+                "tier_cases": {tier: sum(row["difficulty"] == tier for row in mine) / rounds for tier in TIERS},
+                # Suite 1.8 runs one pass, so it ranks by a 95% interval over the supported cases; suite
+                # 1.7 ranks by the range across its passes, as it always has.
+                "interval": wilson(passed, supported_cases) if suite != "1.7" else None,
                 "tracks": {track: sum(row["status"] == "pass" and row["track"] == track for row in mine) / rounds
-                           for track in TRACKS},
+                           for track in tracks},
+                # Planted-instruction cases: how many the model obeyed (averaged over passes).
+                "injection": ({"cases": len(planted) / rounds,
+                               "followed": sum(bool(row.get("injection_followed")) for row in planted) / rounds}
+                              if planted else None),
+                # Protocol 4's repeatability sample: how many repeated cases ended differently.
+                "repeat": ({"cases": len(again),
+                            "changed": sum(row["status"] != first.get((row["case"], row["round"])) for row in again)}
+                           if again else None),
                 "unsupported": sum(row["status"] == "unsupported" for row in rows if row["model"] == model),
                 "capabilities": capabilities or [],
-                **coverage(mine, rounds, capabilities),
+                **covered,
                 "timeouts": sum(row["status"] == "timeout" for row in mine) / rounds,
                 "timeout_s": manifest["options"].get("timeout"),
                 "infrastructure_errors": sum(row["status"] in INFRASTRUCTURE_STATUSES for row in mine) / rounds,
@@ -372,29 +457,30 @@ def row_name(entry):
 CAPABILITY_TRACKS = {"vision": "vision", "agent": "tools"}
 
 
-def supported_tracks(capabilities):
-    return [track for track in TRACKS
+def supported_tracks(capabilities, tracks):
+    return [track for track in tracks
             if track not in CAPABILITY_TRACKS or CAPABILITY_TRACKS[track] in capabilities]
 
 
-def coverage(rows, rounds, capabilities=None):
+def coverage(rows, rounds, capabilities=None, all_tracks=None):
     """Accuracy over the tracks a model supports, and over the text tracks every model has.
 
     A case the model can't attempt (no vision, no tools) is "not applicable", never a 0:
     it is left out of that model's accuracy, and the supported tracks are reported alongside.
     Which tracks are supported comes from the model's recorded capabilities, not from which
     rows happen to exist, so a run that left out a track can't pass for a missing capability."""
-    cases = {track: sum(row["track"] == track for row in rows) / rounds for track in TRACKS}
+    all_tracks = all_tracks or tracks_of(CURRENT_SUITE)
+    cases = {track: sum(row["track"] == track for row in rows) / rounds for track in all_tracks}
     passed = {track: sum(row["track"] == track and row["status"] == "pass" for row in rows) / rounds
-              for track in TRACKS}
+              for track in all_tracks}
     if capabilities is None:  # older manifests: fall back to the tracks that have results
-        tracks = [track for track in TRACKS if cases[track]]
+        tracks = [track for track in all_tracks if cases[track]]
     else:
-        tracks = supported_tracks(capabilities)
+        tracks = supported_tracks(capabilities, all_tracks)
         missing = [track for track in tracks if not cases[track]]
         if missing:
             raise ValueError(f"no results for supported track(s) {', '.join(missing)}")
-    text = [track for track in tracks if track in TEXT_TRACKS]
+    text = [track for track in tracks if track not in IMAGE_TRACKS]
     share = lambda chosen: (100 * sum(passed[t] for t in chosen) / sum(cases[t] for t in chosen)
                             if chosen and sum(cases[t] for t in chosen) else None)
     return {"supported_tracks": tracks, "track_cases": cases,
@@ -402,8 +488,8 @@ def coverage(rows, rounds, capabilities=None):
 
 
 def coverage_label(entry):
-    missing = [TRACK_NAMES[track].lower() for track in TRACKS if track not in entry["supported_tracks"]]
-    label = f"{len(entry['supported_tracks'])}/{len(TRACKS)}"
+    missing = [TRACK_NAMES[track].lower() for track in entry["all_tracks"] if track not in entry["supported_tracks"]]
+    label = f"{len(entry['supported_tracks'])}/{len(entry['all_tracks'])}"
     return label + (f" (no {', '.join(missing)})" if missing else "")
 
 
@@ -535,10 +621,17 @@ def memory(entry):
     return f"✅ {figure}"
 
 
+def has_hard(totals):
+    return bool(totals.get("hard"))
+
+
 def table(group, totals):
+    tracks = totals["tracks"]
+    hard = has_hard(totals)
     # Short headers split over two lines (GitHub allows <br> in cells), so the columns stay narrow.
-    head = ["Model", "Accuracy<br>(all)", "Accuracy<br>(text)", "Challenge",
-            *(TRACK_NAMES[track] for track in TRACKS),
+    head = ["Model", "Accuracy<br>(all)", "Accuracy<br>(text)", "Challenge", *(["Hard"] if hard else []),
+            *(TRACK_NAMES[track] for track in tracks),
+            *(["Planted<br>instructions<br>followed", "Repeats<br>changed"] if hard else []),
             "Time per<br>case", "Timed<br>out", "Peak memory<br>(lowest free)", "CPU °C<br>mean / peak"]
     lines = ["| " + " | ".join(head) + " |", "|" + "|".join(["---"] + ["---:"] * (len(head) - 3) + ["---", "---"]) + "|"]
     for entry in sorted(group, key=lambda item: (-item["accuracy"], item["median_s"])):
@@ -553,12 +646,23 @@ def table(group, totals):
         lines.append("| " + " | ".join([
             f"`{display_name(entry['model'])}`" + (f" ({entry['threads_note']})" if entry.get("threads_note") else "")
             + ("" if entry["setup"] else " †"),
-            (f"**{entry['accuracy']:.0f}%**" if len(entry["supported_tracks"]) == len(TRACKS)
+            (f"**{entry['accuracy']:.0f}%**" if len(entry["supported_tracks"]) == len(tracks)
              else coverage_label(entry).split("(")[-1].rstrip(")")), f"{entry['text_accuracy']:.0f}%",
-            number(entry["challenge"]),
-            *(number(entry["tracks"][track]) if track in entry["supported_tracks"] else "n/a" for track in TRACKS),
+            number(entry["challenge"]), *([number(entry["tiers"]["hard"])] if hard else []),
+            *(number(entry["tracks"][track]) if track in entry["supported_tracks"] else "n/a" for track in tracks),
+            *([of(entry["injection"], "followed"), of(entry["repeat"], "changed")] if hard else []),
             duration(entry["median_s"]), number(entry["timeouts"]), memory(entry), peak]) + " |")
     return "\n".join(lines)
+
+
+def of(counts, key):
+    """'2 of 10' from {"cases": 10, key: 2}, or a dash without counts."""
+    return f"{number(counts[key])} of {number(counts['cases'])}" if counts else "—"
+
+
+def interval_label(entry):
+    low, high = entry["interval"]
+    return f"{low:.0f}–{high:.0f}%"
 
 
 def rate(value):
@@ -886,8 +990,10 @@ def short_memory(entry):
     return f"{icon} {entry['peak_mem_gb']:.1f} GB{'' if entry['mem_exact'] else '≈'}"
 
 
-def glance_table(entries, total):
-    lines = ["| Model | Thinking | Accuracy | Tracks | Time per case | Memory | Note |", "|---|---|---:|---|---:|---|---|"]
+def glance_table(entries, total, intervals=False):
+    lines = ["| Model | Thinking | Accuracy |" + (" 95% interval |" if intervals else "")
+             + " Tracks | Time per case | Memory | Note |",
+             "|---|---|---:|" + ("---:|" if intervals else "") + "---|---:|---|---|"]
     for entry in entries:
         notes = [entry["flag"]] if entry["flag"] else []
         if entry["timeouts"]:
@@ -897,7 +1003,8 @@ def glance_table(entries, total):
             notes.append(f"{count} case{'' if count == '1' else 's'}{per_pass} hit the {limit_label(entry)} limit")
         note = "; ".join(notes)
         lines.append(f"| `{display_name(entry['model'])}`{' (' + entry['threads_note'] + ')' if entry.get('threads_note') else ''} | {entry['thinking']} | **{entry['accuracy']:.0f}%** | "
-                     f"{coverage_label(entry)} | {duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
+                     + (f"{interval_label(entry)} | " if intervals else "")
+                     + f"{coverage_label(entry)} | {duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
     return "\n".join(lines)
 
 
@@ -915,7 +1022,8 @@ def dumbbell_rows(entries, total):
         if "on" not in modes:
             badges.append("no working thinking mode" if model in NO_WORKING_THINKING
                           else "thinking off only" if "thinking" in any_entry["capabilities"] else "no thinking mode")
-        badges += [f"no {TRACK_NAMES[t].lower()}" for t in TRACKS if t not in any_entry["supported_tracks"]]
+        badges += [f"no {TRACK_NAMES[t].lower()}" for t in any_entry["all_tracks"]
+                   if t not in any_entry["supported_tracks"]]
         rows.append({"model": display_name(model), "badges": badges,
                      **{mode: ({"accuracy": modes[mode]["accuracy"], "median_s": modes[mode]["median_s"]}
                                if mode in modes else None) for mode in ("off", "on")}})
@@ -925,7 +1033,7 @@ def dumbbell_rows(entries, total):
 def heatmap_rows(entries, totals):
     return [{"label": row_name(entry), "mode": entry["thinking"],
              "values": [100 * entry["tracks"][track] / entry["track_cases"][track]
-                        if track in entry["supported_tracks"] else None for track in TRACKS]
+                        if track in entry["supported_tracks"] else None for track in entry["all_tracks"]]
                        + [entry["accuracy"]]} for entry in entries]
 
 
@@ -947,16 +1055,35 @@ def check_duplicates(found):
         seen[key] = entry["run"]
 
 
+def suite_totals(suite):
+    """Case counts for a suite: all, per tier and per track, plus the track order."""
+    cases = suite_module(suite).dataset()
+    tracks = tracks_of(suite)
+    return {"all": len(cases), "tracks": tracks,
+            **{tier: sum(case.difficulty == tier for case in cases) for tier in TIERS},
+            **{track: sum(case.track == track for case in cases) for track in tracks}}
+
+
+def tier_summary(totals):
+    return ", ".join(f"{totals[tier]} {tier}" for tier in TIERS if totals[tier])
+
+
 def build():
-    found = entries()
+    suite = shown_suite()
+    found = entries(suite)
     check_duplicates(found)
-    cases = dataset()
-    totals = {"all": len(cases), "challenge": sum(case.difficulty == "challenge" for case in cases),
-              **{track: sum(case.track == track for case in cases) for track in TRACKS}}
+    totals = suite_totals(suite)
+    version = suite_module(suite).VERSION
     parts = [START, "<!-- Generated: edit tools/publish.py and run `python3 tools/publish.py build`, not this section. -->", "",
              f"_Generated by `python3 tools/publish.py build` from the runs in "
-             f"[`docs/results/`](docs/results/). Suite {VERSION}: {totals['all']} cases "
-             f"({totals['all'] - totals['challenge']} control, {totals['challenge']} challenge)._", ""]
+             f"[`docs/results/`](docs/results/). Suite {version}: {totals['all']} cases "
+             f"({tier_summary(totals)})._", ""]
+    if suite != CURRENT_SUITE:
+        current = suite_totals(CURRENT_SUITE)
+        parts += [f"Suite {suite_module(CURRENT_SUITE).VERSION} ({current['all']} cases in {len(current['tracks'])} "
+                  f"tracks) has replaced it, and its official runs on the Pi are in progress. Until they are "
+                  f"published, these are the results of suite {version}. Scores from different suites can't be "
+                  "compared.", ""]
     if not found:
         parts += ["No published runs for this suite version yet.", ""]
     by_device = defaultdict(list)
@@ -985,19 +1112,22 @@ def build():
                  and (base_entry["model"], base_entry["thinking"]) == (other["model"], other["thinking"])]
         total = totals["all"]
         if official:
-            parts += ["### At a glance", "", glance_table(official, total), "",
+            parts += ["### At a glance", "", glance_table(official, total, has_hard(totals)), "",
                       "Accuracy is the share of cases passed on the tracks the model supports; Tracks shows how many "
-                      "of the 5 that is. A track a model can't attempt (no vision, for example) is not counted as "
-                      "0%. Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's "
+                      f"of the {len(totals['tracks'])} that is. A track a model can't attempt (no vision, for example) "
+                      "is not counted as 0%. "
+                      + ("The 95% interval (Wilson) shows how far the accuracy could move by chance with this many "
+                         "cases; results whose intervals overlap may not really differ. " if has_hard(totals) else "")
+                      + "Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's "
                       "7.9 GB of usable RAM.", ""]
             parts += picture(write_chart(f"thinking-{slug_name}", lambda theme: charts.dumbbell(
                 dumbbell_rows(official, total), theme, "What thinking buys"),
                 lambda theme: charts.dumbbell_mobile(dumbbell_rows(official, total), theme, "What thinking buys")),
                 "Accuracy and median time per case for each model with thinking off and on")
             parts += ["### Strengths and weaknesses by track", ""]
-            columns = [TRACK_NAMES[track] for track in TRACKS] + ["All"]
+            columns = [TRACK_NAMES[track] for track in totals["tracks"]] + ["All"]
             parts += picture(write_chart(f"tracks-{slug_name}", lambda theme: charts.heatmap(
-                heatmap_rows(official, totals), columns, theme, "Where each model succeeds"),
+                heatmap_rows(official, totals), columns, theme, "Where each model succeeds", totals["arithmetic"]),
                 lambda theme: charts.heatmap_mobile(heatmap_rows(official, totals), columns, theme,
                                                     "Where each model succeeds")),
                 "Share of each track's cases passed, per model and thinking mode")
@@ -1039,9 +1169,14 @@ def build():
             subset = [entry for entry in group if entry["thinking"] == mode]
             if subset:
                 rounds = sorted({entry["rounds"] for entry in subset})
-                note = (f"Challenge counts are out of {totals['challenge']} cases and each track out of "
-                        f"{totals['arithmetic']}.")
-                if any(len(entry["supported_tracks"]) < len(TRACKS) for entry in subset):
+                note = (f"Challenge counts are out of {totals['challenge']} cases"
+                        + (f", hard ones out of {totals['hard']}," if has_hard(totals) else "")
+                        + f" and each track out of {totals['arithmetic']}.")
+                if has_hard(totals):
+                    note += (" Planted instructions followed counts the cases with an instruction hidden in a tool "
+                             "result, a passage or a file that the model obeyed. Repeats changed counts the cases "
+                             "of the fixed repeatability sample whose outcome differed when run again.")
+                if any(len(entry["supported_tracks"]) < len(totals["tracks"]) for entry in subset):
                     note += (" A model without vision or tools has fewer challenge cases, and its unsupported "
                              "tracks show n/a.")
                 if len(rounds) == 1 and rounds != [1]:
@@ -1062,7 +1197,7 @@ def build():
         timed = [entry for entry in group if entry["thinking"] == "off"
                  and (entry["first_load_s"] is not None or entry["sustained_tok_s"])]
         if timed:
-            parts += ["#### Speed (thinking off)", "", speed_table(timed), "", SPEED_NOTE, ""]
+            parts += ["#### Speed (thinking off)", "", speed_table(timed), "", SPEED_NOTE.format(cases=totals["all"]), ""]
         split = [entry for entry in group if entry["thinking"] == "off" and entry.get("read_s") is not None
                  and entry["setup"]]
         if split:

@@ -48,10 +48,10 @@ class SuiteVisionTest(unittest.TestCase):
                 if path.suffix == ".jpg":
                     self.assertNotIn(0xE1, jpeg_markers(path.read_bytes()), "photos must carry no EXIF (GPS) segment")
 
-    def test_live_suite_does_not_hash_staged_images(self):
-        # Manifests hash light_eval.hashed_paths(), and publish.py checks the PNGs among them; staged
-        # images must stay out of that set, or every suite 1.7 run would stop publishing.
-        hashed = {path.resolve() for path in hashed_paths()}
+    def test_suite_1_7_does_not_hash_suite_1_8_images(self):
+        # Suite 1.7 manifests hash light_eval.hashed_paths("1.7"); suite 1.8's images stay out of that
+        # set, so a suite 1.7 run's hashes still describe only what it used.
+        hashed = {path.resolve() for path in hashed_paths("1.7")}
         staged = {(FIXTURES / case.image).resolve() for case in vision_cases()}
         self.assertTrue(staged)
         self.assertFalse(hashed & staged)

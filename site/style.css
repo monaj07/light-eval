@@ -56,7 +56,10 @@ code { font-family: var(--mono); font-size: .9em; }
 /* Header and navigation */
 .top { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
-.top-inner, .tabs, main, .foot { max-width: 1180px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+.top-inner, .tabs, main, .suite-bar, .foot { max-width: 1180px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+/* Suite switch: a link to the previous suite's results, or a banner on the archive. */
+.suite-bar { margin-top: 14px; }
+.suite-bar p { margin: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--sunk); color: var(--ink2); font-size: .92rem; }
 .top-inner { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--ink); }
 .brand:hover { text-decoration: none; }

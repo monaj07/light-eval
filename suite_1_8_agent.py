@@ -1,4 +1,4 @@
-"""Suite 1.8 agent track (docs/SUITE_1_8_DESIGN.md), staged outside the live suite like suite_1_8.py.
+"""Suite 1.8 agent track (docs/SUITE_1_8_DESIGN.md), collected by suite_1_8.py.
 
 A deterministic simulator of a small business: customers, orders, support tickets, an inbox, a calendar,
 files, stock, a smart home and a few utilities, exposed as 41 tools the way several MCP servers would expose

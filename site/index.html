@@ -46,6 +46,7 @@
     </nav>
   </header>
 
+  <div id="suite-bar" class="suite-bar" hidden></div>
   <main id="app" tabindex="-1"><p class="loading">Loading results…</p></main>
   <div id="tip" class="tip" role="tooltip" hidden></div>
 
@@ -125,7 +126,46 @@
   <template id="about-text">
     <h1>About these results</h1>
     <h2>What is measured</h2>
-    <p>Light Eval asks each model 65 questions in five tracks of 13 cases. Each track mixes easy <em>control</em>
+    <p>Light Eval asks each model 160 questions in eight tracks of 20 cases. Each track has three tiers: easy
+      <em>control</em> cases, <em>challenges</em>, and <em>hard</em> cases meant to stretch the best models:</p>
+    <ul>
+      <li><strong>Arithmetic</strong>: everyday word problems with a single numeric answer.</li>
+      <li><strong>Structured</strong>: extracting typed JSON from messy text.</li>
+      <li><strong>Agent</strong>: using simulated tools (a shop, tickets, email, a calendar, files, a smart home) with retries and decoys, then reporting the result.</li>
+      <li><strong>Vision</strong>: reading and reasoning about real photos and diagrams.</li>
+      <li><strong>Context</strong>: finding facts in long logs, where later records overrule earlier ones.</li>
+      <li><strong>RAG</strong>: answering from a set of passages and citing the right ones, or saying the passages don't answer.</li>
+      <li><strong>Instructions</strong>: writing text that follows several format rules at once.</li>
+      <li><strong>Code</strong>: writing, fixing, tracing and testing small Python functions.</li>
+    </ul>
+    <h2>How answers are scored</h2>
+    <p>No model grades another. JSON answers are compared exactly with the expected value; RAG answers must also cite
+      exactly the passages that support them; instruction answers are checked rule by rule; code runs against hidden
+      tests in a sandbox; agent cases check the tool calls and the final state of the simulated world. Some agent, RAG
+      and code cases hide an instruction in a tool result, a passage or a file, and record whether the model obeyed it.
+      Accuracy is the share of cases passed on the tracks a model can attempt: a text-only model is not given 0% for
+      vision.</p>
+    <h2>Thinking off and on</h2>
+    <p>Models that can reason before answering are run twice, with thinking off and on, each with its own token budget
+      (1,024 and 6,144 tokens per turn). Every case has a 10-minute limit. Compare models only within one mode.</p>
+    <h2>Fairness and repeatability</h2>
+    <p>Each model runs every case once, then a fixed sample of 24 cases again, to show how often an outcome changes
+      when nothing else does. The Pi cools to the same temperature band before every model loads. Each accuracy comes
+      with a 95% interval for its number of cases, and results whose intervals overlap share a rank.</p>
+    <p class="note">Model logos belong to their makers and are shown only to identify the models. Visits are counted with GoatCounter, without cookies or any personal data.</p>
+    <h2>More</h2>
+    <p><a href="https://github.com/monaj07/light-eval/blob/main/docs/METHODOLOGY.md">Methodology</a> ·
+      <a href="https://github.com/monaj07/light-eval/blob/main/docs/SUITE_1_8_DESIGN.md">How suite 1.8 was designed</a> ·
+      <a href="https://github.com/monaj07/light-eval/blob/main/docs/OFFICIAL_RUNS.md">How the official runs were made</a> ·
+      <a href="https://github.com/monaj07/light-eval#quick-start">Run it yourself</a></p>
+  </template>
+
+  <!-- Suite 1.7, the previous suite: shown with its own results (the archive view, or the main view
+       until suite 1.8 has published results). -->
+  <template id="about-text-1.7">
+    <h1>About these results</h1>
+    <h2>What is measured</h2>
+    <p>Suite 1.7 asks each model 65 questions in five tracks of 13 cases. Each track mixes easy <em>control</em>
       cases with harder <em>challenges</em>:</p>
     <ul>
       <li><strong>Arithmetic</strong>: word problems with a single numeric answer.</li>

@@ -1,4 +1,4 @@
-"""Suite 1.8 RAG track (docs/SUITE_1_8_DESIGN.md), staged outside the live suite like suite_1_8.py.
+"""Suite 1.8 RAG track (docs/SUITE_1_8_DESIGN.md), collected by suite_1_8.py.
 
 Each case gives a question and 4 to 8 short passages, each with an ID, from fictional product manuals,
 policies, price lists, rotas and logs. The model replies with {"answer": ..., "sources": [IDs]}. The

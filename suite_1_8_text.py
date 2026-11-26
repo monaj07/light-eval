@@ -1,4 +1,4 @@
-"""Suite 1.8 arithmetic, structured and context tracks (docs/SUITE_1_8_DESIGN.md), staged outside the live suite.
+"""Suite 1.8 arithmetic, structured and context tracks (docs/SUITE_1_8_DESIGN.md), collected by suite_1_8.py.
 
 These use `cases.Case` and the existing scoring (`cases.score_answer`), so they need no new scoring code.
 Suite 1.7 cases that are realistic tasks survive here reworded, usually with a step added; bare calculator

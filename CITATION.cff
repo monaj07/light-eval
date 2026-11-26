@@ -6,8 +6,8 @@ authors:
     given-names: Mohammad
 repository-code: "https://github.com/monaj07/light-eval"
 license: MIT
-version: 1.7.0
-date-released: 2026-11-18
+version: 1.8.0
+date-released: 2026-11-26
 keywords:
   - llm
   - benchmark

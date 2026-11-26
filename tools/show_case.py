@@ -14,7 +14,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from cases import VERSION, dataset  # noqa: E402
+sys.path.insert(0, str(ROOT / "tools"))
+from light_eval import CURRENT_SUITE, suite_module, suite_of  # noqa: E402
+from build_site import expected  # noqa: E402
 
 
 def main():
@@ -26,17 +28,23 @@ def main():
     args = parser.parse_args()
 
     manifest = json.loads((args.run / "manifest.json").read_text())
-    if manifest.get("suite_version") != VERSION:
-        print(f"note: the run used suite {manifest.get('suite_version')}; the prompt below is from suite {VERSION}\n")
-    case = {item.id: item for item in dataset()}.get(args.case)
+    # Cases come from the suite the run used; a run of an unknown version (a pilot) falls back to the current one.
+    suite = suite_of(manifest) or CURRENT_SUITE
+    module = suite_module(suite)
+    if manifest.get("suite_version") != module.VERSION:
+        print(f"note: the run used suite {manifest.get('suite_version')}; the prompt below is from suite "
+              f"{module.VERSION}\n")
+    case = {item.id: item for item in module.dataset()}.get(args.case)
     if case is None:
         sys.exit(f"unknown case {args.case!r}")
     print(f"{case.id} ({case.track}, {case.difficulty})" + (f", image fixtures/{case.image}" if case.image else ""))
     print(f"\nPrompt:\n{case.prompt}\n")
-    print(f"Expected: {json.dumps(case.answer)}")
-    if case.calls:
+    print(f"Expected: {expected(case)}")
+    if getattr(case, "calls", None):
         print(f"Expected tool calls: {[[name, arguments] for name, arguments in case.calls]}")
-    if case.state:
+    if getattr(case, "reference", None) and case.track == "agent":
+        print(f"Reference solution: {[[name, arguments] for name, arguments in case.reference]}")
+    if getattr(case, "state", None):
         print(f"Expected final state: {case.state}")
 
     rows = [json.loads(line) for line in (args.run / "cases.jsonl").read_text().splitlines()]

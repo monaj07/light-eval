@@ -176,6 +176,32 @@ class JailTest(unittest.TestCase):
                 self.assertIn("PermissionError", completed.stderr)
 
 
+@needs_jail
+class StandardLibraryTest(unittest.TestCase):
+    """Allowed modules work in full inside the jail. datetime's strptime, strftime and date.today
+    import _strptime or time from C; the rehearsal on the Pi failed correct date code on that
+    (ImportError), while the model's own `import time` must stay refused."""
+
+    def outcome(self, source):
+        problem, outcomes = evaluate(source, [("t", "result = f()")], ["f"], untrusted=True)
+        return (problem.status, problem.detail) if problem else tuple(outcomes[0])
+
+    def test_datetime_parsing_and_formatting(self):
+        for call, expected in (("datetime.datetime.strptime('2026-01-05', '%Y-%m-%d').day", 5),
+                               ("datetime.date(2026, 1, 5).strftime('%A %d %B %Y')", "Monday 05 January 2026"),
+                               ("datetime.date.today().year > 2000", True),
+                               ("datetime.date.fromisoformat('2026-01-05').weekday()", 0)):
+            with self.subTest(call=call):
+                self.assertEqual(self.outcome(f"import datetime\ndef f():\n    return {call}\n"),
+                                 ("value", encode(expected)))
+
+    def test_the_internal_modules_stay_refused_to_the_model(self):
+        for line in ("import time", "import _strptime", "from time import sleep", "from _strptime import _strptime"):
+            with self.subTest(line=line):
+                self.assertEqual(self.outcome(f"{line}\ndef f():\n    return 1\n"),
+                                 ("code_error", "loading the code raised ImportError"))
+
+
 class NoJailTest(unittest.TestCase):
     def test_refuses_to_run_without_a_jail(self):
         import code_runner

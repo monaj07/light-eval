@@ -321,7 +321,16 @@ def proxy(module):
             setattr(view, key, value)
     return proxies[module.__name__]
 
+# Modules the standard library's C code imports on the model's behalf: datetime's strptime loads
+# _strptime, and strftime and date.today load time. Those requests come through this function with
+# a list as fromlist; Python import statements pass None or a tuple, and the model's code can't call
+# __import__ itself (check_source and the missing builtin). Only these names, only from C, and the
+# module goes to the C caller, never to the model's namespace.
+STDLIB_INTERNAL = {"_strptime", "time"}
+
 def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if not level and name in STDLIB_INTERNAL and real_type(fromlist) is list:
+        return real_import(name, globals, locals, fromlist, level)
     if level or name.split(".")[0] not in allowed:
         raise ImportError("import of " + name + " is not allowed")
     module = real_import(name, globals, locals, fromlist, level)

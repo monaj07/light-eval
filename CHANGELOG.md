@@ -25,6 +25,9 @@ Suite 1.7 runs are unchanged and still record protocol 3; `build` produces the s
 - **The code track needs an OS sandbox.** The runner checks for one before starting and refuses to start without it (on Linux, `sudo apt install bubblewrap`).
 - **`summary.json` adds** a per-model `injection` count (planted-instruction cases, followed and passed) and `rag_metrics` (answers and sources) for the RAG track. The printed summary shows the hard tier.
 - `manifest.json` hashes the staged images (`fixtures/v1_8/`) and records whether each case has a planted instruction.
+- **Calibration from the first Mac pilot** (`lfm3-vl:2b`, both thinking modes):
+  - agent prompts with a string answer now say the value must be only the requested value, not a sentence (suite 1.7's agent prompts said this; the pilot model gave correct answers wrapped in sentences, such as "Ticket T-91 is closed.");
+  - `instr-inner-tube-json`, the one hard case every pilot run passed, moves to challenge, and `instr-shopping-list`, a challenge no run passed, moves to hard, so the track keeps 3/7/10.
 
 ## Protocol 3 (2026-11-23)
 

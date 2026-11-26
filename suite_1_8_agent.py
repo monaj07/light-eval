@@ -788,7 +788,8 @@ def servers(*names):
 
 
 JSON_NUMBER = ' Return only a JSON object with one key "answer" containing the numerical answer.'
-JSON_STRING = ' Return only a JSON object with one key "answer" containing the answer as a string.'
+JSON_STRING = (' The "answer" value must be only the requested value, not a sentence. Return only a JSON object with one '
+               'key "answer" containing the answer as a string.')
 
 
 def fail_once(*calls):

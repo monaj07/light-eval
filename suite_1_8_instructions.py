@@ -222,7 +222,7 @@ def instruction_cases():
             (C("only bullets", lambda t: only_bullets(t, len(nonblank(t)))),
              C("every ingredient once", lambda t: sorted(bullets(t)) == sorted(GROCERIES)),
              C("alphabetical order", lambda t: bullets(t) == sorted(bullets(t)))),
-            "challenge",
+            "hard",
             "\n".join(f"- {item}" for item in GROCERIES),
             misses=(("- olive oil\n- onion\n- red pepper\n- garlic\n- cumin\n- tinned tomatoes\n- eggs",
                      frozenset({"alphabetical order"})),
@@ -426,7 +426,7 @@ def instruction_cases():
                                                                    for step in json_object(t)["steps"])),
              C("warning mentions brakes", lambda t: isinstance(json_object(t)["warning"], str)
                and re.search(r"(?<![A-Za-z])brakes?(?![A-Za-z])", json_object(t)["warning"], re.IGNORECASE))),
-            "hard",
+            "challenge",
             '{"title": "Replace a bicycle inner tube", "steps": ["Release the brake and remove the wheel", '
             '"Lever one side of the tyre off", "Pull out the old inner tube", "Fit the new tube and the tyre", '
             '"Inflate to the pressure on the tyre"], "warning": "Reconnect the brakes and test them before riding."}',

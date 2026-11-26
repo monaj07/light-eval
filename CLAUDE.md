@@ -82,7 +82,7 @@ Each run writes five files: `manifest.json` (options, hashes, model digests, ser
 
 ## Models and platforms
 
-- **Mac and Pi must run identical model builds.** Compare the IDs in `ollama list`. On the Mac use `gemma4:e2b-it-q4_K_M` and `gemma4:e4b-it-q4_K_M`; the plain tags can resolve to different builds on Apple hardware, for example an nvfp4 MLX build.
+- **Mac and Pi must run identical model builds.** Compare the IDs in `ollama list`. On the Mac use `gemma4:e2b-it-q4_K_M`, `gemma4:e4b-it-q4_K_M` and `lfm3-vl:2b-q4_K_M`; the plain tags can resolve to different builds on Apple hardware, for example an nvfp4 MLX build (the plain `lfm3-vl:2b` does: `a39539d2b8d5` on the Mac, against the Pi's GGUF `00ca45bf65a5`).
 - **`LFM2.5-1.2B-Instruct` and `lfm3-omni:2b` have no thinking-on results.** `lfm3-omni` has no thinking capability. LFM2.5 Instruct has the flag, which Ollama derives from its GGUF chat template, but it never reasons: with `think: true` its thinking text is empty.
 - **qwen3.5:9b is excluded** because it runs at about 1.8 tokens/s on the Pi.
 - **gemma4:e4b doesn't reliably fit on the Pi.** In the official thinking-off run it filled RAM and zram in every pass, and in its fourth pass the Pi hung and rebooted. It is excluded from thinking-on runs.

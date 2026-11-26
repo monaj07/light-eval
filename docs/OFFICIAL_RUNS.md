@@ -93,9 +93,11 @@ SETUP="Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
    | `lfm3-vl:2b` | `00ca45bf65a5` |
    | `lfm3-omni:2b` | `4c0ee9400634` |
    | `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | `5791ac70d52d` |
-   | `hf.co/tencent/WePocketModel1.0-4B-GGUF:Q4_K_M` | `b11189e757cc` |
+   | `hf.co/tencent/WePocketModel1.0-4B-GGUF:Q4_K_M` | `37a7a4231688` |
 
    Reproducing the suite 1.7 runs also needs `gemma4:e4b` (`dc35e8d9c606`), which suite 1.8 leaves out.
+
+   These are the IDs Ollama 0.40.13 shows on the Pi. Newer Ollama versions show a different ID for Hugging Face models whose manifest nests another manifest: Ollama 0.40.17 on the Mac shows WePocketModel as `b11189e757cc` for the same files. To compare such a model across machines, compare `sha256sum` of its manifest file (under `~/.ollama/models/manifests/`, or `/usr/share/ollama/.ollama/models/manifests/` for the Pi's service); its first 12 characters are the 0.40.13 ID.
 
 5. **Clean state.**
    - Reboot, and don't use the Pi for anything else during the run.

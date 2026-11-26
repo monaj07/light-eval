@@ -82,7 +82,7 @@ Each run writes five files: `manifest.json` (options, hashes, model digests, ser
 
 ## Models and platforms
 
-- **Mac and Pi must run identical model builds.** Compare the IDs in `ollama list`. On the Mac use `gemma4:e2b-it-q4_K_M`, `gemma4:e4b-it-q4_K_M` and `lfm3-vl:2b-q4_K_M`; the plain tags can resolve to different builds on Apple hardware, for example an nvfp4 MLX build (the plain `lfm3-vl:2b` does: `a39539d2b8d5` on the Mac, against the Pi's GGUF `00ca45bf65a5`).
+- **Mac and Pi must run identical model builds.** Compare the IDs in `ollama list`; for a Hugging Face model with a nested manifest (WePocketModel), Ollama versions differ in the ID they show (0.40.17: `b11189e757cc`, 0.40.13: `37a7a4231688`, same files), so compare the manifest file's `sha256sum` instead. On the Mac use `gemma4:e2b-it-q4_K_M`, `gemma4:e4b-it-q4_K_M` and `lfm3-vl:2b-q4_K_M`; the plain tags can resolve to different builds on Apple hardware, for example an nvfp4 MLX build (the plain `lfm3-vl:2b` does: `a39539d2b8d5` on the Mac, against the Pi's GGUF `00ca45bf65a5`).
 - **`LFM2.5-1.2B-Instruct` and `lfm3-omni:2b` have no thinking-on results.** `lfm3-omni` has no thinking capability. LFM2.5 Instruct has the flag, which Ollama derives from its GGUF chat template, but it never reasons: with `think: true` its thinking text is empty.
 - **qwen3.5:9b is excluded** because it runs at about 1.8 tokens/s on the Pi.
 - **`hf.co/tencent/WePocketModel1.0-4B-GGUF:Q4_K_M` (added for suite 1.8) is text only and thinking off only through Ollama.** Its GGUF has no vision file Ollama uses (`ollama show` lists only `tools` and `completion`), and its template rejects `think`. The BF16 build (about 9 GB) doesn't fit the Pi.

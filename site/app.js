@@ -748,7 +748,7 @@ function outcomeSummary(statuses) {
 }
 
 async function loadCaseText() {
-  if (!caseText) caseText = (await (await fetch(`${BASE}cases.json`)).json()).prompts;
+  if (!caseText) caseText = (await (await getData(`${BASE}cases.json`)).json()).prompts;
   return caseText;
 }
 const caseF = { track: "all", difficulty: "all", order: "hard" };
@@ -823,7 +823,7 @@ async function pageModel(slug) {
   });
   let detail = modelDetail[slug];
   if (!detail) {
-    try { detail = modelDetail[slug] = await (await fetch(`${BASE}models/${slug}.json`)).json(); } catch { detail = null; }
+    try { detail = modelDetail[slug] = await (await getData(`${BASE}models/${slug}.json`)).json(); } catch { detail = null; }
   }
   if (!document.getElementById("m-grid")) return;   // navigated away while loading
   if (detail) document.getElementById("m-grid").innerHTML = list.map((e) => caseGrid(e, detail.entries[e.id])).join("") + gridLegend();
@@ -973,16 +973,29 @@ themeButton.addEventListener("click", () => {
 });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!document.documentElement.dataset.theme) render(); });
 
+/* GitHub Pages lets browsers cache every file for 10 minutes, so after a deploy a browser can hold
+   this script from one deploy and the data from another. Data is always revalidated with the server
+   (a cheap check when it hasn't changed), and data in an older shape gets its missing fields filled
+   in, so a page never stalls on "Loading results…". */
+const getData = (url) => fetch(url, { cache: "no-cache" });
+function withDefaults(data) {
+  data.tiers ||= ["control", "challenge"];
+  data.archives ||= [];
+  data.suite_key ||= data.suite?.split(".").slice(0, 2).join(".");
+  return data;
+}
+
 (async function start() {
   try {
-    [D, M] = await Promise.all([fetch("data/site.json").then((r) => r.json()), fetch("meta.json").then((r) => r.json())]);
+    [D, M] = await Promise.all([getData("data/site.json").then((r) => r.json()), getData("meta.json").then((r) => r.json())]);
     // ?suite=1.7 shows an archived suite's results, if this build has them.
     const wanted = new URLSearchParams(location.search).get("suite");
     const archive = D.archives?.find((a) => a.suite === wanted);
     if (archive) {
       MAIN = D; BASE = archive.path;
-      D = await fetch(`${BASE}site.json`).then((r) => r.json());
+      D = await getData(`${BASE}site.json`).then((r) => r.json());
     }
+    withDefaults(D);
   } catch (error) {
     app.innerHTML = `<p class="empty">Couldn't load the results data. Run <code>python3 tools/build_site.py</code> and serve the <code>site/</code> folder over HTTP.</p>`;
     return;

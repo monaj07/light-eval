@@ -7,7 +7,7 @@ Suite 1.8.0 is the runner's default. Its official runs follow the setup below (t
 - **One pass, then the repeatability sample.** Each model runs the 160 cases once (`--passes 1`, the default), then repeats a fixed sample of 24 cases. `tools/publish.py add` refuses an official run without the sample.
 - **No 2-thread runs.** Every run uses the default 4 threads.
 - **The code track needs a sandbox.** Install it on the Pi once with `sudo apt install bubblewrap`; the runner refuses to start without it.
-- **Models:** thinking off for `qwen3.5:2b`, `qwen3.5:4b`, `gemma4:e2b`, `lfm3`, `lfm3-vl:2b`, `lfm3-omni:2b` and `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M`; thinking on for the five with a working thinking mode. `gemma4:e4b` is left out, since it hung the Pi with suite 1.7's shorter prompts.
+- **Models:** thinking off for `qwen3.5:2b`, `qwen3.5:4b`, `gemma4:e2b`, `lfm3`, `lfm3-vl:2b`, `lfm3-omni:2b`, `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` and `hf.co/tencent/WePocketModel1.0-4B-GGUF:Q4_K_M`; thinking on for the five with a working thinking mode. Through Ollama, WePocketModel is text only, with no thinking mode: its Hugging Face GGUF brings the language model but no vision file Ollama can use, and its template rejects `think`. Its vision track shows n/a. `gemma4:e4b` is left out, since it hung the Pi with suite 1.7's shorter prompts.
 
 Rehearsal first: two models, every phase, two tracks including code, to check the sandbox, the gates and the repeat sample before committing a night to it. Don't publish it.
 
@@ -20,7 +20,7 @@ Thinking off: every model in one run, all phases (about 9 hours).
 
 ```bash
 python3 light_eval.py run --models qwen3.5:2b qwen3.5:4b gemma4:e2b lfm3 lfm3-vl:2b lfm3-omni:2b \
-  hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M \
+  hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M hf.co/tencent/WePocketModel1.0-4B-GGUF:Q4_K_M \
   --temp-min 30 --temp-max 50 --setup "$SETUP" --out results/pi_v1_8_off_all
 ```
 
@@ -82,14 +82,20 @@ SETUP="Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 
 3. **Prompt cache disabled.** `systemctl show ollama -p Environment` must include `LLAMA_ARG_CACHE_RAM=0`.
 
-4. **Models present.** `ollama list` must show the four models, with these IDs:
+4. **Models present.** `ollama list` must show the suite 1.8 models with these IDs: the builds of the published suite 1.7 runs, so results stay comparable across suites, and the build of WePocketModel added for suite 1.8:
 
    | Model | ID |
    |---|---|
    | `qwen3.5:2b` | `324d162be6ca` |
    | `qwen3.5:4b` | `2a654d98e6fb` |
    | `gemma4:e2b` | `b37049369adf` |
-   | `gemma4:e4b` | `dc35e8d9c606` |
+   | `lfm3` | `b36a103fe2f8` |
+   | `lfm3-vl:2b` | `00ca45bf65a5` |
+   | `lfm3-omni:2b` | `4c0ee9400634` |
+   | `hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_K_M` | `5791ac70d52d` |
+   | `hf.co/tencent/WePocketModel1.0-4B-GGUF:Q4_K_M` | `b11189e757cc` |
+
+   Reproducing the suite 1.7 runs also needs `gemma4:e4b` (`dc35e8d9c606`), which suite 1.8 leaves out.
 
 5. **Clean state.**
    - Reboot, and don't use the Pi for anything else during the run.

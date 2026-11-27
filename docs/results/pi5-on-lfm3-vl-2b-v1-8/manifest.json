@@ -1,0 +1,3143 @@
+{
+  "agent_finalization": "native tool loop, then one schema-constrained answer without tools; all turns share the case deadline and contribute to metrics",
+  "agent_scoring": "tool-use success checks required calls, arguments, order and final state; exact final-answer success is reported separately; end-to-end requires both",
+  "case_metadata": {
+    "agent-close-confirmed": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [
+        "get_ticket",
+        "close_ticket",
+        "reply_to_ticket"
+      ],
+      "track": "agent"
+    },
+    "agent-convert": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [
+        "convert_currency",
+        "calculate",
+        "get_weather"
+      ],
+      "track": "agent"
+    },
+    "agent-delay-apologies": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [
+        "get_order",
+        "get_order_status",
+        "find_orders",
+        "cancel_order",
+        "issue_refund",
+        "create_refund_request",
+        "get_customer",
+        "search_customers",
+        "lookup_customer_by_email",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "get_ticket",
+        "list_tickets",
+        "reply_to_ticket",
+        "set_ticket_priority",
+        "assign_ticket",
+        "close_ticket",
+        "calculate",
+        "convert_currency",
+        "get_time"
+      ],
+      "track": "agent"
+    },
+    "agent-delivered-count": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [
+        "lookup_customer_by_email",
+        "search_customers",
+        "find_orders",
+        "get_order"
+      ],
+      "track": "agent"
+    },
+    "agent-escalate-gold": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [
+        "get_ticket",
+        "list_tickets",
+        "reply_to_ticket",
+        "set_ticket_priority",
+        "assign_ticket",
+        "close_ticket",
+        "get_customer",
+        "search_customers",
+        "lookup_customer_by_email",
+        "get_order",
+        "get_order_status",
+        "find_orders",
+        "cancel_order",
+        "issue_refund",
+        "create_refund_request",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "calculate",
+        "convert_currency",
+        "get_time"
+      ],
+      "track": "agent"
+    },
+    "agent-first-free-slot": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [
+        "list_events",
+        "create_event",
+        "update_event",
+        "find_events"
+      ],
+      "track": "agent"
+    },
+    "agent-frost-injection": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [
+        "get_thermostat",
+        "set_thermostat",
+        "get_light",
+        "set_light",
+        "get_weather",
+        "list_events",
+        "find_events",
+        "create_event",
+        "update_event",
+        "delete_event",
+        "check_room",
+        "list_files",
+        "read_file",
+        "search_files",
+        "write_file",
+        "calculate",
+        "convert_currency",
+        "get_time",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email"
+      ],
+      "track": "agent"
+    },
+    "agent-invoice-reminder": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "list_events",
+        "find_events",
+        "create_event",
+        "update_event",
+        "delete_event",
+        "check_room",
+        "list_files",
+        "read_file",
+        "search_files",
+        "write_file",
+        "get_customer",
+        "search_customers",
+        "lookup_customer_by_email",
+        "calculate",
+        "convert_currency",
+        "get_time"
+      ],
+      "track": "agent"
+    },
+    "agent-invoice-total": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [
+        "list_files",
+        "read_file",
+        "search_files",
+        "calculate"
+      ],
+      "track": "agent"
+    },
+    "agent-kitchen-light": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [
+        "get_light",
+        "set_light",
+        "set_thermostat"
+      ],
+      "track": "agent"
+    },
+    "agent-large-refund": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [
+        "get_order",
+        "get_order_status",
+        "find_orders",
+        "cancel_order",
+        "issue_refund",
+        "create_refund_request",
+        "get_customer",
+        "search_customers",
+        "lookup_customer_by_email",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "get_ticket",
+        "list_tickets",
+        "reply_to_ticket",
+        "set_ticket_priority",
+        "assign_ticket",
+        "close_ticket",
+        "calculate",
+        "convert_currency",
+        "get_time"
+      ],
+      "track": "agent"
+    },
+    "agent-move-review": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [
+        "list_events",
+        "find_events",
+        "create_event",
+        "update_event",
+        "delete_event",
+        "check_room",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "list_files",
+        "read_file",
+        "search_files",
+        "write_file",
+        "get_customer",
+        "search_customers",
+        "lookup_customer_by_email",
+        "calculate",
+        "convert_currency",
+        "get_time"
+      ],
+      "track": "agent"
+    },
+    "agent-notes-injection": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [
+        "list_files",
+        "read_file",
+        "search_files",
+        "write_file",
+        "list_events",
+        "find_events",
+        "create_event",
+        "update_event",
+        "delete_event",
+        "check_room",
+        "get_thermostat",
+        "set_thermostat",
+        "get_light",
+        "set_light",
+        "get_weather",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "calculate",
+        "convert_currency",
+        "get_time"
+      ],
+      "track": "agent"
+    },
+    "agent-order-status": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [
+        "get_order_status",
+        "get_order",
+        "find_orders"
+      ],
+      "track": "agent"
+    },
+    "agent-reserve-shortfall": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [
+        "check_stock",
+        "reserve_stock",
+        "transfer_stock"
+      ],
+      "track": "agent"
+    },
+    "agent-stock-injection": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [
+        "check_stock",
+        "reserve_stock",
+        "transfer_stock",
+        "list_sites",
+        "get_order",
+        "get_order_status",
+        "find_orders",
+        "cancel_order",
+        "issue_refund",
+        "create_refund_request",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "calculate",
+        "convert_currency",
+        "get_time",
+        "get_thermostat",
+        "set_thermostat",
+        "get_light",
+        "set_light",
+        "get_weather"
+      ],
+      "track": "agent"
+    },
+    "agent-thermostat-rule": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [
+        "get_thermostat",
+        "set_thermostat",
+        "get_weather"
+      ],
+      "track": "agent"
+    },
+    "agent-ticket-injection": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [
+        "get_order",
+        "get_order_status",
+        "find_orders",
+        "cancel_order",
+        "issue_refund",
+        "create_refund_request",
+        "get_ticket",
+        "list_tickets",
+        "reply_to_ticket",
+        "set_ticket_priority",
+        "assign_ticket",
+        "close_ticket",
+        "search_inbox",
+        "read_email",
+        "send_email",
+        "draft_email",
+        "get_customer",
+        "search_customers",
+        "lookup_customer_by_email",
+        "calculate",
+        "convert_currency",
+        "get_time"
+      ],
+      "track": "agent"
+    },
+    "agent-tracking-retry": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [
+        "get_order",
+        "get_order_status",
+        "find_orders"
+      ],
+      "track": "agent"
+    },
+    "agent-transfer-retry": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [
+        "check_stock",
+        "reserve_stock",
+        "transfer_stock",
+        "list_sites",
+        "get_order",
+        "get_order_status",
+        "find_orders",
+        "cancel_order",
+        "issue_refund",
+        "create_refund_request",
+        "list_events",
+        "find_events",
+        "create_event",
+        "update_event",
+        "delete_event",
+        "check_room",
+        "calculate",
+        "convert_currency",
+        "get_time",
+        "get_thermostat",
+        "set_thermostat",
+        "get_light",
+        "set_light",
+        "get_weather"
+      ],
+      "track": "agent"
+    },
+    "code-business-days": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-expression": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-fix-csv": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-fix-first-index": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-fix-lru": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-fix-rate-limiter": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-fix-tag": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-inverse-digits": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-merge-intervals": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-predict-arithmetic": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-predict-closures": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-predict-default": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-predict-iterators": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-split-amount": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-sql-top-customer": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-task-order": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-tests-paths": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-tests-roman": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-tests-versions": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "code-tests-wrap": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "code"
+    },
+    "context-backup-snapshot": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-badge-absent": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-bike-last-ride": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-billing-deploys": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-config-reverts": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-contract-approvals": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-door-code": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-holds-queue": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-house-expenses": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-latest-address": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-manager-chain": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-meter-reading": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-night-pages": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-parcel-locker": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-room-bookings": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-sensor-max": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-settled-balance": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-shipment-carrier": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-stock-transfers": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "context-ticket-status": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "context"
+    },
+    "instr-alt-text": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-commit-message": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-conventional-commit": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-delay-texts": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-hike-list": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-inner-tube-json": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-jacket-description": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-library-post": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-listing-json": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-lowercase-caption": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-meeting-agenda": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-no-digits": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-out-of-office": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-reschedule-email": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-scale-recipe": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-shoe-faq": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-shopping-list": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-sms-reminder": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-study-table": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "instr-zero-waste": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "instructions"
+    },
+    "json-address-fields": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-appointments-iso": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-attendees": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-conditional-orders": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-crate-note": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-dock-words": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-dry-beds": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-invoice-cents": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-latest-contact": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-login-counts": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-meeting-times": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-node-down": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-nothing-available": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-order-items": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-quoted-note": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-rebooked-itinerary": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-recipe-grams": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-tasks-by-owner": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-ticket-priority": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "json-unassigned-ticket": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "structured"
+    },
+    "math-bill-split": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-checkout-discount": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-currency-change": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-floor-tiles": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-heater-cost": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-hose-fill": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-leap-interest": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-lemonade-syrup": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-meal-total": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-night-bus": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-race-pace": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-rent-up-down": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-round-trip-speed": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-savings-withdrawals": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-shift-pay": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-stacked-offers": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-trains-meet": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-trial-end": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-two-painters": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "math-unit-price": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "arithmetic"
+    },
+    "rag-battery-code": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-carry-over-unknown": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-dashboard-port": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-ebike-range": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-filter-cost": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-filter-interval": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-firmware-schedules": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-first-response": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-guest-wifi": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-incident-minutes": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-library-fine": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-meal-allowance": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-on-call": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-parental-leave": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-price-unknown": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-refund-days": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-return-deadline": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-running-version": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-training-budget": {
+      "difficulty": "hard",
+      "injection": true,
+      "tools": [],
+      "track": "rag"
+    },
+    "rag-warranty-unknown": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "rag"
+    },
+    "vision-floor-route": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-fruit-tree": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-gpio-pin-1": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-heating-off": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-ice-cream-order": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-irrigation-flow": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-kangaroos": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-map-cottage": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-net-sales-change": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-next-train": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-penguin-band": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-promo-items": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-receipt-split": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-salmon-cost": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-saturday-bus": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-selfie-jacket": {
+      "difficulty": "control",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-solar-share": {
+      "difficulty": "hard",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-tracking-number": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-tv-model-line": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    },
+    "vision-visitor-months": {
+      "difficulty": "challenge",
+      "injection": false,
+      "tools": [],
+      "track": "vision"
+    }
+  },
+  "cpu_governor": "ondemand",
+  "device_tree_model": "Raspberry Pi 5 Model B Rev 1.1",
+  "inference_options": {
+    "device": "cpu",
+    "num_batch": 64
+  },
+  "memory_page_bytes": 16384,
+  "memory_telemetry": "Linux available-memory estimate; macOS free/compressed/wired memory and swap; all swap counters are system-wide, not model-specific",
+  "models": {
+    "lfm3-vl:2b": {
+      "capabilities": [
+        "completion",
+        "vision",
+        "tools",
+        "thinking"
+      ],
+      "details": {
+        "context_length": 128000,
+        "embedding_length": 2048,
+        "families": [
+          "lfm3"
+        ],
+        "family": "lfm3",
+        "format": "gguf",
+        "parameter_size": "1.7B",
+        "parent_model": "LFM3-VL-2B-Q4_K_M.gguf",
+        "quantization_level": "Q4_K_M",
+        "runner": "llamacpp"
+      },
+      "digest": "00ca45bf65a5c626104a906ec9b5f4cd2f576387dbcdefdb150e88d0b3bd7b2e",
+      "model_parameters": "top_p                          1\nrepeat_last_n                  -1\nrepeat_penalty                 1.1\ntemperature                    0.1\ntop_k                          50",
+      "size_bytes": 1478634721,
+      "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315",
+      "thinking_metadata": {
+        "default": true,
+        "values": [
+          true,
+          false
+        ]
+      },
+      "thinking_requested": true
+    }
+  },
+  "ollama_version": "0.40.13",
+  "options": {
+    "command": "run",
+    "context": 10240,
+    "cooldown": 900,
+    "cpu_only": false,
+    "max_tokens": 6144,
+    "models": [
+      "lfm3-vl:2b"
+    ],
+    "no_thermal_gate": false,
+    "passes": 1,
+    "phases": [
+      "warm"
+    ],
+    "plan": false,
+    "port": 11434,
+    "sample_seconds": 1,
+    "seed": 42,
+    "setup": "Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Raspberry Pi Active Cooler; clear vented acrylic case with lid; official Raspberry Pi 27 W USB-C power supply; SanDisk Extreme 128 GB microSDXC UHS-I; Ollama systemd service with LLAMA_ARG_CACHE_RAM=0; 2 GB zram; room about 22 C (estimated)",
+    "suite": "1.8",
+    "sustain_seconds": 90,
+    "sustain_tokens": 128,
+    "temp_max": 50.0,
+    "temp_min": 30.0,
+    "thinking": "on",
+    "threads": 4,
+    "timeout": 600,
+    "tool_calls": 16,
+    "tool_rounds": 12,
+    "tracks": [
+      "arithmetic",
+      "structured",
+      "agent",
+      "vision",
+      "context",
+      "rag",
+      "instructions",
+      "code"
+    ]
+  },
+  "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.7\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"",
+  "plan": [
+    {
+      "cases": [
+        "instr-delay-texts",
+        "vision-salmon-cost",
+        "agent-ticket-injection",
+        "rag-filter-cost",
+        "vision-promo-items",
+        "agent-reserve-shortfall",
+        "rag-battery-code",
+        "code-tests-roman",
+        "agent-thermostat-rule",
+        "context-room-bookings",
+        "code-tests-paths",
+        "code-predict-arithmetic",
+        "agent-convert",
+        "json-order-items",
+        "math-round-trip-speed",
+        "json-login-counts",
+        "context-badge-absent",
+        "instr-lowercase-caption",
+        "agent-invoice-reminder",
+        "math-floor-tiles",
+        "rag-return-deadline",
+        "json-rebooked-itinerary",
+        "math-currency-change",
+        "code-fix-tag",
+        "instr-no-digits",
+        "json-latest-contact",
+        "instr-library-post",
+        "instr-inner-tube-json",
+        "context-sensor-max",
+        "context-meter-reading",
+        "code-tests-wrap",
+        "code-predict-closures",
+        "instr-conventional-commit",
+        "math-trial-end",
+        "json-tasks-by-owner",
+        "rag-carry-over-unknown",
+        "rag-meal-allowance",
+        "code-expression",
+        "rag-incident-minutes",
+        "instr-listing-json",
+        "agent-delivered-count",
+        "vision-tracking-number",
+        "json-quoted-note",
+        "code-task-order",
+        "json-recipe-grams",
+        "code-fix-rate-limiter",
+        "context-latest-address",
+        "vision-fruit-tree",
+        "rag-ebike-range",
+        "math-bill-split",
+        "agent-escalate-gold",
+        "instr-scale-recipe",
+        "vision-saturday-bus",
+        "vision-receipt-split",
+        "math-night-bus",
+        "vision-solar-share",
+        "json-address-fields",
+        "json-conditional-orders",
+        "instr-commit-message",
+        "context-night-pages",
+        "instr-alt-text",
+        "json-attendees",
+        "context-manager-chain",
+        "math-meal-total",
+        "instr-jacket-description",
+        "agent-stock-injection",
+        "instr-out-of-office",
+        "math-heater-cost",
+        "math-hose-fill",
+        "rag-dashboard-port",
+        "instr-reschedule-email",
+        "agent-frost-injection",
+        "json-dry-beds",
+        "agent-kitchen-light",
+        "vision-penguin-band",
+        "code-predict-iterators",
+        "math-leap-interest",
+        "vision-next-train",
+        "code-business-days",
+        "json-crate-note",
+        "rag-firmware-schedules",
+        "math-race-pace",
+        "math-savings-withdrawals",
+        "context-shipment-carrier",
+        "vision-irrigation-flow",
+        "vision-net-sales-change",
+        "agent-close-confirmed",
+        "instr-meeting-agenda",
+        "agent-move-review",
+        "agent-notes-injection",
+        "agent-tracking-retry",
+        "context-bike-last-ride",
+        "agent-invoice-total",
+        "code-predict-default",
+        "agent-first-free-slot",
+        "context-backup-snapshot",
+        "vision-visitor-months",
+        "agent-transfer-retry",
+        "math-unit-price",
+        "context-contract-approvals",
+        "instr-sms-reminder",
+        "code-fix-lru",
+        "math-two-painters",
+        "context-house-expenses",
+        "json-node-down",
+        "agent-delay-apologies",
+        "json-unassigned-ticket",
+        "code-tests-versions",
+        "rag-guest-wifi",
+        "rag-library-fine",
+        "code-fix-csv",
+        "math-trains-meet",
+        "rag-running-version",
+        "json-dock-words",
+        "rag-training-budget",
+        "agent-order-status",
+        "json-ticket-priority",
+        "vision-kangaroos",
+        "vision-map-cottage",
+        "agent-large-refund",
+        "code-merge-intervals",
+        "context-parcel-locker",
+        "vision-ice-cream-order",
+        "rag-on-call",
+        "json-invoice-cents",
+        "json-meeting-times",
+        "code-inverse-digits",
+        "math-stacked-offers",
+        "rag-warranty-unknown",
+        "context-ticket-status",
+        "code-split-amount",
+        "context-settled-balance",
+        "instr-shopping-list",
+        "instr-study-table",
+        "context-door-code",
+        "instr-shoe-faq",
+        "context-config-reverts",
+        "math-checkout-discount",
+        "rag-refund-days",
+        "json-nothing-available",
+        "math-lemonade-syrup",
+        "vision-floor-route",
+        "vision-tv-model-line",
+        "context-holds-queue",
+        "vision-heating-off",
+        "json-appointments-iso",
+        "vision-gpio-pin-1",
+        "code-fix-first-index",
+        "vision-selfie-jacket",
+        "rag-first-response",
+        "context-stock-transfers",
+        "rag-parental-leave",
+        "rag-price-unknown",
+        "instr-hike-list",
+        "rag-filter-interval",
+        "code-sql-top-customer",
+        "math-shift-pay",
+        "math-rent-up-down",
+        "context-billing-deploys",
+        "instr-zero-waste"
+      ],
+      "models": [
+        "lfm3-vl:2b"
+      ],
+      "repeat": [
+        "math-unit-price",
+        "math-race-pace",
+        "math-trains-meet",
+        "json-crate-note",
+        "json-nothing-available",
+        "json-latest-contact",
+        "agent-convert",
+        "agent-delivered-count",
+        "agent-transfer-retry",
+        "vision-selfie-jacket",
+        "vision-tv-model-line",
+        "vision-receipt-split",
+        "context-door-code",
+        "context-ticket-status",
+        "context-room-bookings",
+        "rag-battery-code",
+        "rag-meal-allowance",
+        "rag-training-budget",
+        "instr-hike-list",
+        "instr-out-of-office",
+        "instr-reschedule-email",
+        "code-merge-intervals",
+        "code-tests-roman",
+        "code-predict-iterators"
+      ]
+    }
+  ],
+  "platform": "Linux-6.18.50+rpt-rpi-2712-aarch64-with-glibc2.41",
+  "protocol_version": 4,
+  "python": "3.13.5",
+  "response_schemas": {
+    "agent-close-confirmed": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-convert": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-delay-apologies": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-delivered-count": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-escalate-gold": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-first-free-slot": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-frost-injection": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-invoice-reminder": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-invoice-total": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-kitchen-light": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-large-refund": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-move-review": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-notes-injection": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-order-status": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-reserve-shortfall": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-stock-injection": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-thermostat-rule": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-ticket-injection": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-tracking-retry": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "agent-transfer-retry": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "code-business-days": null,
+    "code-expression": null,
+    "code-fix-csv": null,
+    "code-fix-first-index": null,
+    "code-fix-lru": null,
+    "code-fix-rate-limiter": null,
+    "code-fix-tag": null,
+    "code-inverse-digits": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "code-merge-intervals": null,
+    "code-predict-arithmetic": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "code-predict-closures": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "code-predict-default": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "code-predict-iterators": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "code-split-amount": null,
+    "code-sql-top-customer": null,
+    "code-task-order": null,
+    "code-tests-paths": {
+      "additionalProperties": false,
+      "properties": {
+        "tests": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "tests"
+      ],
+      "type": "object"
+    },
+    "code-tests-roman": {
+      "additionalProperties": false,
+      "properties": {
+        "tests": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "tests"
+      ],
+      "type": "object"
+    },
+    "code-tests-versions": {
+      "additionalProperties": false,
+      "properties": {
+        "tests": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "tests"
+      ],
+      "type": "object"
+    },
+    "code-tests-wrap": {
+      "additionalProperties": false,
+      "properties": {
+        "tests": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "tests"
+      ],
+      "type": "object"
+    },
+    "context-backup-snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-badge-absent": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-bike-last-ride": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-billing-deploys": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-config-reverts": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-contract-approvals": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-door-code": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-holds-queue": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-house-expenses": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-latest-address": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-manager-chain": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-meter-reading": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-night-pages": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-parcel-locker": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-room-bookings": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-sensor-max": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-settled-balance": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-shipment-carrier": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-stock-transfers": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "context-ticket-status": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "instr-alt-text": null,
+    "instr-commit-message": null,
+    "instr-conventional-commit": null,
+    "instr-delay-texts": null,
+    "instr-hike-list": null,
+    "instr-inner-tube-json": null,
+    "instr-jacket-description": null,
+    "instr-library-post": null,
+    "instr-listing-json": null,
+    "instr-lowercase-caption": null,
+    "instr-meeting-agenda": null,
+    "instr-no-digits": null,
+    "instr-out-of-office": null,
+    "instr-reschedule-email": null,
+    "instr-scale-recipe": null,
+    "instr-shoe-faq": null,
+    "instr-shopping-list": null,
+    "instr-sms-reminder": null,
+    "instr-study-table": null,
+    "instr-zero-waste": null,
+    "json-address-fields": null,
+    "json-appointments-iso": null,
+    "json-attendees": null,
+    "json-conditional-orders": null,
+    "json-crate-note": null,
+    "json-dock-words": null,
+    "json-dry-beds": null,
+    "json-invoice-cents": null,
+    "json-latest-contact": null,
+    "json-login-counts": null,
+    "json-meeting-times": null,
+    "json-node-down": null,
+    "json-nothing-available": null,
+    "json-order-items": null,
+    "json-quoted-note": null,
+    "json-rebooked-itinerary": null,
+    "json-recipe-grams": null,
+    "json-tasks-by-owner": null,
+    "json-ticket-priority": null,
+    "json-unassigned-ticket": null,
+    "math-bill-split": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-checkout-discount": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-currency-change": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-floor-tiles": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-heater-cost": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-hose-fill": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-leap-interest": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-lemonade-syrup": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-meal-total": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-night-bus": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-race-pace": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-rent-up-down": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-round-trip-speed": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-savings-withdrawals": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-shift-pay": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-stacked-offers": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-trains-meet": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-trial-end": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-two-painters": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "math-unit-price": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "rag-battery-code": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-carry-over-unknown": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-dashboard-port": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-ebike-range": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-filter-cost": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-filter-interval": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-firmware-schedules": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-first-response": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-guest-wifi": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-incident-minutes": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-library-fine": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-meal-allowance": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-on-call": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-parental-leave": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-price-unknown": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-refund-days": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-return-deadline": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-running-version": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-training-budget": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "rag-warranty-unknown": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "answer",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "vision-floor-route": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-fruit-tree": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-gpio-pin-1": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-heating-off": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-ice-cream-order": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-irrigation-flow": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-kangaroos": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-map-cottage": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-net-sales-change": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-next-train": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-penguin-band": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-promo-items": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-receipt-split": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-salmon-cost": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-saturday-bus": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-selfie-jacket": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-solar-share": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-tracking-number": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-tv-model-line": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    },
+    "vision-visitor-months": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer"
+      ],
+      "type": "object"
+    }
+  },
+  "server_environment": {
+    "LLAMA_ARG_CACHE_RAM": "0",
+    "OLLAMA_FLASH_ATTENTION": "1",
+    "OLLAMA_KV_CACHE_TYPE": "f16",
+    "OLLAMA_NUM_PARALLEL": "1"
+  },
+  "server_prompt_cache_ram_mib": "0",
+  "sha256": {
+    "cases.py": "715b01c619ed3a5a170db52845a2df0c038e92d5a6984835637c6f6d0e1260d8",
+    "code_runner.py": "3fa7894c34c594fec2e12d20bf3f487b729a7baf90d349a8bd6819f6c341c48c",
+    "fixtures/badge.png": "d26e18a0a473251e2e47984de8a5ed85558415e61f06fc554c98846dbe325113",
+    "fixtures/chart.png": "b3b97f9d3e728aab2a51100c49c334b92286885574496b0c427e16d0a4b4f081",
+    "fixtures/counting.png": "3f2d7f7050ce1580de50a70ecfc0d237823917bdefca1351eb96a6086f1deebd",
+    "fixtures/frame.png": "d2519ae10b992c01bb2714371b34a3a8249e4383451dd83fae45a1de0d96cbf4",
+    "fixtures/grid.png": "075533cbdd18dca216bdc3dfd1480f6df9e060fbf959ea2149cfc0cf85f1dee6",
+    "fixtures/label.png": "636e5cc99fe3fcd23fe05f04956dc2176c52901ee55567fb2b8a265ee91cc0c3",
+    "fixtures/objects.png": "69abc699a675518388f3366f3bd95db2192817aba5ff7a612ffc229f35ae38b1",
+    "fixtures/position.png": "aca6d2b3bd076db10c324923ffd6deb2f499af3549641ab3a81de47845c1c081",
+    "fixtures/receipt.png": "74b04515c2eb1a22a6d10473f7b1482f3e519f2c864058e89ca36cd08487484a",
+    "fixtures/shapes.png": "f89a28d846ffe58c3bc398c442086534a0fa5b7380c18d0c766a5588ead34070",
+    "fixtures/table.png": "864a3a43e7544dc2e212d30a156f03c4d26f33717308d79b565a9b60da990678",
+    "fixtures/v1_8/bus-timetable.png": "4ccb624e139ab524aa73f71b8cb3370cd4c9ccd0dc48ca26c979b615097db1e4",
+    "fixtures/v1_8/clock-departures.png": "f185e6da8d1670fd134653d8e7145de065b7fc83acfd2b78235448bce13c8f4f",
+    "fixtures/v1_8/energy-stacked.png": "20b9dd6894966122b67f1d6e45aa34995021638ba6bcda1e691b8978cfc7d54d",
+    "fixtures/v1_8/floor-plan.png": "107aadc6c29f51109431fa1d8c74a68660c4a96238eeab9948565f2172dc292e",
+    "fixtures/v1_8/flowchart.png": "594f2e6eaeeadf5957456ba2bdd8c8c6efe39fb31238f2224768ffb732b18d51",
+    "fixtures/v1_8/grocery-receipt.png": "7975312fb7bb2eb95ac59a2a7bfe78e2c960a4b8f04e66343d0aac5e8ed47956",
+    "fixtures/v1_8/parcel-label.png": "5d0a91cd0f89b34ff0e1fb7665d5e4f1ba627c925928740e300543cf37cb6920",
+    "fixtures/v1_8/photos/fruit-tree.jpg": "56a6a53caa9a3285a882bc01c8c4113a83c407e181a3e4ee2703db8fc3b9bec4",
+    "fixtures/v1_8/photos/ice-cream-menu.jpg": "97cd0f2faf681ebc084726013d5e39810b7de758a4d4eae5b9cdf95094ce16aa",
+    "fixtures/v1_8/photos/kangaroos.jpg": "5d0ec8d277818f7d5a49d8f3626785a5c75fda7a6ab63f2623636912fe77c2b6",
+    "fixtures/v1_8/photos/park-map.jpg": "55e82940f16194db09ba7666aa758ca9e661c696e6e70fb0744f7680c52f7807",
+    "fixtures/v1_8/photos/penguins.jpg": "0f51e14aeccc21041fbef767248211e9592c4296905b494eda360a6f054f95b5",
+    "fixtures/v1_8/photos/pi-gpio.jpg": "41418d7d7485d2574d9557781a6ad9accac93657e89e7ded8ff991e5fc68506a",
+    "fixtures/v1_8/photos/restaurant-receipt.jpg": "89a3746994d68e1e5e42649a714167cb64801f719dd60f0f4088ffd4d43a00c8",
+    "fixtures/v1_8/photos/supermarket.jpg": "48e3467e18d6ff96ce7d52b7e2798f07d97938b49a2250ae8b51c829b6fde455",
+    "fixtures/v1_8/photos/television.jpg": "7fa0cc4039f02f9400b103ead09af4b2b442911cfb421e4dc0ba7d91172f665e",
+    "fixtures/v1_8/photos/welcome-sign.jpg": "f3257b84becb8d5b4c86ac70e2c2a89f73de590acfc01f0b8f7a5824a7549fc8",
+    "fixtures/v1_8/store-table.png": "446f9b34987c050a31baac20cfd647cf1251672410ff70d4c02beae66aa006b6",
+    "fixtures/v1_8/thermostat-dashboard.png": "52552fbff2e09cd70c09de4095f246c1c4f1224fabc723685b3bfc948718e349",
+    "fixtures/v1_8/visitors-lines.png": "bf562b5e4148113a88339f649f3a74ae8d3cb78a96a7a705c71d12727c862c6e",
+    "light_eval.py": "95dd7887b1f7992a27f758e116b15fc33f6ca0305d4146aa3ed22823d262e582",
+    "runtime.py": "35199fd10186702f2868f0e850c6335601a1f987d42fd7f45273b8d9513e9c96",
+    "suite_1_8.py": "354a7940f2357441295237b43d5b60f8173514165920901d049e15268f61d559",
+    "suite_1_8_agent.py": "e14bc5f8e46a8133ada3ee61fa87266ad6a8204072c38cac45433a6cd444a7b3",
+    "suite_1_8_code.py": "a535fc689c8f8b27130f05b63c017beb16bbf5065c02decb70c10000ca6ce602",
+    "suite_1_8_instructions.py": "b051f7ff2337b90bff3186ffe7327fd32af58ed7815b40e16a6182e30fe09d55",
+    "suite_1_8_rag.py": "5a73afd9e035a2230993534bc0f6ba70a0ed17921547aa1a2749cacfadf4e6b1",
+    "suite_1_8_text.py": "b075e9321f0662a36dc03ac627047e4eb74a928448fb6a53ba7134d4831797b4"
+  },
+  "start_utc": "2026-11-27T05:44:50.055198+00:00",
+  "status": "complete",
+  "storage_page_cache": "OS page cache retained and uncontrolled",
+  "suite_version": "1.8.0",
+  "sustained_prompt_cache": "one repeated prompt reference; native prefix reuse allowed",
+  "swap_devices": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n/dev/zram0                              partition\t2097136\t\t0\t\t100",
+  "temperature_band_c": [
+    30.0,
+    50.0
+  ],
+  "thermal_gate_timeouts": [],
+  "warm_prompt_cache": "one load and warmup for all warm cases, outside case timing; reload after a failed warmup, out-of-memory error, server or connection error, or eviction; cross-request prompt cache set by server_prompt_cache_ram_mib"
+}

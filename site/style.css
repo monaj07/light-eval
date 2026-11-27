@@ -69,6 +69,12 @@ code { font-family: var(--mono); font-size: .9em; }
 .brand-text strong { font-size: 1.32rem; letter-spacing: -.015em; }
 .brand-eval { color: var(--brand); }
 .brand-text small { color: var(--ink2); font-size: .86rem; }
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.gh { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--panel); color: var(--ink); font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.gh:hover { text-decoration: none; border-color: var(--brand); color: var(--brand); }
+.gh svg { width: 18px; height: 18px; flex: none; }
+.gh-short { display: none; }
 .theme { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px;
   width: 36px; height: 36px; font-size: 1.05rem; cursor: pointer; }
 .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-top: 8px; padding-bottom: 0; }
@@ -176,7 +182,9 @@ td.heat-td { padding: 3px; }
 .lb-card-stats b { display: block; color: var(--ink); font-size: 1rem; }
 .paired { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
 .paired li { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 4px 14px; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--line); }
-.paired .model-cell { display: flex; align-items: center; gap: 8px; }
+.paired .model-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.paired .model-cell b { min-width: 0; overflow-wrap: anywhere; }
+.paired .model-cell .mode { flex-shrink: 0; white-space: nowrap; }
 @media (max-width: 640px) { .paired li { grid-template-columns: 1fr; } }
 .minitracks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .minitracks .heat { min-width: 0; font-size: .74rem; padding: 4px 2px; }
@@ -272,6 +280,9 @@ td.heat-td { padding: 3px; }
   .search { width: 100%; }
   .case-row summary { grid-template-columns: 1fr; gap: 6px; }
   .brand-text small { display: none; }
+  .gh { padding: 0 12px; }
+  .gh-long { display: none; }
+  .gh-short { display: inline; }
   .vs { grid-template-columns: 1fr; }
   .vs .mid { display: none; }
   .casegrid-row { grid-template-columns: 1fr; gap: 4px; }

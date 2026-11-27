@@ -24,7 +24,7 @@
 
 ## Results
 
-**Bottom line (suite 1.8, thinking off; thinking-on runs in progress):** suite 1.8 is much harder than 1.7, and with thinking off no small model stands out. The top five, `WePocketModel1.0-4B` (43%), `gemma4:e2b` (43%), `qwen3.5:4b` (41%), `lfm3-vl:2b` (38%) and `qwen3.5:2b` (34%), aren't separated by a paired test of their case-by-case results; with 160 cases, the only significant gaps are `gemma4:e2b` over `lfm3` and every model over `LFM2.5-1.2B`. Speed and memory separate them more than accuracy does: `lfm3-vl:2b` takes 8.7 seconds per case in 3.1 GB, against 13.6 seconds and 6.2 GB for `gemma4:e2b` and 22–27 seconds in 5.4–6.3 GB for the two 4B models. Every model fails nearly all arithmetic and code cases with thinking off. CPU temperature peaks at 79 °C with the official Active Cooler, without throttling. The suite 1.7 results, where thinking-on `lfm3-vl:2b` led with 94%, stay on [the results site](https://monaj07.github.io/light-eval/?suite=1.7) and in [`docs/results/`](docs/results/).
+**Bottom line (suite 1.8; thinking-on runs in progress):** suite 1.8 is much harder than 1.7, and with thinking off no small model stands out. The top five, `WePocketModel1.0-4B` (43%), `gemma4:e2b` (43%), `qwen3.5:4b` (41%), `lfm3-vl:2b` (38%) and `qwen3.5:2b` (34%), aren't separated by a paired test of their case-by-case results; with 160 cases, the only significant gaps are `gemma4:e2b` over `lfm3` and every model over `LFM2.5-1.2B`. Speed and memory separate them more than accuracy does: `lfm3-vl:2b` takes 8.7 seconds per case in 3.1 GB, against 13.6 seconds and 6.2 GB for `gemma4:e2b` and 22–27 seconds in 5.4–6.3 GB for the two 4B models. Every model fails nearly all arithmetic and code cases with thinking off. CPU temperature peaks at 79 °C with the official Active Cooler, without throttling. The first thinking-on result, `lfm3-vl:2b`, scores 64% against its 38% with thinking off, but takes 3.6 minutes per case, and 39 of its 160 cases hit the 10-minute limit. The suite 1.7 results, where thinking-on `lfm3-vl:2b` led with 94%, stay on [the results site](https://monaj07.github.io/light-eval/?suite=1.7) and in [`docs/results/`](docs/results/).
 
 <!-- results:start -->
 <!-- Generated: edit tools/publish.py and run `python3 tools/publish.py build`, not this section. -->
@@ -41,6 +41,7 @@ Setup: Raspberry Pi 5 8 GB; Raspberry Pi OS Lite 64-bit, headless; official Rasp
 
 | Model | Thinking | Accuracy | 95% interval | Tracks | Time per case | Memory | Note |
 |---|---|---:|---:|---|---:|---|---|
+| `lfm3-vl:2b` | on | **64%** | 57–71% | 8/8 | 3.6 min | ✅ 3.1 GB | 39 cases hit the 10-minute limit |
 | `WePocketModel1.0-4B-GGUF:Q4_K_M` | off | **43%** | 35–51% | 7/8 (no vision) | 22.4 s | ✅ 5.4 GB |  |
 | `gemma4:e2b` | off | **43%** | 35–50% | 8/8 | 13.6 s | ✅ 6.2 GB |  |
 | `qwen3.5:4b` | off | **41%** | 33–48% | 8/8 | 26.8 s | ✅ 6.3 GB |  |
@@ -103,6 +104,14 @@ Note: Official filename for pulling `WePocketModel1.0-4B-GGUF:Q4_K_M` through Ol
 
 Challenge counts are out of 49 cases, hard ones out of 90, and each track out of 20. Planted instructions followed counts the cases with an instruction hidden in a tool result, a passage or a file that the model obeyed. Repeats changed counts the cases of the fixed repeatability sample whose outcome differed when run again. A model without vision or tools has fewer challenge cases, and its unsupported tracks show n/a.
 
+#### Thinking on: scores by track
+
+| Model | Accuracy<br>(all) | Accuracy<br>(text) | Challenge | Hard | Arithmetic | Structured | Agent | Vision | Context | RAG | Instructions | Code | Planted<br>instructions<br>followed | Repeats<br>changed | Time per<br>case | Timed<br>out | Peak memory<br>(lowest free) | CPU °C<br>mean / peak |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| `lfm3-vl:2b` | **64%** | 65% | 40 | 43 | 15 | 14 | 19 | 12 | 8 | 15 | 17 | 3 | 2 of 10 | 0 of 24 | 3.6 min | 39 | ✅ 3.1 GB (4.8 GB free) | 67 / 77 |
+
+Challenge counts are out of 49 cases, hard ones out of 90, and each track out of 20. Planted instructions followed counts the cases with an instruction hidden in a tool result, a passage or a file that the model obeyed. Repeats changed counts the cases of the fixed repeatability sample whose outcome differed when run again.
+
 Peak memory in use is system-wide (Raspberry Pi OS and Ollama included): RAM in use plus pages swapped to zram, at the warm phase's peak. The Pi has 7.9 GB of usable RAM and 2 GB of zram. ≈ marks runs recorded before zram's own RAM use was measured: they add the separate peaks of RAM and swap, and count zram's compressed pages twice, so they overstate memory in use when zram is busy. ✅ more than 0.5 GB stayed free and swap stayed under 1 GB; ⚠️ less free or more swap; ❌ ran out of memory or hung the Pi.
 
 #### Speed (thinking off)
@@ -141,11 +150,12 @@ Answers are short, so most of each case is spent reading the prompt, especially 
 
 ### Key findings
 
-From the official thinking-off run of suite 1.8 (one pass of 160 cases, then 24 cases repeated). Thinking-on results are added as each model's run finishes. The [failure analysis](docs/ANALYSIS.md) covers suite 1.7.
+From the official runs of suite 1.8 (one pass of 160 cases, then 24 cases repeated): all models with thinking off, and `lfm3-vl:2b` so far with thinking on. More thinking-on results are added as each model's run finishes. The [failure analysis](docs/ANALYSIS.md) covers suite 1.7.
 
 - **With thinking off, the top five can't be told apart.** `WePocketModel1.0-4B`, `gemma4:e2b`, `qwen3.5:4b`, `lfm3-vl:2b` and `qwen3.5:2b` score 34–43%, and no paired test (exact McNemar over the cases where two models differ, Holm-adjusted across all 28 pairs) separates any two of them, or them from `lfm3-omni:2b` (33%). The only significant gaps are `gemma4:e2b` over `lfm3` (it passes 26 cases `lfm3` fails, and fails 6 that `lfm3` passes) and every model over `LFM2.5-1.2B`. Not significant isn't equal: a real gap of a few points is often too small to show with 160 cases. The suite was calibrated for the best model with thinking on to pass 50–70% of the hard cases; with thinking off, the best passes 32 of 90 (`gemma4:e2b`).
+- **Thinking lifts `lfm3-vl:2b` from 38% to 64%, at 25 times the time.** It passes 50 cases it failed with thinking off and fails 7 it passed (exact McNemar, p < 0.0001), and improves on every track: arithmetic from 1 to 15 of 20, vision from 5 to 12, agent from 15 to 19. It passes 43 of the 90 hard cases, just under the 50–70% the suite was calibrated for. The cost is time: 3.6 minutes per case, and 39 cases timed out at 10 minutes, 15 of the 20 code cases and 11 of the 20 context cases among them, so code stays at 3 of 20. Memory stays at 3.1 GB, and outcomes repeated exactly: none of the 24 repeated cases changed.
 - **Controls mostly pass; hard cases mostly don't.** Most models pass 14–17 of the 21 controls. 57 of the 160 cases were passed by no model, and 11 by every model, mostly instruction-following and context cases.
-- **Arithmetic and code are out of reach without thinking.** No model passes more than 3 of 20 arithmetic cases or 7 of 20 code cases (`gemma4:e2b`). In the Mac pilot, thinking on took `lfm3-vl:2b` from 1 to 17 of 20 arithmetic cases.
+- **Arithmetic and code are out of reach without thinking.** No model passes more than 3 of 20 arithmetic cases or 7 of 20 code cases (`gemma4:e2b`). On the Pi, thinking on takes `lfm3-vl:2b` from 1 to 15 of 20 arithmetic cases.
 - **Agent work favours the LFM models.** `lfm3-vl:2b` passes 15 of 20 agent cases and `lfm3-omni:2b` 14, against 8–12 for the Qwen models and WePocketModel. `qwen3.5:4b` followed 5 of the 10 instructions planted in tool results, passages and files, more than any other model; `lfm3-vl:2b` and `qwen3.5:2b` followed none.
 - **`WePocketModel1.0-4B` is text only on Ollama.** Its Hugging Face GGUF brings no vision file Ollama can use, and it has no thinking mode there. On the text tracks it scores 43%, level with `gemma4:e2b` (46%) and `qwen3.5:4b` (44%), at 22 seconds per case.
 - **The smallest model falls behind.** `LFM2.5-1.2B-Instruct` scores 17%, passing 5 of 80 hard cases, though it is the fastest (5.1 seconds per case) and the leanest (1.7 GB).
@@ -157,7 +167,7 @@ From the official thinking-off run of suite 1.8 (one pass of 160 cases, then 24 
 - **Reading the prompt still takes much of each case.** With thinking off, 42–80% of the time goes to processing the prompt, most for `lfm3-omni:2b` (80%) and `gemma4:e2b` (77%). The LFM models read at 64–93 tokens/s; the 4B models at 23.
 - **The 4B models write slowly.** `qwen3.5:4b` and WePocketModel generate about 3.5 tokens/s, against 10–16 for the LFM models and 12.6 for `gemma4:e2b` in cases (8.4 in sustained prose, likely because its speculative decoding helps most on short, predictable JSON).
 - **Every model fits in 8 GB at 4 threads.** The largest peaks were 6.3 GB (`qwen3.5:4b`) and 6.2 GB (`gemma4:e2b`), with at least 1.6 GB left free and at most 60 MB of swap. `gemma4:e4b`, which hung the Pi in suite 1.7, is left out.
-- **The Pi stays cool enough with the official Active Cooler.** CPU temperature averaged 68–72 °C and peaked at 79 °C, just under the roughly 80 °C at which the Pi 5 starts throttling. No case recorded a throttling flag, and sustained generation slowed by 1–4% over each 90-second phase.
+- **The Pi stays cool enough with the official Active Cooler.** CPU temperature averaged 67–72 °C and peaked at 79 °C, just under the roughly 80 °C at which the Pi 5 starts throttling. No case recorded a throttling flag, and sustained generation slowed by 1–4% over each 90-second phase.
 - **Four threads are the default.** Suite 1.7 compared 2 and 4 threads: 4 speeds up reading the prompt but can slow down generation, most for the Qwen models. Suite 1.8 runs only at 4 threads, all of the Pi's cores.
 
 ## What it measures

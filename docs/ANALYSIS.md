@@ -1,4 +1,6 @@
-# Failure analysis
+# Failure analysis (suite 1.7)
+
+> This analysis is of suite 1.7, the previous suite; the README now shows suite 1.8, whose cases are different and harder. Its results stay on [the results site](https://monaj07.github.io/light-eval/?suite=1.7). A suite 1.8 analysis will follow its thinking-on runs.
 
 This page walks through representative failures from each track. It shows what the models actually answered, and what that says about both the models and how Light Eval scores them.
 

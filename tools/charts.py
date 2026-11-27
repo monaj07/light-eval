@@ -67,6 +67,12 @@ class Canvas:
         return "\n".join(self.parts + ["</svg>"]) + "\n"
 
 
+def whole(value):
+    """A percentage or count rounded half up, as the site's JavaScript rounds (42.5 -> 43), never to the
+    even neighbour as Python's formatting does (42.5 -> 42), so the README and the site agree."""
+    return f"{math.floor(value + 0.5):.0f}"
+
+
 def label_column(labels, minimum):
     """Width of a column of 14 px semibold labels after a mode dot (text starts at x = 44), wide
     enough for the longest label, so a long model name never runs into the plot."""
@@ -104,7 +110,11 @@ def dumbbell(rows, theme, title):
 
     rows: [{"model", "badges": [short labels], "off": {"accuracy", "median_s"} or None, "on": {...} or None}]
     """
-    label_w, panel_w, gap = 250, 280, 50
+    # The name column fits the longest name (14.5 px bold), and the two panels share what is left of
+    # the 920 px, so a long name never runs into a low score's dot.
+    gap = 50
+    label_w = max(250, round(24 + 8.6 * max((len(row["model"]) for row in rows), default=0) + 16))
+    panel_w = min(280, (920 - label_w - gap - 40) // 2)
     top, row_h = 104, 52
     height = top + row_h * len(rows) + 54
     c = Canvas(theme, 920, height, title,
@@ -142,7 +152,7 @@ def dumbbell(rows, theme, title):
                            f'stroke="{c.t["ink2"]}" stroke-width="1.25"/>')
             c.text(bx + w / 2, y + 18.5, badge, size=11.5, fill="ink", anchor="middle", weight="600")
             bx += w + 6
-        for scale, key, fmt in ((acc_x, "accuracy", lambda v: f"{v:.0f}%"), (time_x, "median_s", duration)):
+        for scale, key, fmt in ((acc_x, "accuracy", lambda v: f"{whole(v)}%"), (time_x, "median_s", duration)):
             points = [(mode, row[mode][key]) for mode in ("off", "on") if row[mode]]
             if len(points) == 2:
                 c.line(scale(points[0][1]), y, scale(points[1][1]), y, stroke="ink2", width=2.5,
@@ -200,7 +210,7 @@ def heatmap(rows, columns, theme, title, per_track=13):
             c.parts.append(f'<rect x="{x + 2}" y="{y + 2}" width="{cell_w - 4}" height="{cell_h - 4}" rx="5" '
                            f'fill="{fill}"/>')
             # Text inside a fill is white or near-black, chosen by the fill's brightness.
-            c.text(x + cell_w / 2, y + cell_h / 2 + 5.5, f"{value:.0f}%", size=14.5, anchor="middle",
+            c.text(x + cell_w / 2, y + cell_h / 2 + 5.5, f"{whole(value)}%", size=14.5, anchor="middle",
                    weight="700" if col == len(columns) - 1 else "600",
                    color="#ffffff" if luminance(fill) < 0.3 else "#0b0b0b")
     # The overall column is set apart by a gap line.
@@ -255,7 +265,7 @@ def threads(rows, theme, title, low, high, primary):
         c.dot(after, cy, 8.5, c.t[row["mode"]], hollow=primary != high)
         change = (row["after"] / row["before"] - 1) * 100
         word = "faster" if change < 0 else "slower"
-        c.text(max(before, after) + 18, y + 1, f"{high} threads: {abs(change):.0f}% {word}", size=14, fill="ink",
+        c.text(max(before, after) + 18, y + 1, f"{high} threads: {whole(abs(change))}% {word}", size=14, fill="ink",
                weight="700")
     return c.svg()
 
@@ -300,7 +310,7 @@ def dumbbell_mobile(rows, theme, title):
     times = [mode["median_s"] for row in rows for mode in (row["off"], row["on"]) if mode]
     time_x, ticks = log_scale(times, left, right - left)
     acc_x = lambda percent: left + (right - left) * percent / 100
-    panels = ((top, "Accuracy (cases passed)", acc_x, "accuracy", lambda v: f"{v:.0f}%",
+    panels = ((top, "Accuracy (cases passed)", acc_x, "accuracy", lambda v: f"{whole(v)}%",
                [(acc_x(p), f"{p}%") for p in (0, 50, 100)]),
               (top + panel_h + panel_gap, "Median time per case (log scale)", time_x, "median_s", duration,
                [(time_x(t), time_label(t)) for t in ticks if t in (1, 10, 60, 600) or len(ticks) <= 4]))
@@ -366,7 +376,7 @@ def heatmap_mobile(rows, columns, theme, title):
                 continue
             fill = ramp[min(len(ramp) - 1, round(value / 100 * (len(ramp) - 1)))]
             c.parts.append(f'<rect x="{x + 2:.1f}" y="{cy}" width="{cell_w - 4:.1f}" height="30" rx="5" fill="{fill}"/>')
-            c.text(x + cell_w / 2, cy + 20.5, f"{value:.0f}%", size=12.5 if small else 14.5, anchor="middle",
+            c.text(x + cell_w / 2, cy + 20.5, f"{whole(value)}%", size=12.5 if small else 14.5, anchor="middle",
                    weight="700", color="#ffffff" if luminance(fill) < 0.3 else "#0b0b0b")
     c.text(24, height - 40, "n/a: the model can't attempt that track.", size=13.5)
     c.text(24, height - 20, "All: the tracks each model supports.", size=13.5)
@@ -402,6 +412,6 @@ def threads_mobile(rows, theme, title, low, high, primary):
         c.dot(before, cy, 8.5, c.t[row["mode"]], hollow=primary != low)
         c.dot(after, cy, 8.5, c.t[row["mode"]], hollow=primary != high)
         change = (row["after"] / row["before"] - 1) * 100
-        c.text(right + 24, cy + 5.5, f"{abs(change):.0f}% {'faster' if change < 0 else 'slower'}", size=15,
+        c.text(right + 24, cy + 5.5, f"{whole(abs(change))}% {'faster' if change < 0 else 'slower'}", size=15,
                fill="ink", weight="700")
     return c.svg()

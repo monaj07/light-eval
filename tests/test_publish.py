@@ -353,6 +353,11 @@ class CoverageTest(unittest.TestCase):
     def rows(self, tracks, status="pass"):
         return [{"track": track, "status": status} for track in tracks for _ in range(13)]
 
+    def test_percentages_round_half_up_like_the_site(self):
+        # 68 of 160 is 42.5%: the site's JavaScript shows 43%, so the README must too, not 42%.
+        self.assertEqual([publish.charts.whole(v) for v in (42.5, 32.5, 37.5, 42.49, 0.5, 100)],
+                         ["43", "33", "38", "42", "1", "100"])
+
     def test_wilson_interval(self):
         low, high = publish.wilson(107, 160)
         self.assertEqual((round(low, 1), round(high, 1)), (59.3, 73.7))
@@ -449,7 +454,7 @@ class BubbleChartTest(unittest.TestCase):
 
     def layout(self, svg):
         bubbles = [tuple(map(float, found)) for found in
-                   re.findall(r'<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)" fill="[^"]+" fill-opacity', svg)]
+                   re.findall(r'<circle class="pt" cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"', svg)]
         boxes = []
         for x, y, anchor, content in re.findall(
                 r'<text x="([\d.]+)" y="([\d.]+)" font-size="14.5" font-weight="600" text-anchor="(\w+)"[^>]*>([^<]+)<', svg):
@@ -479,7 +484,7 @@ class BubbleChartTest(unittest.TestCase):
 
     def test_published_chart(self):
         svg = (ROOT / "docs" / "assets" / "score-vs-time-raspberry-pi-5-8-gb-light.svg").read_text()
-        self.check(svg, svg.count('fill-opacity="0.9"'))
+        self.check(svg, svg.count('class="pt"'))
 
     def test_crowded_chart(self):
         # A tight cluster of similar models, as a batch of new small models would add.

@@ -2,7 +2,7 @@
 
 This document describes how Light Eval runs and scores models. The [README](../README.md) has the quick start and the results; [CHANGELOG.md](../CHANGELOG.md) has the suite version history.
 
-> **Suite 1.8 is now the runner's default.** The track descriptions, case counts and pass schedule below are suite 1.7's (protocol 3), whose results the README still shows. Suite 1.8's eight tracks, three tiers, scoring and protocol 4 (one pass plus a repeatability sample) are described in [SUITE_1_8_DESIGN.md](SUITE_1_8_DESIGN.md) and [CHANGELOG.md](../CHANGELOG.md); this page will be rewritten for suite 1.8 when its results are published. The server setup, phases and telemetry are the same for both.
+> **Suite 1.8 is now the runner's default.** The track descriptions, case counts and pass schedule below are suite 1.7's (protocol 3), the previous suite, whose results stay on [the results site](https://monaj07.github.io/light-eval/?suite=1.7). Suite 1.8's eight tracks, three tiers, scoring and protocol 4 (one pass plus a repeatability sample) are described in [SUITE_1_8_DESIGN.md](SUITE_1_8_DESIGN.md) and [CHANGELOG.md](../CHANGELOG.md); this page will be rewritten for suite 1.8 once its thinking-on runs are published. The server setup, phases and telemetry are the same for both.
 
 ## Server setup
 

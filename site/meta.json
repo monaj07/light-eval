@@ -30,6 +30,14 @@
       "url": "https://www.liquid.ai",
       "logo": "logos/liquid.png",
       "logo_source": "https://www.liquid.ai/icon.png (the maker's site icon)"
+    },
+    {
+      "match": "wepocket",
+      "maker": "Tencent",
+      "family": "WePocket",
+      "mark": "W",
+      "color": "#4d7c0f",
+      "url": "https://github.com/Tencent/WePocketModel"
     }
   ],
   "default": {

@@ -4,6 +4,13 @@ Each run records the suite version in `manifest.json`. Scores are comparable onl
 
 Since protocol 2, runs also record `protocol_version`: how runs are made, separately from the suite version, which covers cases and scoring. A protocol change can alter timings or how failures are classified without changing any case, so it no longer needs a new suite version, which would retire every published result.
 
+## Published results, suite 1.8 (2026-11-27)
+
+- **The official thinking-off run of suite 1.8 is published** (`docs/results/pi5-off-official-v1-8`, eight models, 16.4 hours on the Pi), so the README and the site now show suite 1.8, and the site keeps suite 1.7 as an archive view. One case is published with its error accepted (`--allow-errors`): `qwen3.5:2b` on `agent-ticket-injection` got `HTTP 500 EOF` from Ollama, which the Pi's Ollama log shows was the model's own malformed tool call. It counts as failed. The runner's classifier is unchanged, because a bare EOF can also mean a crash.
+- **The README's accuracy-and-speed chart is drawn like the site's:** each result is its maker's badge (logo, or a letter for a maker without one, such as Tencent's WePocketModel), thinking on adds an orange ring and the word "thinking", and a model that didn't reliably fit gets a dashed outline. Bubble size for memory and the dashed connectors between modes are gone; the label layout and its tests are unchanged.
+- **Whole-number percentages round half up in the README**, as on the site (68 of 160 is 43%, not 42%).
+- **"What thinking buys"** sizes its name column to the longest name, and a suite 1.8 model whose thinking-on run is still to come is marked "thinking on: not run yet".
+
 ## Suite 1.8.0 and protocol 4 (2026-11-26)
 
 Suite 1.8.0 replaces suite 1.7.0 as the runner's default: 160 cases in eight tracks of 20 (arithmetic, structured, agent, vision, context, and the new RAG, instructions and code tracks), each with control, challenge and hard tiers. The cases, and why each 1.7 case was kept, reworked or retired, are in [`docs/SUITE_1_8_DESIGN.md`](docs/SUITE_1_8_DESIGN.md). Suite 1.8 runs record protocol 4.

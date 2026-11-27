@@ -13,9 +13,11 @@
 Standard library only, like the runner.
 """
 import argparse
+import base64
 import hashlib
 import json
 import math
+import re
 import statistics
 import sys
 from collections import defaultdict
@@ -670,8 +672,8 @@ def table(group, totals):
         lines.append("| " + " | ".join([
             f"`{display_name(entry['model'])}`" + (f" ({entry['threads_note']})" if entry.get("threads_note") else "")
             + ("" if entry["setup"] else " †"),
-            (f"**{entry['accuracy']:.0f}%**" if len(entry["supported_tracks"]) == len(tracks)
-             else coverage_label(entry).split("(")[-1].rstrip(")")), f"{entry['text_accuracy']:.0f}%",
+            (f"**{charts.whole(entry['accuracy'])}%**" if len(entry["supported_tracks"]) == len(tracks)
+             else coverage_label(entry).split("(")[-1].rstrip(")")), f"{charts.whole(entry['text_accuracy'])}%",
             number(entry["challenge"]), *([number(entry["tiers"]["hard"])] if hard else []),
             *(number(entry["tracks"][track]) if track in entry["supported_tracks"] else "n/a" for track in tracks),
             *([of(entry["injection"], "followed"), of(entry["repeat"], "changed")] if hard else []),
@@ -686,7 +688,7 @@ def of(counts, key):
 
 def interval_label(entry):
     low, high = entry["interval"]
-    return f"{low:.0f}–{high:.0f}%"
+    return f"{charts.whole(low)}–{charts.whole(high)}%"
 
 
 def rate(value):
@@ -768,35 +770,48 @@ def text_width(content, size):
     return units * size
 
 
+def families():
+    """Model families from the site's meta.json: logo badges and letter marks, shared with the site."""
+    meta = json.loads((ROOT / "site" / "meta.json").read_text())
+    return meta["families"], meta["default"]
+
+
+def family_of(model):
+    found, default = families()
+    return next((family for family in found if re.search(family["match"], model, re.I)), default)
+
+
+def logo_data(family):
+    """A family's logo as a data URI, so the SVG stays self-contained on GitHub, or None for a letter mark."""
+    path = ROOT / "site" / family["logo"] if family.get("logo") else None
+    return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode() if path and path.exists() else None
+
+
 def svg_chart(points, theme, title):
-    """Accuracy against speed. Bubble area shows peak memory in use, colour shows the thinking
-    mode, and a thin connector joins each model's thinking-off and thinking-on points."""
+    """Accuracy against median time per case, drawn like the site's chart: each result is its maker's
+    badge, thinking on adds an orange ring and the word "thinking" under its label, and a model that
+    didn't reliably fit gets a dashed outline. The plot keeps the README's full 920 px width with the
+    legend in a row above; both axes hug the data; every label sits beside its own point."""
     t = THEMES[theme]
-    # The README shows the chart 920 px wide, so the plot gets the full width and the legend
-    # sits in a row above it; both axes hug the data instead of starting at zero.
-    width, height = 920, 820
-    left, top, plot_w, plot_h = 68, 206, 824, 540
+    width, height = 920, 760
+    left, top, plot_w, plot_h = 68, 150, 824, 540
     font = 'font-family="system-ui, -apple-system, Segoe UI, sans-serif"'
-    with_memory = [point for point in points if point["peak_mem_gb"]]
-    # Area encodes memory: radius grows with the square root, 10 GB -> 32 px.
-    scale = 32 / math.sqrt(10)
+    tile, ring = 15, 4  # badge radius, and the extra radius of the thinking-on ring
 
     def radius(point):
-        return scale * math.sqrt(point["peak_mem_gb"]) if point["peak_mem_gb"] else 7
+        return tile + (ring if point["thinking"] == "on" else 0)
 
     def accuracy(point):
         # Over the tracks the model supports, as in the tables.
         return point["accuracy"]
 
-    # Accuracy axis: round tens just beyond the data. Position, not length, carries the value,
-    # so the axis needn't start at zero.
     scores = [accuracy(point) for point in points]
     y_low = max(0, 10 * math.floor((min(scores) - 9) / 10))
     y_high = min(100, 10 * math.ceil((max(scores) + 9) / 10))
 
-    # Time axis (log): padded in pixels so the largest bubble and a label fit at either end.
+    # Time axis (log): padded in pixels so a point and a label fit at either end.
     times = [point["median_s"] for point in points]
-    pad = max(radius(point) for point in points) + 26
+    pad = tile + ring + 26
     span = math.log10(max(times)) - math.log10(min(times)) or 1
     per_decade = (plot_w - 2 * pad) / span
     x_low = math.log10(min(times)) - pad / per_decade
@@ -811,45 +826,57 @@ def svg_chart(points, theme, title):
         return top + plot_h * (y_high - percent) / (y_high - y_low)
 
     def text(px, py, content, size=13, fill="ink2", anchor="start", weight="normal", halo=False):
-        # A halo in the surface colour keeps labels legible where they cross a connector.
+        # A halo in the surface colour keeps labels legible over grid lines and other marks.
         outline = f'stroke="{t["surface"]}" stroke-width="4" paint-order="stroke" ' if halo else ""
         return (f'<text x="{px:.1f}" y="{py:.1f}" font-size="{size}" font-weight="{weight}" '
                 f'text-anchor="{anchor}" fill="{t[fill]}" {outline}{font}>{content}</text>')
 
-    subtitle = "Higher is more accurate, further left is faster. Colour: thinking mode"
-    subtitle += "; bubble area: peak memory in use (RAM + zram)." if with_memory else "."
+    def badge(cx, cy, family, flagged):
+        """A maker's badge: its logo on white, or its letter on its colour, as on the site."""
+        logo = logo_data(family)
+        stroke = (f'stroke="{t["ink2"]}" stroke-width="2" stroke-dasharray="3 2"' if flagged
+                  else f'stroke="{t["axis"]}" stroke-width="1.2"')
+        parts = [f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{tile}" fill="{"#ffffff" if logo else family["color"]}" {stroke}/>']
+        if logo:
+            size = tile * 1.36
+            parts.append(f'<image href="{logo}" x="{cx - size / 2:.1f}" y="{cy - size / 2:.1f}" width="{size:.1f}" '
+                         f'height="{size:.1f}"/>')
+        else:
+            parts.append(f'<text x="{cx:.1f}" y="{cy + 5:.1f}" font-size="14" font-weight="800" text-anchor="middle" '
+                         f'fill="#ffffff" {font}>{family["mark"]}</text>')
+        return parts
+
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
            f'viewBox="0 0 {width} {height}" role="img" aria-label="{title}">',
            f'<rect width="{width}" height="{height}" rx="8" fill="{t["surface"]}"/>',
            text(24, 36, title, size=19, fill="ink", weight="700"),
-           text(24, 60, subtitle, size=13.5, fill="ink2")]
+           text(24, 60, "Higher is more accurate, further left is faster. Each point is a model, marked with "
+                        "its maker's badge.", size=13.5, fill="ink2")]
 
-    # Legend row: thinking modes, memory sizes, then the flag marker.
-    ly, lx = 116, 24
-    modes = [mode for mode in ("off", "on") if any(point["thinking"] == mode for point in points)]
-    out.append(text(lx, ly + 5, "Thinking", size=14, fill="ink", weight="700"))
-    lx += 76
-    for mode in modes:
-        out.append(f'<circle cx="{lx + 8}" cy="{ly}" r="8" fill="{t[mode]}"/>')
-        out.append(text(lx + 22, ly + 5, mode, fill="ink"))
-        lx += 62
-    if with_memory:
-        lx += 24
-        out.append(text(lx, ly + 5, "Memory in use", size=14, fill="ink", weight="700"))
-        lx += 112
-        for gb in (2, 4, 8):
-            r = scale * math.sqrt(gb)
-            out.append(f'<circle cx="{lx + r:.1f}" cy="{ly}" r="{r:.1f}" fill="none" '
-                       f'stroke="{t["ink2"]}" stroke-width="1.5"/>')
-            out.append(text(lx + 2 * r + 8, ly + 5, f"{gb} GB", fill="ink"))
-            lx += 2 * r + 58
+    # Legend row: the two thinking modes, the makers present, then the fit marker.
+    ly, lx = 100, 24
+    for mode, label in (("off", "Thinking off"), ("on", "Thinking on")):
+        if not any(point["thinking"] == mode for point in points):
+            continue
+        out.append(f'<circle cx="{lx + tile}" cy="{ly}" r="{tile - 4}" fill="none" stroke="{t["ink2"]}" stroke-width="1.5"/>')
+        if mode == "on":
+            out.append(f'<circle cx="{lx + tile}" cy="{ly}" r="{tile - 4 + ring}" fill="none" stroke="{t["on"]}" '
+                       f'stroke-width="3"/>')
+        out.append(text(lx + 2 * tile + 10, ly + 5, label, fill="ink"))
+        lx += 2 * tile + 10 + text_width(label, 13) + 22
+    shown = []
+    for point in points:
+        family = family_of(point["model"])
+        if family not in shown:
+            shown.append(family)
+    for family in shown:
+        out += badge(lx + tile, ly, family, False)
+        out.append(text(lx + 2 * tile + 8, ly + 5, family.get("family") or "Other", fill="ink"))
+        lx += 2 * tile + 8 + text_width(family.get("family") or "Other", 13) + 20
     if any(point["flag"] for point in points):
-        lx += 16
-        out.append(f'<circle cx="{lx + 9}" cy="{ly}" r="9" fill="none" stroke="{t["ink2"]}" '
-                   f'stroke-width="2" stroke-dasharray="4 3"/>')
-        out.append(text(lx + 26, ly + 5, "Didn't reliably fit", fill="ink"))
-    if with_memory:
-        out.append(text(24, ly + 48, "For scale: the Pi has 8 GB of RAM and 2 GB of zram.", size=12.5))
+        out.append(f'<circle cx="{lx + tile}" cy="{ly}" r="{tile - 2}" fill="none" stroke="{t["ink2"]}" '
+                   f'stroke-width="2" stroke-dasharray="3 2"/>')
+        out.append(text(lx + 2 * tile + 8, ly + 5, "Didn't reliably fit", fill="ink"))
 
     for percent in range(y_low, y_high + 1, 10):
         out.append(f'<line x1="{left}" x2="{left + plot_w}" y1="{y(percent):.1f}" y2="{y(percent):.1f}" '
@@ -866,26 +893,22 @@ def svg_chart(points, theme, title):
     better = (left + plot_w - 8, top + 20)
     out.append(text(*better, "better ↖", size=13, anchor="end"))
 
-    # Connectors first, so the bubbles sit on top of them.
-    by_model = defaultdict(dict)
-    for point in points:
-        by_model[point["model"]][point["thinking"]] = point
-    for modes_of in by_model.values():
-        if "off" in modes_of and "on" in modes_of:
-            a, b = modes_of["off"], modes_of["on"]
-            out.append(f'<line x1="{x(a["median_s"]):.1f}" y1="{y(accuracy(a)):.1f}" x2="{x(b["median_s"]):.1f}" '
-                       f'y2="{y(accuracy(b)):.1f}" stroke="{t["ink2"]}" stroke-width="1.75" stroke-dasharray="1 4" '
-                       f'stroke-linecap="round"/>')
-    # Largest bubbles first, so small ones stay visible on top.
+    # Points, lowest first so higher ones sit on top, as on the site. The outermost circle of each
+    # point (the ring for thinking on) carries class="pt": BubbleChartTest reads the layout from it.
     bubbles = []
-    for point in sorted(points, key=lambda item: -radius(item)):
+    for point in sorted(points, key=lambda item: -accuracy(item)):
         px, py, r = x(point["median_s"]), y(accuracy(point)), radius(point)
         bubbles.append((point, px, py, r))
-        color = t["on" if point["thinking"] == "on" else "off"]
-        dashed = ' stroke-dasharray="4 3"' if point["flag"] else ""
-        ring = t["ink2"] if point["flag"] else t["surface"]
-        out.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r:.1f}" fill="{color}" fill-opacity="0.9" '
-                   f'stroke="{ring}" stroke-width="2"{dashed}/>')
+    for point, px, py, r in sorted(bubbles, key=lambda item: -item[2]):
+        family = family_of(point["model"])
+        if point["thinking"] == "on":
+            out.append(f'<circle class="pt" cx="{px:.1f}" cy="{py:.1f}" r="{r:.1f}" fill="{t["surface"]}" '
+                       f'stroke="{t["on"]}" stroke-width="3"/>')
+            out += badge(px, py, family, point["flag"])
+        else:
+            parts = badge(px, py, family, point["flag"])
+            parts[0] = parts[0].replace("<circle ", '<circle class="pt" ', 1)
+            out += parts
 
     def gap_to(box, cx, cy, cr):
         """Distance from a bubble's edge to a box; negative when they overlap."""
@@ -902,10 +925,12 @@ def svg_chart(points, theme, title):
     better_box = (better[0] - 70, better[1] - 14, better[0], better[1] + 4)
     specs = []
     for point, px, py, r in bubbles:
-        label = f'{display_name(point["model"])} · {accuracy(point):.0f}%'
-        # Flags and a different thread count go on a second line under the name, so the label stays narrow.
-        notes = (["hung the Pi"] if point["flag"] else []) + ([point["threads_note"]] if point.get("threads_note") else [])
-        note = f"({', '.join(notes)})" if notes else None
+        label = f'{display_name(point["model"])} · {charts.whole(accuracy(point))}%'
+        # As on the site, a second line says "thinking" for thinking on; flags and a different thread
+        # count join it, so the label stays narrow.
+        notes = (["thinking"] if point["thinking"] == "on" else []) + (["hung the Pi"] if point["flag"] else []) \
+            + ([point["threads_note"]] if point.get("threads_note") else [])
+        note = " · ".join(notes) if notes else None
         w = max(text_width(label, 14.5), text_width(note or "", 12.5))
         h = 18 + (16 if note else 0)
         spots = []
@@ -976,7 +1001,9 @@ def svg_chart(points, theme, title):
             tx, anchor = (x0 + x1) / 2, "middle"
         labels.append(text(tx, y0 + 14, spec["label"], size=14.5, fill="ink", weight="600", anchor=anchor, halo=True))
         if spec["note"]:
-            labels.append(text(tx, y0 + 30, spec["note"], size=12.5, fill="ink2", anchor=anchor, halo=True))
+            on = spec["point"]["thinking"] == "on"
+            labels.append(text(tx, y0 + 30, spec["note"], size=12.5, fill="on" if on else "ink2", anchor=anchor,
+                               halo=True, weight="600" if on else "normal"))
     out += leaders + labels
     out.append("</svg>")
     return "\n".join(out) + "\n"
@@ -1037,7 +1064,7 @@ def glance_table(entries, total, intervals=False):
             per_pass = " per pass" if entry["rounds"] > 1 else ""
             notes.append(f"{count} case{'' if count == '1' else 's'}{per_pass} hit the {limit_label(entry)} limit")
         note = "; ".join(notes)
-        lines.append(f"| `{display_name(entry['model'])}`{' (' + entry['threads_note'] + ')' if entry.get('threads_note') else ''} | {entry['thinking']} | **{entry['accuracy']:.0f}%** | "
+        lines.append(f"| `{display_name(entry['model'])}`{' (' + entry['threads_note'] + ')' if entry.get('threads_note') else ''} | {entry['thinking']} | **{charts.whole(entry['accuracy'])}%** | "
                      + (f"{interval_label(entry)} | " if intervals else "")
                      + f"{coverage_label(entry)} | {duration(entry['median_s'])} | {short_memory(entry)} | {note} |")
     return "\n".join(lines)
@@ -1055,8 +1082,11 @@ def dumbbell_rows(entries, total):
         badges = ["hung the Pi"] if flag else []
         badges += sorted({entry["threads_note"] for entry in modes.values() if entry.get("threads_note")})
         if "on" not in modes:
+            # Suite 1.7's thinking-on runs are finished, so a missing one was never made; suite 1.8's are
+            # made one model at a time after the thinking-off run.
+            pending = "thinking on: not run yet" if any_entry["suite"] != "1.7" else "thinking off only"
             badges.append("no working thinking mode" if model in NO_WORKING_THINKING
-                          else "thinking off only" if "thinking" in any_entry["capabilities"] else "no thinking mode")
+                          else pending if "thinking" in any_entry["capabilities"] else "no thinking mode")
         badges += [f"no {TRACK_NAMES[t].lower()}" for t in any_entry["all_tracks"]
                    if t not in any_entry["supported_tracks"]]
         rows.append({"model": display_name(model), "badges": badges,
@@ -1192,8 +1222,9 @@ def build():
         base = f"score-vs-time-{slug_name}"
         for theme in THEMES:
             write_svg(f"{base}-{theme}.svg", svg_chart(group, theme, f"Accuracy and speed on {name}"))
-        parts += picture(base, f"Cases passed against median time per case on {name}; colour shows the thinking "
-                               "mode and bubble area the peak memory in use")
+        parts += picture(base, f"Cases passed against median time per case on {name}; each point is a model, "
+                               "marked with its maker's badge, with an orange ring for thinking on")
+        parts += ["Model logos belong to their makers and are shown only to identify the models.", ""]
         for note in sorted({entry["note"] for entry in group if entry["note"]}):
             parts += [f"Note: {note}", ""]
         renamed = sorted({(display_name(entry["model"]), entry["model"]) for entry in group

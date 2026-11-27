@@ -7,11 +7,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cases import ROOT, TRACKS, dataset
+from cases import ROOT
+from light_eval import suite_module, suite_of
 
 sys.path.insert(0, str(ROOT / "tools"))
 import publish  # noqa: E402
 import build_site as site_builder  # noqa: E402
+
+# The suite the site leads with, from the published runs: its cases and tracks are what the site shows.
+SHOWN = suite_module(publish.shown_suite())
+TRACKS = SHOWN.TRACKS
+
+
+def dataset():
+    return SHOWN.dataset()
 
 
 class SiteDataTest(unittest.TestCase):
@@ -94,8 +103,14 @@ class ArchiveTest(unittest.TestCase):
         from test_publish import suite_1_8_run, write_run
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp)
+        # The published suite 1.7 runs only, as they were before the switch.
         published = tmp / "published"
-        shutil.copytree(publish.PUBLISHED, published)
+        published.mkdir()
+        for run in publish.PUBLISHED.iterdir():
+            if suite_of(json.loads((run / "manifest.json").read_text())) == "1.7":
+                shutil.copytree(run, published / run.name)
+        with patch.object(publish, "PUBLISHED", published):
+            before = site_builder.build_all(tmp / "before")
         manifest, rows = suite_1_8_run()
         manifest["device_tree_model"] = "Raspberry Pi 5 Model B Rev 1.1"
         write_run(published / "pi5-on-gemma4-e2b-1.8", manifest, rows)
@@ -111,7 +126,6 @@ class ArchiveTest(unittest.TestCase):
         archive = json.loads((tmp / "data" / "archive" / "1.7" / "site.json").read_text())
         self.assertEqual((archive["suite"], archive["current"]["version"], archive["archives"]), ("1.7.0", "1.8.0", []))
         # The archive holds exactly what the site showed for suite 1.7 before the switch.
-        before = site_builder.build_all(tmp / "before")
         self.assertEqual([entry["id"] for entry in archive["entries"]], [entry["id"] for entry in before["entries"]])
         self.assertTrue(all(entry["interval"] is None for entry in archive["entries"]))
         self.assertIsNone(data["next"])

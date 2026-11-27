@@ -150,8 +150,31 @@
       (1,024 and 6,144 tokens per turn). Every case has a 10-minute limit. Compare models only within one mode.</p>
     <h2>Fairness and repeatability</h2>
     <p>Each model runs every case once, then a fixed sample of 24 cases again, to show how often an outcome changes
-      when nothing else does. The Pi cools to the same temperature band before every model loads. Each accuracy comes
-      with a 95% interval for its number of cases, and results whose intervals overlap share a rank.</p>
+      when nothing else does. The Pi cools to the same temperature band before every model loads.</p>
+    <h2>How results are ranked, and which gaps are real</h2>
+    <p>The leaderboard ranks results by accuracy, rounded to a whole percent; equal accuracies share a rank (=). One
+      case is about 0.6 points of accuracy (0.7 for a text-only model, which attempts 140), so a gap of a few points
+      can be chance. Two numbers show how much:</p>
+    <ul>
+      <li><strong>The 95% interval</strong> (the bar behind each accuracy, a Wilson score interval) is the range that,
+        with 95% confidence, holds the accuracy the model would reach over many more cases like these. With 160 cases
+        it is about ±8 points. It describes one model on its own.</li>
+      <li><strong>The paired test</strong> compares two models. Both answered the same cases (a text-only model is
+        compared on the cases both could attempt), so the cases both passed or both failed say nothing about which is
+        better. Only the cases where one passed and the other didn't count. If the two were equally good, each of those
+        cases would be a coin flip, so a split like 26 to 6 is very unlikely by chance and 20 to 15 is not. This is an
+        exact McNemar test, two-sided.</li>
+    </ul>
+    <p>The paired test is the sharper one: two intervals can overlap while the paired test still finds a clear
+      difference, because it ignores the many cases two models agree on. But testing every pair at once gives chance
+      many tries (eight models make 28 pairs), so the p values are adjusted with Holm's method across all the pairs in
+      a thinking mode, and a gap counts as significant only when its adjusted p value is below 5%. The 26-to-6 split
+      passes that bar; a 23-to-10 split (p = 0.035 on its own) doesn't.</p>
+    <p>Only official results from one pass are compared, and only within one thinking mode. The leaderboard lists,
+      under the table, which results each one is significantly ahead of or behind, and the largest group at the top
+      that no test separates. "Not significant" doesn't mean equal: with 160 cases, a real gap of a few points is
+      often too small to show. Both tests also treat one pass as fixed, while a model's answers vary a little from
+      run to run (the repeated sample on each model's page shows how much).</p>
     <p class="note">Model logos belong to their makers and are shown only to identify the models. Visits are counted with GoatCounter, without cookies or any personal data.</p>
     <h2>More</h2>
     <p><a href="https://github.com/monaj07/light-eval/blob/main/docs/METHODOLOGY.md">Methodology</a> ·

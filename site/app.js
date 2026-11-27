@@ -74,7 +74,7 @@ function tags(e, { mode = false } = {}) {
   return out.join("");
 }
 /* How far a result's accuracy could move: its 95% interval when the suite reports one (suite 1.8,
-   one pass), otherwise its range across passes. Ranks tie when these overlap. */
+   one pass), otherwise its range across passes (suite 1.7, whose ranks tie when these overlap). */
 function range(e) {
   if (e.interval) {
     const [lo, hi] = e.interval;
@@ -171,10 +171,61 @@ addEventListener("scroll", () => { if (lastPointer !== "touch") hideTip(); }, { 
 
 /* ---------- data selections ---------- */
 const primary = () => D.entries.filter((e) => e.primary);
+/* Suite 1.8 ranks by accuracy as shown (whole percent), tying only equal values; paired tests
+   (e.ahead, from the build) say which gaps are significant. Suite 1.7 ties results whose ranges
+   across passes overlap. */
 function ranked(list) {
+  const paired = list.some((e) => e.interval);
   return list.map((e) => ({
-    e, rank: 1 + list.filter((o) => o !== e && range(o).lo > range(e).hi + 1e-9).length,
+    e, rank: 1 + list.filter((o) => o !== e && (paired
+      ? Math.round(o.accuracy) > Math.round(e.accuracy)
+      : range(o).lo > range(e).hi + 1e-9)).length,
   }));
+}
+const listNames = (names) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+/* The paired tests for the leaderboard view shown (main results or 2-thread runs): the ids a
+   result is significantly ahead of (Holm-adjusted, within its thinking mode), or null when the
+   result isn't compared (exploratory, several passes, or suite 1.7). Mirrors tools/publish.py. */
+const pairView = () => F.threads === "main" ? "main" : "2";
+const aheadOf = (e) => e.ahead?.[pairView()] ?? null;
+const compared = (e) => Array.isArray(aheadOf(e));
+const separated = (a, b) => (aheadOf(a) || []).includes(b.id) || (aheadOf(b) || []).includes(a.id);
+function pairedSummary(list) {
+  const out = [];
+  const modes = new Set(list.filter(compared).map((e) => e.thinking));
+  for (const mode of ["off", "on"]) {
+    const r = list.filter((e) => e.thinking === mode && compared(e)).sort((a, b) => b.accuracy - a.accuracy);
+    if (r.length < 2) continue;
+    let size = 1;
+    while (size < r.length && !r.slice(0, size).some((a) => separated(a, r[size]))) size++;
+    const start = modes.size > 1 ? `With thinking ${mode}, ` : "";
+    const names = (arr) => listNames(arr.map((e) => `<b>${esc(e.name)}</b>`));
+    const beatsAll = r.slice(1).every((b) => (aheadOf(r[0]) || []).includes(b.id));
+    const text = size === r.length ? `${start}no two results shown differ significantly.`
+      : size > 1 ? `${start}the top ${size} shown, ${names(r.slice(0, size))}, don't differ significantly from each other.`
+      : beatsAll ? `${start}${names([r[0]])} is significantly ahead of every other result shown.`
+      : `${start}the paired test separates ${names([r[0]])} from the next result shown.`;
+    out.push(text.charAt(0).toUpperCase() + text.slice(1));
+  }
+  return out.join(" ");
+}
+function pairedList(list) {
+  const byId = Object.fromEntries(list.map((e) => [e.id, e]));
+  const mixed = new Set(list.map((e) => e.thinking)).size > 1;
+  const rows = [...list].sort((a, b) => b.accuracy - a.accuracy).map((e) => {
+    let text;
+    if (!compared(e)) text = "Not compared: only official one-pass results take part.";
+    else if (!list.some((o) => o !== e && o.thinking === e.thinking && compared(o))) text = `No other thinking-${e.thinking} result shown to compare with.`;
+    else {
+      const ahead = aheadOf(e).filter((id) => byId[id]).map((id) => esc(byId[id].name));
+      const behind = list.filter((o) => (aheadOf(o) || []).includes(e.id)).map((o) => esc(o.name));
+      text = [ahead.length ? `Ahead of ${listNames(ahead)}.` : "", behind.length ? `Behind ${listNames(behind)}.` : ""].filter(Boolean).join(" ")
+        || "No significant difference from the other results shown.";
+    }
+    return `<li><span class="model-cell">${logo(e.model)}<b>${esc(e.name)}</b>${mixed ? ` <span class="mode ${e.thinking}">thinking ${e.thinking}</span>` : ""}</span>
+      <span class="muted">${text}</span></li>`;
+  }).join("");
+  return `<ul class="paired">${rows}</ul>`;
 }
 function filtered() {
   let list = F.threads === "main" ? primary() : D.entries.filter((e) => e.threads === 2);
@@ -481,9 +532,9 @@ function leaderboardTable(items, { limit = null, sortable = true } = {}) {
     <td class="num">${e.temp_peak == null ? "—" : e.temp_peak.toFixed(0)}</td>
     <td class="num">${num(e.timeouts, e.timeouts % 1 ? 1 : 0)}</td></tr>`).join("");
   const cards = rows.map(({ e, rank }) => `<div class="card lb-card">
-    <div class="lb-card-head"><span class="r">${rank}</span>${logo(e.model)}<div><a href="#/model/${esc(e.model_slug)}">${esc(e.name)}</a><div>${tags(e, { mode: true })}</div></div></div>
+    <div class="lb-card-head"><span class="r">${rankCell(rank, items)}</span>${logo(e.model)}<div><a href="#/model/${esc(e.model_slug)}">${esc(e.name)}</a><div>${tags(e, { mode: true })}</div></div></div>
     ${accCell(e)}
-    <div class="lb-card-stats"><div>Time / case<b>${dur(e.median_s)}</b></div><div>Memory<b class="mem ${e.memory || ""}">${gb(e.peak_mem_gb)}</b></div><div>${hasTier("hard") ? `Hard<b>${pct(e.hard_accuracy)}</b>` : `Challenges<b>${pct(e.challenge_accuracy)}</b>`}</div></div>
+    <div class="lb-card-stats"><div>Time / case<b>${dur(e.median_s)}</b></div><div>Memory<b class="mem ${e.memory || ""}">${gb(e.peak_mem_gb)}</b></div><div>${hasTier("hard") ? `Hard<b>${pct(e.hard_accuracy)}</b>` : `Challenges<b>${pct(e.challenge_accuracy)}</b>`}</div><div>Peak<b>${e.temp_peak == null ? "—" : `${e.temp_peak.toFixed(0)} °C`}</b></div></div>
     <div class="minitracks">${D.tracks.map((t) => { const v = e.tracks[t.id]; return v == null ? `<div class="heat na">${shortTrack[t.id]}<small>n/a</small></div>` : `<div class="heat" style="${heat(v)}">${shortTrack[t.id]}<small>${Math.round(v)}%</small></div>`; }).join("")}</div>
   </div>`).join("");
   return `<div class="table-wrap responsive card"><table class="lb"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div><div class="cards">${cards}</div>`;
@@ -528,7 +579,7 @@ function pageLeaderboard() {
   if (!otherThreads) F.threads = "main";
   const onePass = items.every((x) => x.e.passes === 1);
   const how = intervals
-    ? `Ranked by accuracy on the tracks each model supports, ${onePass ? "from one pass" : "averaged over its passes"}. Results whose 95% intervals overlap share a rank (=).`
+    ? `Ranked by accuracy on the tracks each model supports, ${onePass ? "from one pass" : "averaged over its passes"}; equal accuracies share a rank (=). A small gap may be chance: <a href="#/about">a paired test</a> says which gaps are significant, below the table.`
     : `Ranked by accuracy on the tracks each model supports, averaged over its passes. Results whose ranges across passes overlap share a rank (=).`;
   app.innerHTML = `<h1>Leaderboard</h1>
     <p class="lede">${new Set(items.map((x) => x.e.model)).size} models, ${items.length} results, on ${esc(D.device.name)} with ${F.threads === "main" ? D.primary_threads : 2} CPU threads${intervals && onePass ? "" : ` and up to ${Math.max(0, ...items.map((x) => x.e.passes))} passes each`}. ${how} One case is ${num(100 / D.totals.cases, 1)} points.</p>
@@ -539,7 +590,11 @@ function pageLeaderboard() {
       <input class="search" id="q" type="search" placeholder="Search models" value="${esc(F.q)}" aria-label="Search models">
     </div>
     <div id="lb">${items.length ? leaderboardTable(items) : `<p class="empty">No results match these filters.</p>`}</div>
-    <p class="note">Track cells show the share of that track's ${perTrack()} cases passed; hover for the counts in each tier. ${intervals ? "The bar marks the 95% interval: how far the accuracy could move by chance with this many cases." : "The bar marks the range across passes where it isn't a single value."} ${!otherThreads ? "" : F.threads === "main" ? "The 4-thread view includes gemma4:e4b at 2 threads, the only thread count it was run at." : "2-thread runs: thinking on is a single pass."}</p>`;
+    <p class="note">Track cells show the share of that track's ${perTrack()} cases passed; hover for the counts in each tier. ${intervals ? "The bar marks the 95% interval: how far the accuracy could move by chance with this many cases." : "The bar marks the range across passes where it isn't a single value."} ${!otherThreads ? "" : F.threads === "main" ? "The 4-thread view includes gemma4:e4b at 2 threads, the only thread count it was run at." : "2-thread runs: thinking on is a single pass."}</p>
+    ${items.some((x) => compared(x.e)) ? `<section class="section"><div class="section-head"><h2>Which gaps are real</h2></div>
+      <div class="card pad">${pairedSummary(items.map((x) => x.e)) ? `<p style="margin-top:0">${pairedSummary(items.map((x) => x.e))}</p>` : ""}
+      <p class="note">Every model answers the same cases, so two results are compared only on the cases where one passed and the other didn't. A gap counts as significant when chance alone would produce one that lopsided less than 5% of the time (exact McNemar test), after a Holm correction for testing every pair in a thinking mode at once. The tests cover all the results in this view; filters only change which are listed. <a href="#/about">How this works →</a></p>
+      ${pairedList(items.map((x) => x.e))}</div></section>` : ""}`;
   app.querySelectorAll("button[data-f]").forEach((b) => b.addEventListener("click", () => { F[b.dataset.f] = b.dataset.v; render(); }));
   document.getElementById("fits").addEventListener("change", (ev) => { F.fits = ev.target.checked; render(); });
   const q = document.getElementById("q");

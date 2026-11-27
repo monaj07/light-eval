@@ -172,8 +172,12 @@ td.heat-td { padding: 3px; }
 .lb-card-head { display: flex; align-items: center; gap: 10px; }
 .lb-card-head .r { font-weight: 800; color: var(--muted); width: 26px; }
 .lb-card-head a { color: var(--ink); font-weight: 650; word-break: break-word; }
-.lb-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: .82rem; color: var(--ink2); }
+.lb-card-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: .82rem; color: var(--ink2); }
 .lb-card-stats b { display: block; color: var(--ink); font-size: 1rem; }
+.paired { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.paired li { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 4px 14px; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--line); }
+.paired .model-cell { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 640px) { .paired li { grid-template-columns: 1fr; } }
 .minitracks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .minitracks .heat { min-width: 0; font-size: .74rem; padding: 4px 2px; }
 .minitracks .heat small { display: block; font-weight: 400; font-size: .64rem; opacity: .85; }

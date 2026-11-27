@@ -446,6 +446,122 @@ class RunnerFailureTest(unittest.TestCase):
             self.assertIsNone(server_environment())
 
 
+class PairedTestTest(unittest.TestCase):
+    """The paired comparison that says which suite 1.8 gaps are significant."""
+
+    @staticmethod
+    def outcomes(wins, losses, both=0, neither=0):
+        """Two results that differ on wins + losses cases: a passed the first wins, b the next losses."""
+        a, b, n = {}, {}, 0
+        for a_pass, b_pass, count in ((1, 0, wins), (0, 1, losses), (1, 1, both), (0, 0, neither)):
+            for _ in range(count):
+                a[f"c{n}"], b[f"c{n}"] = float(a_pass), float(b_pass)
+                n += 1
+        return a, b
+
+    def test_exact_mcnemar_values(self):
+        # Two-sided binomial tails: 26 to 6 and 20 to 15 are the About page's examples.
+        self.assertAlmostEqual(publish.paired_p(*self.outcomes(26, 6))[2], 0.000535, places=5)
+        self.assertAlmostEqual(publish.paired_p(*self.outcomes(20, 15))[2], 0.4996, places=3)
+        self.assertAlmostEqual(publish.paired_p(*self.outcomes(5, 0))[2], 0.0625)
+        self.assertEqual(publish.paired_p(*self.outcomes(0, 0, both=10)), (0, 0, 1.0))
+
+    def test_agreed_cases_dont_count(self):
+        # Cases both pass or both fail change nothing; overlapping intervals would say they do.
+        bare = publish.paired_p(*self.outcomes(12, 2))
+        padded = publish.paired_p(*self.outcomes(12, 2, both=60, neither=80))
+        self.assertEqual(bare, padded)
+        self.assertLess(bare[2], 0.05)
+
+    def test_only_shared_cases_count(self):
+        a, b = self.outcomes(10, 0)
+        del b["c0"]  # b couldn't attempt it (a text-only model on a vision case)
+        self.assertEqual(publish.paired_p(a, b)[:2], (9, 0))
+
+    def entry(self, accuracy, outcomes, thinking="off", rounds=1, setup="official"):
+        return {"accuracy": accuracy, "thinking": thinking, "interval": [0, 100], "outcomes": outcomes,
+                "rounds": rounds, "setup": setup, "model": f"m{accuracy}"}
+
+    @staticmethod
+    def passing(*spans, cases=100):
+        passed = {n for start, stop in spans for n in range(start, stop)}
+        return {f"c{n}": float(n in passed) for n in range(cases)}
+
+    def test_holm_drops_a_gap_that_is_only_nominally_significant(self):
+        top = self.passing((0, 40))                # top against low: 15 wins to 5, p = 0.041 on its own
+        mid = self.passing((0, 30), (40, 45))
+        low = self.passing((0, 25), (45, 50))
+        group = [self.entry(40, top), self.entry(35, mid), self.entry(30, low)]
+        tests = publish.paired_tests(group)
+        self.assertLess(tests[(0, 2)][2], 0.05)
+        self.assertGreater(tests[(0, 2)][3], 0.05)   # three pairs: adjusted to at least 3 × 0.041
+        self.assertEqual(publish.paired_ahead(group), {0: [], 1: [], 2: []})
+        self.assertEqual(publish.leading_group(group, publish.paired_ahead(group)), 3)
+
+    def test_holm_adjusted_values(self):
+        # Step-down: the smallest p times 3, the next times 2 (never below the one before), the last times 1.
+        group = [self.entry(60, self.passing((0, 60))), self.entry(50, self.passing((0, 40), (60, 70))),
+                 self.entry(20, self.passing((0, 20)))]
+        tests = publish.paired_tests(group)
+        ordered = sorted(tests.values(), key=lambda test: test[2])
+        expected = []
+        for rank, test in enumerate(ordered):
+            expected.append(max(expected[-1] if expected else 0, min(1.0, (3 - rank) * test[2])))
+        self.assertEqual([test[3] for test in ordered], expected)
+        self.assertEqual(publish.paired_ahead(group)[0], [2])
+
+    def test_ahead_and_leading_group(self):
+        top = self.passing((0, 60))
+        mid = self.passing((0, 55))
+        low = self.passing((0, 10))
+        group = [self.entry(60, top), self.entry(55, mid), self.entry(10, low)]
+        ahead = publish.paired_ahead(group)
+        self.assertEqual(ahead, {0: [2], 1: [2], 2: []})
+        self.assertEqual(publish.leading_group(group, ahead), 2)
+
+    def test_leading_group_checks_both_directions(self):
+        # A text-only model ranks first on its own cases, but the vision model beats it on the cases both attempted.
+        text_only = {f"c{n}": float(n < 50) for n in range(100)}
+        vision = {**{f"c{n}": float(n < 50 or 50 <= n < 75) for n in range(100)}, **{f"v{n}": 0.0 for n in range(60)}}
+        group = [self.entry(50, text_only), self.entry(47, vision)]
+        ahead = publish.paired_ahead(group)
+        self.assertEqual(ahead, {0: [], 1: [0]})
+        self.assertEqual(publish.leading_group(group, ahead), 1)
+
+    def test_lead_sentence(self):
+        names = ["`a`", "`b`", "`c`"]
+        self.assertEqual(publish.lead_sentence("off", names, 3, False), "With thinking off, no two results differ significantly.")
+        self.assertEqual(publish.lead_sentence("off", names, 2, False),
+                         "With thinking off, the top 2, `a` and `b`, don't differ significantly from each other.")
+        self.assertEqual(publish.lead_sentence("on", names, 1, True), "With thinking on, `a` is significantly ahead of every other result.")
+        # Separated from the next result only: never claim it beats every other one.
+        self.assertEqual(publish.lead_sentence("on", names, 1, False), "With thinking on, the paired test separates `a` from the next result.")
+
+    def test_only_official_one_pass_results_are_compared(self):
+        a, b = self.outcomes(40, 0)
+        self.assertEqual(publish.paired_ahead([self.entry(50, a), self.entry(10, b, thinking="on")]), {0: [], 1: []})
+        for kind, other in (("several passes", self.entry(10, b, rounds=3)), ("exploratory", self.entry(10, b, setup="")),
+                            ("suite 1.7", {**self.entry(10, b), "interval": None})):
+            with self.subTest(kind):
+                self.assertEqual(publish.paired_ahead([self.entry(50, a), other]), {0: [], 1: None})
+
+    def test_readme_note(self):
+        group = [self.entry(60, self.passing((0, 60))), self.entry(55, self.passing((0, 55))), self.entry(10, self.passing((0, 10)))]
+        name = lambda entry: entry["model"]
+        self.assertEqual(publish.paired_note(group, name),
+                         "With thinking off, the top 2, m60 and m55, don't differ significantly from each other. "
+                         "Significant gaps: m10 is behind every other result.")
+        self.assertEqual(publish.paired_note(group[:1], name), "")
+
+    def test_published_entries_carry_their_case_outcomes(self):
+        for entry in publish.entries():
+            with self.subTest(entry=(entry["run"], entry["model"])):
+                self.assertEqual(len(entry["outcomes"]), sum(entry["track_cases"][track]
+                                                             for track in entry["supported_tracks"]))
+                self.assertAlmostEqual(100 * sum(entry["outcomes"].values()) / len(entry["outcomes"]),
+                                       entry["accuracy"])
+
+
 class BubbleChartTest(unittest.TestCase):
     """The accuracy-and-speed chart's layout rules, checked on the published chart and on a crowded
     synthetic one, so a new model can't silently break them: every label sits inside the plot,

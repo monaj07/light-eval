@@ -33,7 +33,7 @@ for model in lfm3-vl:2b lfm3 gemma4:e2b qwen3.5:2b qwen3.5:4b; do
 done
 ```
 
-The README and the site keep showing suite 1.7 until the first suite 1.8 run is published, then switch to suite 1.8 and keep suite 1.7 as an archive view on the site.
+The thinking-off run is published (`docs/results/pi5-off-official-v1-8`), so the README and the site show suite 1.8; the site keeps suite 1.7 as an archive view (`?suite=1.7`). Publish each thinking-on run as it finishes, under `pi5-on-<model>-v1-8`.
 
 ## Suite 1.7 (protocol 3)
 

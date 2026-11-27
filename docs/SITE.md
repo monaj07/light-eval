@@ -42,7 +42,7 @@ Every view starts from the main results, the same rows as the README's tables: o
 
 ## Ranks and uncertainty
 
-Accuracy is the share of cases passed on the tracks a model supports, averaged over passes, exactly as in the README. Each result also has its accuracy in each pass. A result's rank is 1 plus the number of results whose *worst* pass beats its *best* pass, so results whose pass ranges overlap share a rank. With 65 cases, one case is 1.5 points.
+Accuracy is the share of cases passed on the tracks a model supports, averaged over passes, exactly as in the README. Each result also has its accuracy in each pass. A result's rank is 1 plus the number of results whose *worst* pass beats its *best* pass, so results whose pass ranges overlap share a rank. With 65 cases, one case is 1.5 points. That is suite 1.7, which runs three passes. Suite 1.8 runs one pass, so it ranks by accuracy rounded to a whole percent, tying only equal values, and each result carries `ahead`: the results in the same thinking mode it is significantly ahead of by an exact two-sided McNemar test over the cases where the two differ, Holm-adjusted across the mode's pairs (p < 0.05; `publish.paired_ahead`, which also writes the README's note). Only official one-pass results are compared (`publish.comparable`); `ahead` is keyed by leaderboard view (`main`, `2` threads), and null means not compared. The leaderboard lists them under the table, and About explains both.
 
 ## Charts and tooltips
 

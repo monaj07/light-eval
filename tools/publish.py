@@ -353,6 +353,135 @@ def wilson(passed, n, z=1.96):
     return [100 * max(0.0, centre - half), 100 * min(1.0, centre + half)]
 
 
+def case_outcomes(rows, supported):
+    """Each supported case's share of passes, over the passes run."""
+    seen = defaultdict(list)
+    for row in rows:
+        if row["track"] in supported:
+            seen[row["case"]].append(row["status"] == "pass")
+    return {case: sum(results) / len(results) for case, results in seen.items()}
+
+
+SIGNIFICANCE = 0.05
+
+
+def paired_p(a, b):
+    """Exact two-sided McNemar test of two results over the cases both attempted.
+
+    Every model answers the same cases, so only the cases where the two differ say which is
+    better: wins (a passed, b didn't) against losses. Under no difference each such case is a fair
+    coin, so the p value is a two-sided binomial tail. Returns (wins, losses, p)."""
+    shared = a.keys() & b.keys()
+    wins = sum(a[case] > b[case] for case in shared)
+    losses = sum(a[case] < b[case] for case in shared)
+    n = wins + losses
+    if not n:
+        return wins, losses, 1.0
+    tail = sum(math.comb(n, k) for k in range(min(wins, losses) + 1)) / 2 ** n
+    return wins, losses, min(1.0, 2 * tail)
+
+
+def comparable(entry):
+    """Whether a result takes part in the paired tests: an official, one-pass suite 1.8 result.
+
+    Suite 1.7 (no interval) ranks by its ranges across passes instead. With several passes a case's
+    outcome is a share, not pass or fail, so McNemar's test doesn't apply; exploratory runs are left
+    out so the README and the site test the same results."""
+    return bool(entry.get("interval") and entry.get("setup") and entry.get("rounds") == 1)
+
+
+def paired_tests(group):
+    """Every pair of comparable results in the same thinking mode: {(i, j): (wins, losses, p, adjusted)}.
+
+    i < j index group; wins count cases i passed and j didn't. adjusted is Holm's step-down p value
+    over all the pairs in that mode, so testing many pairs at once doesn't find gaps by chance."""
+    tests = {}
+    for mode in ("off", "on"):
+        members = [i for i, entry in enumerate(group) if entry["thinking"] == mode and comparable(entry)]
+        pairs = {(i, j): paired_p(group[i]["outcomes"], group[j]["outcomes"])
+                 for n, i in enumerate(members) for j in members[n + 1:]}
+        running = 0.0
+        for rank, (pair, (wins, losses, p)) in enumerate(sorted(pairs.items(), key=lambda item: item[1][2])):
+            running = max(running, min(1.0, (len(pairs) - rank) * p))
+            tests[pair] = (wins, losses, p, running)
+    return tests
+
+
+def paired_ahead(group, tests=None):
+    """For each index into group, the indexes of the results it is significantly ahead of (Holm-adjusted),
+    or None for a result that isn't compared."""
+    tests = paired_tests(group) if tests is None else tests
+    ahead = {index: ([] if comparable(entry) else None) for index, entry in enumerate(group)}
+    for (i, j), (wins, losses, _, adjusted) in tests.items():
+        if adjusted < SIGNIFICANCE and wins != losses:
+            winner, loser = (i, j) if wins > losses else (j, i)
+            ahead[winner].append(loser)
+    return {index: sorted(found) if found is not None else None for index, found in ahead.items()}
+
+
+def separated(ahead, i, j):
+    return j in (ahead.get(i) or []) or i in (ahead.get(j) or [])
+
+
+def leading_group(ranked, ahead):
+    """How many results, from the top, no paired test separates from each other, in either direction.
+
+    ranked is sorted by accuracy, best first; ahead indexes into it."""
+    size = 1
+    while size < len(ranked) and not any(separated(ahead, i, size) for i in range(size)):
+        size += 1
+    return size
+
+
+def lead_sentence(mode, names, size, beats_all, prefix=True):
+    """The site's and README's shared sentence on one thinking mode's paired tests."""
+    start = f"With thinking {mode}, " if prefix else ""
+    if size == len(names):
+        text = f"{start}no two results differ significantly."
+    elif size > 1:
+        text = f"{start}the top {size}, {join(names[:size])}, don't differ significantly from each other."
+    elif beats_all:
+        text = f"{start}{names[0]} is significantly ahead of every other result."
+    else:
+        text = f"{start}the paired test separates {names[0]} from the next result."
+    return text[0].upper() + text[1:]
+
+
+def paired_note(group, name=None):
+    """What the paired tests separate, per thinking mode, for the README."""
+    name = name or (lambda entry: f"`{display_name(entry['model'])}`")
+    sentences = []
+    for mode in ("off", "on"):
+        ranked = sorted((entry for entry in group if entry["thinking"] == mode and comparable(entry)),
+                        key=lambda entry: -entry["accuracy"])
+        if len(ranked) < 2:
+            continue
+        tests = paired_tests(ranked)
+        ahead = paired_ahead(ranked, tests)
+        size = leading_group(ranked, ahead)
+        names = [name(entry) for entry in ranked]
+        sentences.append(lead_sentence(mode, names, size, len(ahead[0]) == len(ranked) - 1))
+        gaps = []
+        for loser in range(len(ranked)):
+            winners = [i for i in range(len(ranked)) if loser in ahead[i]]
+            if not winners:
+                continue
+            if len(winners) == len(ranked) - 1:
+                gaps.append(f"{names[loser]} is behind every other result")
+                continue
+            def split(i):
+                wins, losses = tests[(min(i, loser), max(i, loser))][:2]
+                return f"{names[i]} ({max(wins, losses)} cases to {min(wins, losses)})"
+            gaps.append(f"{names[loser]} is behind {join([split(i) for i in winners])}")
+        if gaps:
+            sentences.append("Significant gaps: " + "; ".join(gaps) + ".")
+    return " ".join(sentences)
+
+
+def join(items):
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
 def entries(suite=None):
     """One entry per published run and model, for one suite (by default the one shown)."""
     suite = suite or shown_suite()
@@ -407,6 +536,8 @@ def entries(suite=None):
                 "interval": wilson(passed * rounds, supported_cases * rounds) if suite != "1.7" else None,
                 "tracks": {track: sum(row["status"] == "pass" and row["track"] == track for row in mine) / rounds
                            for track in tracks},
+                # Each supported case's share of passes, for the paired comparison (paired_ahead).
+                "outcomes": case_outcomes(mine, covered["supported_tracks"]),
                 # Planted-instruction cases: how many the model obeyed (averaged over passes).
                 "injection": ({"cases": len(planted) / rounds,
                                "followed": sum(followed_injection(row) for row in planted) / rounds}
@@ -1182,8 +1313,11 @@ def build():
                       "Accuracy is the share of cases passed on the tracks the model supports; Tracks shows how many "
                       f"of the {len(totals['tracks'])} that is. A track a model can't attempt (no vision, for example) "
                       "is not counted as 0%. "
-                      + ("The 95% interval (Wilson) shows how far the accuracy could move by chance with this many "
-                         "cases; results whose intervals overlap may not really differ. " if has_hard(totals) else "")
+                      + (("The 95% interval (Wilson) shows how far the accuracy could move by chance with this many "
+                          "cases. Every model answers the same cases, so a paired test over the cases where two "
+                          "models differ (exact McNemar, Holm-adjusted across the pairs in each mode, p < 0.05) "
+                          "separates results better than overlapping intervals do. "
+                          + (paired_note(official) + " " if paired_note(official) else "")) if has_hard(totals) else "")
                       + "Time is the median per case. Memory is the peak in use, RAM plus zram, against the Pi's "
                       "7.9 GB of usable RAM.", ""]
             parts += picture(write_chart(f"thinking-{slug_name}", lambda theme: charts.dumbbell(

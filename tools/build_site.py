@@ -176,6 +176,20 @@ def build(out, suite, archives=(), archive_of=None):
                       for row in outcomes[case_id]]
             for case_id in by_case if case_id in outcomes}
 
+    # Paired tests (suite 1.8): which results each one is significantly ahead of, Holm-adjusted within
+    # its thinking mode, for each leaderboard view (the main results, and the 2-thread runs), so a
+    # result is only ever compared with the others in the view it appears in. None: not compared.
+    views = {"main": group, "2": [entry for entry in shown if entry["threads"] == 2]}
+    for site_entry in site_entries:
+        site_entry["ahead"] = {}
+    for view, together in views.items():
+        ahead = publish.paired_ahead(together)
+        index = {entry_id(entry): i for i, entry in enumerate(together)}
+        for site_entry in site_entries:
+            if site_entry["id"] in index:
+                found = ahead[index[site_entry["id"]]]
+                site_entry["ahead"][view] = None if found is None else sorted(entry_id(together[j]) for j in found)
+
     for model, data in model_files.items():
         data["model"] = model
         (out / "models" / f"{publish.slug(model)}.json").write_text(json.dumps(data, separators=(",", ":")))

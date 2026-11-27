@@ -88,6 +88,24 @@ class SiteDataTest(unittest.TestCase):
                 if isinstance(value, float):
                     self.assertTrue(math.isfinite(value), f"{entry['id']}.{key}")
 
+    def test_paired_comparisons_follow_the_published_results(self):
+        # ahead is what the leaderboard's "Which gaps are real" lists, per view; it must be exactly what
+        # paired_ahead finds for the README's results, and only within one thinking mode.
+        pi = [entry for entry in publish.entries() if entry["device"].startswith("Raspberry")]
+        group, _ = publish.primary_group(pi)
+        ahead = publish.paired_ahead(group)
+        expected = {site_builder.entry_id(entry): (None if ahead[i] is None else
+                                                   sorted(site_builder.entry_id(group[j]) for j in ahead[i]))
+                    for i, entry in enumerate(group)}
+        by_id = {entry["id"]: entry for entry in self.data["entries"]}
+        for entry in self.data["entries"]:
+            with self.subTest(entry=entry["id"]):
+                if entry["primary"]:
+                    self.assertEqual(entry["ahead"]["main"], expected[entry["id"]])
+                for found in entry["ahead"].values():
+                    for other in found or []:
+                        self.assertEqual(by_id[other]["thinking"], entry["thinking"])
+
     def test_case_titles_drop_the_answer_format(self):
         self.assertEqual(site_builder.case_title('What is 173 × 29? Return only a JSON object with one key "answer".'),
                          "What is 173 × 29?")
